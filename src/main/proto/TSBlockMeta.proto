@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+
+message TagUid {
+    map<string, int32> tagKUid = 1;
+    map<int32, string> uidtagK = 2;
+    map<string, int32> tagVUid = 3;
+    map<int32, string> uidtagV = 4;
+    int32 tagkIdx = 5;
+    int32 tagvIdx = 6;
+}

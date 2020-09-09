@@ -1,0 +1,37 @@
+TTTTTTTTTTTTTTTTTTTTTTT  iiii
+T:::::::::::::::::::::T i::::i
+T:::::::::::::::::::::T  iiii
+T:::::TT:::::::TT:::::T
+TTTTTT  T:::::T  TTTTTTiiiiiii nnnn  nnnnnnnn    yyyyyyy           yyyyyyy
+        T:::::T        i:::::i n:::nn::::::::nn   y:::::y         y:::::y
+        T:::::T         i::::i n::::::::::::::nn   y:::::y       y:::::y
+        T:::::T         i::::i nn:::::::::::::::n   y:::::y     y:::::y
+        T:::::T         i::::i   n:::::nnnn:::::n    y:::::y   y:::::y
+        T:::::T         i::::i   n::::n    n::::n     y:::::y y:::::y
+        T:::::T         i::::i   n::::n    n::::n      y:::::y:::::y
+        T:::::T         i::::i   n::::n    n::::n       y:::::::::y
+      TT:::::::TT      i::::::i  n::::n    n::::n        y:::::::y
+      T:::::::::T      i::::::i  n::::n    n::::n         y:::::y
+      T:::::::::T      i::::::i  n::::n    n::::n        y:::::y
+      TTTTTTTTTTT      iiiiiiii  nnnnnn    nnnnnn       y:::::y
+                                                       y:::::y
+                                                      y:::::y
+                                                     y:::::y
+                                                    y:::::y
+                                                   yyyyyyy
+                                                        TTTTTTTTTTTTTTTTTTTTTTT   SSSSSSSSSSSSSSS DDDDDDDDDDDDD        BBBBBBBBBBBBBBBBB
+                                                        T:::::::::::::::::::::T SS:::::::::::::::SD::::::::::::DDD     B::::::::::::::::B
+                                                        T:::::::::::::::::::::TS:::::SSSSSS::::::SD:::::::::::::::DD   B::::::BBBBBB:::::B
+                                                        T:::::TT:::::::TT:::::TS:::::S     SSSSSSSDDD:::::DDDDD:::::D  BB:::::B     B:::::B
+                                                        TTTTTT  T:::::T  TTTTTTS:::::S              D:::::D    D:::::D   B::::B     B:::::B
+                                                               T:::::T        S:::::S              D:::::D     D:::::D  B::::B     B:::::B
+                                                               T:::::T         S::::SSSS           D:::::D     D:::::D  B::::BBBBBB:::::B
+                                                               T:::::T          SS::::::SSSSS      D:::::D     D:::::D  B:::::::::::::BB
+                                                               T:::::T            SSS::::::::SS    D:::::D     D:::::D  B::::BBBBBB:::::B
+                                                               T:::::T               SSSSSS::::S   D:::::D     D:::::D  B::::B     B:::::B
+                                                               T:::::T                    S:::::S  D:::::D     D:::::D  B::::B     B:::::B
+                                                               T:::::T                    S:::::S  D:::::D    D:::::D   B::::B     B:::::B
+                                                             TT:::::::TT      SSSSSSS     S:::::SDDD:::::DDDDD:::::D  BB:::::BBBBBB::::::B
+                                                             T:::::::::T      S::::::SSSSSS:::::SD:::::::::::::::DD   B:::::::::::::::::B
+                                                             T:::::::::T      S:::::::::::::::SS D::::::::::::DDD     B::::::::::::::::B
+                                                             TTTTTTTTTTT       SSSSSSSSSSSSSSS   DDDDDDDDDDDDD        BBBBBBBBBBBBBBBBB

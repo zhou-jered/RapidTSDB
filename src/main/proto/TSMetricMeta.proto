@@ -1,0 +1,15 @@
+syntax="proto3";
+
+
+message DataPoint {
+    int32 offsetTime=1;
+    int32 data=2;
+}
+
+message TSDBBlock {
+    int64 baseTime = 1;
+    repeated DataPoint dps = 2;
+    int32 tagk_uid = 3;
+    int32 tagv_uid = 4;
+}
+

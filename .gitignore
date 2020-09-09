@@ -1,0 +1,11 @@
+idea
+*.imp
+*.iml
+target
+local
+local*
+.idea
+run.sh
+*.data
+*.idx
+*.aol
