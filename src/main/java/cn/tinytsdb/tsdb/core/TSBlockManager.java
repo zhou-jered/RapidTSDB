@@ -123,10 +123,6 @@ public class TSBlockManager implements Persistently, Initializer, Closer {
         return tsBlock;
     }
 
-    public TSBlock newNextTsBlock(TSBlock currentBlock) {
-        return null;
-    }
-
 
     /**
      * persist a TSBlock

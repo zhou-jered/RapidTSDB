@@ -15,6 +15,10 @@ import static cn.tinytsdb.tsdb.core.ByteMask.RIGHT_MASK;
 @Log4j2
 public class TSBlock {
 
+    /**
+     * base time always the seconds unit,
+     * this values won't must writen to the series data
+     */
     @Getter
     private long baseTime;
     @Getter
@@ -31,8 +35,9 @@ public class TSBlock {
     private Double preWrittenValue;
     private TSDB.DoubleXorResult preWrittenValueXorResult;
 
+    @Getter
     private TimeUtils.TimeUnitAdaptor timeUnitAdapter;
-    private TimeUtils.TimeUnitAdaptor secondAdapter = TimeUtils.TimeUnitAdaptorFactory.getTimeAdaptor("s");
+    private static final TimeUtils.TimeUnitAdaptor secondAdapter = TimeUtils.TimeUnitAdaptorFactory.getTimeAdaptor("s");
 
     /**
      * data point int flat mode
@@ -131,6 +136,11 @@ public class TSBlock {
 
     void frzeeWrite() {
         this.writeable = false;
+    }
+
+    TSBlock newNextTsBlock(TSBlock currentBlock) {
+        long nextBaseSecond = currentBlock.getBaseTime()+currentBlock.getBlockLengthSeconds();
+        TSBlock tsBlock = new TSBlock(nextBaseSecond, currentBlock.getBlockLengthSeconds(), timeUnitAdapter);
     }
 
     private void appendValue(double value) {
