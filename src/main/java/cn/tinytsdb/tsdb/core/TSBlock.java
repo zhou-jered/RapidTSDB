@@ -141,6 +141,7 @@ public class TSBlock {
     TSBlock newNextTsBlock(TSBlock currentBlock) {
         long nextBaseSecond = currentBlock.getBaseTime()+currentBlock.getBlockLengthSeconds();
         TSBlock tsBlock = new TSBlock(nextBaseSecond, currentBlock.getBlockLengthSeconds(), timeUnitAdapter);
+        return tsBlock;
     }
 
     private void appendValue(double value) {

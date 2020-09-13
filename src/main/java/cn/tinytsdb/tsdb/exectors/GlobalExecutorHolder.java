@@ -1,9 +1,12 @@
 package cn.tinytsdb.tsdb.exectors;
 
 import cn.tinytsdb.tsdb.config.TSDBConfig;
+import lombok.extern.log4j.Log4j2;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -11,9 +14,11 @@ import java.util.concurrent.TimeUnit;
 /**
  *
  */
+@Log4j2
 public class GlobalExecutorHolder {
 
     private ThreadPoolExecutor threadPoolExecutor;
+    private ThreadPoolExecutor failedTaskExecutor;
     private ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
 
     private GlobalExecutorHolder() {
@@ -31,6 +36,28 @@ public class GlobalExecutorHolder {
         return scheduledExecutorService;
     }
 
+    public void submitFailedTask(Runnable failedTask) {
+        if (failedTaskExecutor == null) {
+            TSDBConfig config = TSDBConfig.getConfigInstance();
+            synchronized (this) {
+                if (failedTaskExecutor == null) {
+                    int qSize = config.getFailedTaskQueueSize();
+                    if (qSize < 0) {
+                        qSize = Integer.MAX_VALUE;
+                    }
+                    failedTaskExecutor = new ThreadPoolExecutor(config.getFailedTaskExecutorIoCore(), config.getFailedTaskExecutorIoMax(), 1, TimeUnit.HOURS, new LinkedBlockingQueue<>(qSize));
+                    failedTaskExecutor.setRejectedExecutionHandler(new RejectedExecutionHandler() {
+                        @Override
+                        public void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
+                            log.error("Failed Task Queue Full, Task Rejected, {}", r);
+                        }
+                    });
+                }
+            }
+            failedTaskExecutor.submit(failedTask);
+        }
+    }
+
     /**
      * return an integer which between 0 to 100, to indicate the system load level,
      * Some low priority task may depend this method result
@@ -39,7 +66,7 @@ public class GlobalExecutorHolder {
      */
     public int getSystemLoadLevel() {
         int approximate = (int) (100 - threadPoolExecutor.getTaskCount());
-        return approximate < 0 ? -1: approximate;
+        return approximate < 0 ? -1 : approximate;
     }
 
 

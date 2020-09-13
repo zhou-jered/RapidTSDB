@@ -40,6 +40,9 @@ public class BinaryUtils {
 
 
     public static String hexBytes(byte[] bytes) {
+        if(bytes==null) {
+            return "";
+        }
         String hex = "";
         for (byte b : bytes) {
             String bHex = Long.toHexString(b);

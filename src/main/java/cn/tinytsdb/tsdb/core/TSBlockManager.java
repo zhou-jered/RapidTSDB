@@ -3,43 +3,33 @@ package cn.tinytsdb.tsdb.core;
 import cn.tinytsdb.tsdb.config.MetricConfig;
 import cn.tinytsdb.tsdb.config.TSDBConfig;
 import cn.tinytsdb.tsdb.core.persistent.Persistently;
+import cn.tinytsdb.tsdb.core.persistent.file.FileLocation;
+import cn.tinytsdb.tsdb.exectors.GlobalExecutorHolder;
 import cn.tinytsdb.tsdb.lifecycle.Closer;
 import cn.tinytsdb.tsdb.lifecycle.Initializer;
 import cn.tinytsdb.tsdb.store.StoreHandler;
 import cn.tinytsdb.tsdb.store.StoreHandlerFactory;
-import cn.tinytsdb.tsdb.utils.BinaryUtils;
 import cn.tinytsdb.tsdb.utils.TimeUtils;
 import lombok.extern.log4j.Log4j2;
-import org.apache.commons.lang.ClassUtils;
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.lang.math.RandomUtils;
-import sun.reflect.generics.reflectiveObjects.LazyReflectiveObjectGenerator;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
-import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.RandomAccessFile;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.ServiceLoader;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
-import java.util.logging.SocketHandler;
+import java.util.concurrent.ThreadPoolExecutor;
 
 /**
- * TSBlock Logical Manager
+ * TSBlock Logical Manager, File Implementation
  * response for @TSBlock store, search, compress
  */
 @Log4j2
-public class TSBlockManager implements Persistently, Initializer, Closer {
+public class TSBlockManager  extends AbstractTSBlockManager implements Persistently, Initializer, Closer {
 
     private final static String METRIC_LOCATION_SEPARATOR_FILE = "mp.idx";
 
@@ -47,11 +37,13 @@ public class TSBlockManager implements Persistently, Initializer, Closer {
 
     StoreHandler storeHandler;
 
-    private static final TimeUtils.TimeUnitAdaptor TIME_UNIT_ADAPTOR_SECONDS = TimeUtils.ADAPTER_SECONDS;
     private static final int BLOCK_SIZE_SECONDS = 2 * 60;
 
     private Map<Integer, TSBlock> currentBlockCache = new ConcurrentHashMap<>(10240);
     private Map<Integer, int[]> metricLocationSeparator = new ConcurrentHashMap<>(10240);
+
+    GlobalExecutorHolder executorHolder = GlobalExecutorHolder.getInstance();
+    ThreadPoolExecutor ioExecutor = executorHolder.ioExecutor();
 
     public TSBlockManager(TSDBConfig tsdbConfig) {
         this.tsdbConfig = tsdbConfig;
@@ -129,8 +121,25 @@ public class TSBlockManager implements Persistently, Initializer, Closer {
      *
      * @param tsBlock
      */
-    public void persistTSBlock(TSBlock tsBlock) {
+    public void persistTSBlock(int metricId, TSBlock tsBlock) {
         TSBlockMeta blockMeta = createTSBlockMeta(tsBlock);
+        long baseTime = tsBlock.getBaseTime();
+        baseTime = TIME_UNIT_ADAPTOR_SECONDS.adapt(baseTime);
+        long currentSeconds = TimeUtils.currentTimestamp();
+        long todayBase = TimeUtils.truncateDaySeconds(currentSeconds);
+        if (baseTime >= todayBase) {
+
+        }
+
+    }
+
+    @Override
+    public void persistTSBlockSync(int metricId, TSBlock tsBlock) {
+        persistTSBlock(metricId, tsBlock);
+    }
+
+    @Override
+    public void persistTSBlockAsync(int metricId, TSBlock tsBlock) {
 
     }
 
@@ -142,28 +151,81 @@ public class TSBlockManager implements Persistently, Initializer, Closer {
         return null;
     }
 
-    private TSBlockMeta createTSBlockMeta(TSBlock tsBlock) {
-        tsBlock.frzeeWrite();
-        TSBlockMeta blockMeta = new TSBlockMeta();
-        blockMeta.setBaseTime(TIME_UNIT_ADAPTOR_SECONDS.adapt(tsBlock.getBaseTime()));
-        blockMeta.setDpsSize(tsBlock.getDataPoints().size());
-        blockMeta.setTimeBitsLen(tsBlock.getTime().getTotalBitsLength());
-        blockMeta.setValuesBitsLen(tsBlock.getValues().getTotalBitsLength());
 
-        try {
-            MessageDigest messageDigest = MessageDigest.getInstance("md5");
-            messageDigest.update(tsBlock.getTime().getData(), 0, tsBlock.getTime().getBytesOffset());
-            messageDigest.update(tsBlock.getValues().getData(), 0, tsBlock.getValues().getBytesOffset());
-            byte[] bs = messageDigest.digest();
-            String md5 = BinaryUtils.hexBytes(bs);
-            blockMeta.setMd5Checksum(md5);
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
+    static class SimpleTSBlockStoreTask implements Runnable {
+        private final static Logger log = LogManager.getLogger("asf");
+        private FileLocation fileLocation;
+        private TSBlock tsBlock;
+        private StoreHandler storeHandler;
+
+        public SimpleTSBlockStoreTask(FileLocation fileLocation, TSBlock tsBlock, StoreHandler storeHandler) {
+            this.fileLocation = fileLocation;
+            this.tsBlock = tsBlock;
+            this.storeHandler = storeHandler;
         }
 
-        return blockMeta;
+        @Override
+        public void run() {
+            TSBlockMeta blockMeta = createTSBlockMeta(tsBlock);
+            if(log.isDebugEnabled()) {
+                log.debug("Store {}, dpsSize:{}, md5:{}, file:{}", blockMeta.getBaseTime(), blockMeta.getDpsSize(), blockMeta.getMd5Checksum(), fileLocation);
+            }
+            final String fullFilename = fileLocation.getPathWithFilename();
+            if(storeHandler.fileExisted(fullFilename)) {
+                log.warn("Store {}, file already Existed. Overrided", blockMeta.getSimpleInfo());
+            }
+            try {
+                OutputStream outputStream = storeHandler.getFileOutputStream(fullFilename);
+                TSBytes timeBytes = tsBlock.getTime();
+                TSBytes valBytes = tsBlock.getValues();
 
+                outputStream.write(blockMeta.series());
+
+            } catch (IOException e) {
+                e.printStackTrace();
+                log.error("Write File {} Exception", fileLocation.getPathWithFilename(), e);
+                GlobalExecutorHolder.getInstance().submitFailedTask(this);
+            }
+
+
+        }
     }
 
+    static class OldTsBlockUpdateTask implements Runnable {
+
+        private int metricId;
+        private TSBlock tsBlock;
+
+        public OldTsBlockUpdateTask(int metricId, TSBlock tsBlock) {
+            this.metricId = metricId;
+            this.tsBlock = tsBlock;
+        }
+
+        @Override
+        public void run() {
+
+        }
+    }
+
+    private static class FilenameStrategy {
+        public static String getTodayBlockFilename(int metricId, long baseTimeSeconds) {
+            return "T" + metricId + ":" + baseTimeSeconds + ".data";
+        }
+
+        public static String getDailyBlockFilename(int metricId, long timeSeconds) {
+            timeSeconds = TimeUtils.truncateDaySeconds(timeSeconds);
+            return "D"+metricId+":"+timeSeconds+".data";
+        }
+
+        public static String getMonthBlockFilename(int metricId, long timeSeconds) {
+            timeSeconds = TimeUtils.truncateMonthSeconds(timeSeconds);
+            return "M"+metricId+":"+timeSeconds+".data";
+        }
+
+        public static String getYearBlockFilename(int metricId, long timeSeconds) {
+            timeSeconds = TimeUtils.truncateYearSeconds(timeSeconds);
+            return "Y"+metricId+":"+ timeSeconds+".data";
+        }
+    }
 
 }

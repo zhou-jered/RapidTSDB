@@ -3,6 +3,8 @@ package cn.tinytsdb.tsdb.core;
 import com.google.common.primitives.Longs;
 import lombok.Getter;
 
+import java.io.Serializable;
+
 import static cn.tinytsdb.tsdb.core.ByteMask.RIGHT_MASK;
 
 public class TSBytes {
