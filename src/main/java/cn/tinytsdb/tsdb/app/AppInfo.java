@@ -6,6 +6,8 @@ import java.util.List;
 
 public class AppInfo {
 
+    public static final String TEMPFILE = System.getProperty("java.io.tmpdir");
+
     private static List<CmdArgs> allArgs = Lists.newArrayList();
 
     public static String getVersion() {

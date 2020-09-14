@@ -8,7 +8,7 @@
   <artifactId>TinyTSDB</artifactId>
   <version>1.0-SNAPSHOT</version>
 
-  <name>TinyTSDB</name>
+  <name>RapidTSDB</name>
 
   <url>https://tingtsdb.flowersouth.com</url>
   <packaging>jar</packaging>

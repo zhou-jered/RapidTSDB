@@ -1,6 +1,5 @@
 package cn.tinytsdb.tsdb.core;
 
-import cn.tinytsdb.tsdb.utils.BinaryUtils;
 import cn.tinytsdb.tsdb.utils.TimeUtils;
 
 import java.security.MessageDigest;
@@ -29,21 +28,44 @@ public abstract class AbstractTSBlockManager {
 
     public abstract Iterator<TSBlock> getBlockStreamByTimeRange(int metricId, long start, long end);
 
-    protected static TSBlockMeta createTSBlockMeta(TSBlock tsBlock) {
-        tsBlock.frzeeWrite();
+    protected static TSBlockMeta createTSBlockMeta(TSBlockSnapshot snapshot) {
+
         TSBlockMeta blockMeta = new TSBlockMeta();
-        blockMeta.setBaseTime(TIME_UNIT_ADAPTOR_SECONDS.adapt(tsBlock.getBaseTime()));
-        blockMeta.setDpsSize(tsBlock.getDataPoints().size());
-        blockMeta.setTimeBitsLen(tsBlock.getTime().getTotalBitsLength());
-        blockMeta.setValuesBitsLen(tsBlock.getValues().getTotalBitsLength());
+        blockMeta.setBaseTime(TIME_UNIT_ADAPTOR_SECONDS.adapt(snapshot.getTsBlock().getBaseTime()));
+        blockMeta.setDpsSize(snapshot.getDpsSize());
+        blockMeta.setTimeBitsLen(snapshot.getTimeBitsLength());
+        blockMeta.setValuesBitsLen(snapshot.getValuesBitsLength());
+
 
         try {
+            byte lastDataByte;
             MessageDigest messageDigest = MessageDigest.getInstance("md5");
-            messageDigest.update(tsBlock.getTime().getData(), 0, tsBlock.getTime().getBytesOffset());
-            messageDigest.update(tsBlock.getValues().getData(), 0, tsBlock.getValues().getBytesOffset());
-            byte[] bs = messageDigest.digest();
-            String md5 = BinaryUtils.hexBytes(bs);
-            blockMeta.setMd5Checksum(bs);
+
+            int bytesLength = snapshot.getTimeBytesLength();
+            int bits = snapshot.getTimeBitsLength();
+            if (bits % 8 != 0 && bytesLength > 1) {
+                messageDigest.update(snapshot.getTsBlock().getTime().getData(), 0, bytesLength - 1);
+                lastDataByte = snapshot.getTsBlock().getTime().getData()[bytesLength - 1];
+                lastDataByte &= ByteMask.LEFT_MASK[bits % 8];
+                messageDigest.update(lastDataByte);
+            } else {
+                messageDigest.update(snapshot.getTsBlock().getTime().getData(), 0, snapshot.getTimeBytesLength());
+            }
+
+
+            bytesLength = snapshot.getValuesBytesLength();
+            bits = snapshot.getValuesBitsLength();
+            if (bits % 8 != 0 && bytesLength > 1) {
+                messageDigest.update(snapshot.getTsBlock().getValues().getData(), 0, bytesLength - 1);
+                lastDataByte = snapshot.getTsBlock().getValues().getData()[bytesLength - 1];
+                lastDataByte &= ByteMask.LEFT_MASK[bits % 8];
+                messageDigest.update(lastDataByte);
+            } else {
+                messageDigest.update(snapshot.getTsBlock().getValues().getData(), 0, snapshot.getValuesBytesLength());
+            }
+
+            byte[] md5 = messageDigest.digest();
+            blockMeta.setMd5Checksum(md5);
         } catch (NoSuchAlgorithmException e) {
             e.printStackTrace();
         }
@@ -51,4 +73,6 @@ public abstract class AbstractTSBlockManager {
         return blockMeta;
 
     }
+
+
 }

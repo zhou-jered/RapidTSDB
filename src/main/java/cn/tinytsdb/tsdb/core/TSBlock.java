@@ -9,6 +9,8 @@ import lombok.extern.log4j.Log4j2;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static cn.tinytsdb.tsdb.core.ByteMask.RIGHT_MASK;
 
@@ -30,7 +32,9 @@ public class TSBlock {
     private TSBytes values;
     private Long preTime;
     private int preTimeDelta;
-    private volatile boolean writeable = true;
+    protected AtomicInteger dataVersion = new AtomicInteger(0);
+    @Getter
+    protected volatile int clearedVersion = -1;
 
     private Double preWrittenValue;
     private TSDB.DoubleXorResult preWrittenValueXorResult;
@@ -72,24 +76,18 @@ public class TSBlock {
      * @param timestamp
      * @param val
      */
-    public void appendDataPoint(long timestamp, double val) {
-        if (writeable) {
-            if (!inBlock(timestamp)) {
-                throw new BlockDataMissMatchException(timestamp, baseTime, blockLengthSeconds);
-            }
-            appendTime(timestamp);
-            appendValue(val);
-        } else {
-            throw new RuntimeException("Block frozen");
+    public synchronized void appendDataPoint(long timestamp, double val) {
+        if (!inBlock(timestamp)) {
+            throw new BlockDataMissMatchException(timestamp, baseTime, blockLengthSeconds);
         }
+        appendTime(timestamp);
+        appendValue(val);
+        dataVersion.incrementAndGet();
     }
 
-    public void updateDataPoint(long timestamp, double val) {
-        if (writeable) {
-            appendDataPoint(timestamp, val);
-        } else {
-            throw new RuntimeException("Block frozen");
-        }
+    public synchronized TSBlockSnapshot snapshot() {
+        TSBlockSnapshot snapshot = new TSBlockSnapshot(this);
+        return snapshot;
     }
 
     public double getMemoryUsedKB() {
@@ -134,12 +132,9 @@ public class TSBlock {
         preTime = t;
     }
 
-    void frzeeWrite() {
-        this.writeable = false;
-    }
 
     TSBlock newNextTsBlock(TSBlock currentBlock) {
-        long nextBaseSecond = currentBlock.getBaseTime()+currentBlock.getBlockLengthSeconds();
+        long nextBaseSecond = currentBlock.getBaseTime() + currentBlock.getBlockLengthSeconds();
         TSBlock tsBlock = new TSBlock(nextBaseSecond, currentBlock.getBlockLengthSeconds(), timeUnitAdapter);
         return tsBlock;
     }
@@ -362,6 +357,18 @@ public class TSBlock {
         v <<= (64 - bitLen);
         v >>= (64 - bitLen);
         return v;
+    }
+
+    public void markVersionClear(int version) {
+        this.clearedVersion = version;
+    }
+
+    public boolean isDirty() {
+        return dataVersion.get() == clearedVersion;
+    }
+
+    public int getDataVersion() {
+        return dataVersion.get();
     }
 
 }

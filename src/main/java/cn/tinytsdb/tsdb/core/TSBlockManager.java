@@ -16,11 +16,8 @@ import org.apache.logging.log4j.Logger;
 
 import java.io.DataInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadPoolExecutor;
 
@@ -40,7 +37,9 @@ public class TSBlockManager  extends AbstractTSBlockManager implements Persisten
     private static final int BLOCK_SIZE_SECONDS = 2 * 60;
 
     private Map<Integer, TSBlock> currentBlockCache = new ConcurrentHashMap<>(10240);
+    private Map<Integer, TSBlock> lastBlockCache = new WeakHashMap<>(4096);
     private Map<Integer, int[]> metricLocationSeparator = new ConcurrentHashMap<>(10240);
+    private List<HistoryTSBlock> historyTSBlockList = new LinkedList<>();
 
     GlobalExecutorHolder executorHolder = GlobalExecutorHolder.getInstance();
     ThreadPoolExecutor ioExecutor = executorHolder.ioExecutor();
@@ -71,29 +70,33 @@ public class TSBlockManager  extends AbstractTSBlockManager implements Persisten
 
     public TSBlock getCurrentWriteBlock(int metricId, long timestamp) {
         TSBlock currentBlock = currentBlockCache.get(metricId);
-        if (currentBlock == null) {
+        if(currentBlock==null) {
             currentBlock = newTSBlock(metricId, timestamp);
             TSBlock existedBlocks = currentBlockCache.putIfAbsent(metricId, currentBlock);
-            if (existedBlocks == null) {
-                return currentBlock;
-            } else {
-                return existedBlocks;
+            if (existedBlocks != null) {
+                currentBlock = existedBlocks;
             }
         }
-        if (currentBlock.inBlock(timestamp)) {
+
+        if(currentBlock.inBlock(timestamp)) {
             return currentBlock;
         }
 
-        // A new Round Come here
         if (currentBlock.afterBlock(timestamp)) {
-
+            // A new Round Come here
             TSBlock expiredBlock = currentBlock;
             // persist expired current block todo
-
+            persistTSBlock(metricId, currentBlock);
+            lastBlockCache.put(metricId, currentBlock);
 
             currentBlock = newTSBlock(metricId, timestamp);
             currentBlockCache.put(metricId, currentBlock);
             return currentBlock;
+        }
+
+        TSBlock lastBlock = lastBlockCache.get(metricId);
+        if(lastBlock!=null && lastBlock.inBlock(timestamp)) {
+            return lastBlock;
         }
 
         return searchHistoryBlock(metricId, timestamp);
@@ -122,7 +125,7 @@ public class TSBlockManager  extends AbstractTSBlockManager implements Persisten
      * @param tsBlock
      */
     public void persistTSBlock(int metricId, TSBlock tsBlock) {
-        TSBlockMeta blockMeta = createTSBlockMeta(tsBlock);
+        TSBlockMeta blockMeta = createTSBlockMeta(tsBlock.snapshot());
         long baseTime = tsBlock.getBaseTime();
         baseTime = TIME_UNIT_ADAPTOR_SECONDS.adapt(baseTime);
         long currentSeconds = TimeUtils.currentTimestamp();
@@ -166,7 +169,7 @@ public class TSBlockManager  extends AbstractTSBlockManager implements Persisten
 
         @Override
         public void run() {
-            TSBlockMeta blockMeta = createTSBlockMeta(tsBlock);
+            TSBlockMeta blockMeta = createTSBlockMeta(tsBlock.snapshot());
             if(log.isDebugEnabled()) {
                 log.debug("Store {}, dpsSize:{}, md5:{}, file:{}", blockMeta.getBaseTime(), blockMeta.getDpsSize(), blockMeta.getMd5Checksum(), fileLocation);
             }
