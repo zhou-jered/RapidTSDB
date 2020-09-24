@@ -82,7 +82,7 @@ public class TSBlock {
         }
         appendTime(timestamp);
         appendValue(val);
-        dataVersion.incrementAndGet();
+        incrDataVersion();
     }
 
     public synchronized TSBlockSnapshot snapshot() {
@@ -357,6 +357,10 @@ public class TSBlock {
         v <<= (64 - bitLen);
         v >>= (64 - bitLen);
         return v;
+    }
+
+    public void incrDataVersion() {
+        dataVersion.incrementAndGet();
     }
 
     public void markVersionClear(int version) {

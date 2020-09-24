@@ -44,10 +44,9 @@ public class TSBlockManager  extends AbstractTSBlockManager implements Persisten
     GlobalExecutorHolder executorHolder = GlobalExecutorHolder.getInstance();
     ThreadPoolExecutor ioExecutor = executorHolder.ioExecutor();
 
-    public TSBlockManager(TSDBConfig tsdbConfig) {
+    TSBlockManager(TSDBConfig tsdbConfig) {
         this.tsdbConfig = tsdbConfig;
         storeHandler = StoreHandlerFactory.getStoreHandler();
-
     }
 
     @Override
@@ -69,6 +68,7 @@ public class TSBlockManager  extends AbstractTSBlockManager implements Persisten
     }
 
     public TSBlock getCurrentWriteBlock(int metricId, long timestamp) {
+
         TSBlock currentBlock = currentBlockCache.get(metricId);
         if(currentBlock==null) {
             currentBlock = newTSBlock(metricId, timestamp);
@@ -79,6 +79,7 @@ public class TSBlockManager  extends AbstractTSBlockManager implements Persisten
         }
 
         if(currentBlock.inBlock(timestamp)) {
+
             return currentBlock;
         }
 
@@ -155,6 +156,9 @@ public class TSBlockManager  extends AbstractTSBlockManager implements Persisten
     }
 
 
+    /**
+     * Just write A TSBlock into a single file
+     */
     static class SimpleTSBlockStoreTask implements Runnable {
         private final static Logger log = LogManager.getLogger("asf");
         private FileLocation fileLocation;
@@ -194,6 +198,10 @@ public class TSBlockManager  extends AbstractTSBlockManager implements Persisten
         }
     }
 
+    /**
+     * write tsblock into a compressed file.
+     * file seek invovled
+     */
     static class OldTsBlockUpdateTask implements Runnable {
 
         private int metricId;
