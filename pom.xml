@@ -115,7 +115,7 @@
         <artifactId>spring-boot-maven-plugin</artifactId>
         <version>2.1.0.RELEASE</version>
         <configuration>
-          <mainClass>cn.tinytsdb.tsdb.TinyTSDBApplication</mainClass>
+          <mainClass>cn.rapidtsdb.tsdb.TinyTSDBApplication</mainClass>
         </configuration>
         <executions>
           <execution>
