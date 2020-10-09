@@ -60,12 +60,20 @@ public class TSDB implements Initializer, Closer {
         appendOnlyLogManager.init();
         initMemDb();
         initScheduleTimeTask();
+        long currentMills = TimeUtils.currentMills();
+        long initDelay = currentMills - currentMills % TimeUnit.HOURS.toMillis(2);
+        initDelay = Math.max(initDelay, TimeUnit.MINUTES.toMillis(30));
+        globalExecutor.scheduledExecutor()
+                .scheduleAtFixedRate(() -> blockManager.triggerPersist(),
+                        initDelay, TimeUnit.HOURS.toMillis(2), TimeUnit.HOURS);
     }
 
 
     @Override
     public void close() {
+        log.info("Closing TSDB");
         appendOnlyLogManager.close();
+        log.info("TSDB Close completed");
     }
 
 
