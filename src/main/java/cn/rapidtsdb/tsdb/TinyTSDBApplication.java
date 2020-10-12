@@ -37,6 +37,7 @@ public class TinyTSDBApplication implements Initializer, Runner {
 
 
     public static void main(String[] args) {
+
         log.debug("debug");
         Map<String, String> configKV = new ConcurrentHashMap<>(128);
         Map<String, String> appProperties = getApplicationProerties();
