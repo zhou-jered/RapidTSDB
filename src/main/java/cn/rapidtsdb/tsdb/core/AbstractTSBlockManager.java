@@ -1,5 +1,6 @@
 package cn.rapidtsdb.tsdb.core;
 
+import cn.rapidtsdb.tsdb.core.persistent.TSDBCheckPointManager;
 import cn.rapidtsdb.tsdb.utils.TimeUtils;
 
 import java.security.MessageDigest;
@@ -13,6 +14,8 @@ import java.util.Set;
  * Define the Manager Rules of TSBlocks.
  */
 public abstract class AbstractTSBlockManager {
+
+    protected TSDBCheckPointManager checkPointManager;
 
     protected static final TimeUtils.TimeUnitAdaptor TIME_UNIT_ADAPTOR_SECONDS = TimeUtils.ADAPTER_SECONDS;
 
