@@ -7,4 +7,8 @@ public class TSDBCheckPointManager implements Initializer, Persistently {
     public void init() {
 
     }
+
+    public void savePoint(long point) {
+        
+    }
 }

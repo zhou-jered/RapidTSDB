@@ -19,13 +19,12 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -44,14 +43,14 @@ public class TSBlockManager extends AbstractTSBlockManager implements Persistent
 
     private static final int BLOCK_SIZE_SECONDS = 2 * 60;
 
-    private Map<Integer, TSBlock> currentBlockCache = new ConcurrentHashMap<>(10240);
-    private Map<Integer, TSBlock> lastBlockCache = new WeakHashMap<>(4096);
+
+    private AtomicReference<Map<Integer, TSBlock>> currentBlockCacheRef = new AtomicReference<>();
+    private Map<Integer, TSBlock> lastBlockCache = null;
 
     /**
-     *
+     * ???
      */
     private Map<Integer, int[]> metricLocationSeparator = new ConcurrentHashMap<>(10240);
-    private List<HistoryTSBlock> historyTSBlockList = new LinkedList<>();
 
     GlobalExecutorHolder globalExecutor = GlobalExecutorHolder.getInstance();
     ThreadPoolExecutor ioExecutor = globalExecutor.ioExecutor();
@@ -68,6 +67,7 @@ public class TSBlockManager extends AbstractTSBlockManager implements Persistent
 
     @Override
     public void init() {
+        currentBlockCacheRef.set(newTSMap());
         if (storeHandler.fileExisted(METRIC_LOCATION_SEPARATOR_FILE)) {
             try {
                 DataInputStream dataInputStream = new DataInputStream(storeHandler.openFileInputStream(METRIC_LOCATION_SEPARATOR_FILE));
@@ -80,7 +80,7 @@ public class TSBlockManager extends AbstractTSBlockManager implements Persistent
     }
 
     public TSBlock getCurrentWriteBlock(int metricId, long timestamp) {
-
+        Map<Integer, TSBlock> currentBlockCache = currentBlockCacheRef.get();
         TSBlock currentBlock = currentBlockCache.get(metricId);
         if (currentBlock == null) {
             currentBlock = newTSBlock(metricId, timestamp);
@@ -110,12 +110,9 @@ public class TSBlockManager extends AbstractTSBlockManager implements Persistent
         if (lastBlock != null && lastBlock.inBlock(timestamp)) {
             return lastBlock;
         }
-        return searchHistoryBlock(metricId, timestamp);
-    }
-
-    public HistoryTSBlock searchHistoryBlock(int metricId, long timestamp) {
         return null;
     }
+    
 
     public TSBlock newTSBlock(int metricId, long timestamp) {
         TSBlock tsBlock = null;
@@ -150,16 +147,13 @@ public class TSBlockManager extends AbstractTSBlockManager implements Persistent
 
     }
 
-    @Override
-    public void persistTSBlockSync(int metricId, TSBlock tsBlock) {
-        persistTSBlock(metricId, tsBlock);
-    }
 
     @Override
-    public void persistTSBlockAsync(int metricId, TSBlock tsBlock) {
-
+    public void triggerPersist() {
+        Map<Integer, TSBlock> newRoundTSMap = newTSMap();
+        Map old = currentBlockCacheRef.get();
+        currentBlockCacheRef.compareAndSet(old, newRoundTSMap);
     }
-
 
     public List<TSBlock> getBlockWithTimeRange(int metricId, long start, long end) {
         return null;
@@ -171,6 +165,10 @@ public class TSBlockManager extends AbstractTSBlockManager implements Persistent
 
     private void flushMemoryBlock() {
 
+    }
+
+    public Map<Integer, TSBlock> newTSMap() {
+        return new ConcurrentHashMap<Integer, TSBlock>();
     }
 
     /**

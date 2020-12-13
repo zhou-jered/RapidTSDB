@@ -27,6 +27,9 @@ public class TSDBConfig {
     private String storeHandlerImplClass;
 
     @Getter
+    private RpcConfig rpc;
+
+    @Getter
     private Boolean printBanner = true;
 
     //io executor config
@@ -35,11 +38,14 @@ public class TSDBConfig {
     @Getter
     private Integer executorIoMax = 5;
 
-    @Getter Integer failedTaskExecutorIoCore = 1;
+    @Getter
+    Integer failedTaskExecutorIoCore = 1;
 
-    @Getter Integer failedTaskExecutorIoMax = 5;
+    @Getter
+    Integer failedTaskExecutorIoMax = 5;
 
-    @Getter Integer failedTaskQueueSize = 4096;
+    @Getter
+    Integer failedTaskQueueSize = 4096;
 
     @Getter
     private AdvancedConfig advancedConfig = new AdvancedConfig();

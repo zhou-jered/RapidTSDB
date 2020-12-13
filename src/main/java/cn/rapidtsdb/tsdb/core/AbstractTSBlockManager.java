@@ -23,18 +23,19 @@ public abstract class AbstractTSBlockManager {
 
     public abstract TSBlock getCurrentWriteBlock(int metricId, long timestamp);
 
-    public abstract HistoryTSBlock searchHistoryBlock(int metricId, long timestamp);
-
     public abstract TSBlock newTSBlock(int metricId, long timestamp);
 
-    public abstract void persistTSBlockSync(int metricId, TSBlock tsBlock);
 
-    public abstract void persistTSBlockAsync(int metricId, TSBlock tsBlock);
+    /**
+     * Every Two Hours Trigger once
+     */
+    public abstract void triggerPersist();
 
     public abstract List<TSBlock> getBlockWithTimeRange(int metricId, long start, long end);
 
     public abstract Iterator<TSBlock> getBlockStreamByTimeRange(int metricId, long start, long end);
 
+    @Deprecated
     public void markDirtyBlock(TSBlock block) {
         dirtyBlocks.add(block);
     }

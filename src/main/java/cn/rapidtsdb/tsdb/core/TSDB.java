@@ -6,6 +6,7 @@ import cn.rapidtsdb.tsdb.core.persistent.MetricsKeyManager;
 import cn.rapidtsdb.tsdb.exectors.GlobalExecutorHolder;
 import cn.rapidtsdb.tsdb.lifecycle.Closer;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
+import cn.rapidtsdb.tsdb.obj.WriteMetricResult;
 import cn.rapidtsdb.tsdb.query.TSQuery;
 import cn.rapidtsdb.tsdb.utils.TimeUtils;
 import lombok.AllArgsConstructor;
@@ -60,42 +61,39 @@ public class TSDB implements Initializer, Closer {
         appendOnlyLogManager.init();
         initMemDb();
         initScheduleTimeTask();
+        long currentMills = TimeUtils.currentMills();
+        long initDelay = currentMills - currentMills % TimeUnit.HOURS.toMillis(2);
+        initDelay = Math.max(initDelay, TimeUnit.MINUTES.toMillis(30));
+        globalExecutor.scheduledExecutor().scheduleAtFixedRate(() -> blockManager.triggerPersist(), initDelay, TimeUnit.HOURS.toMillis(2), TimeUnit.HOURS);
     }
 
 
     @Override
     public void close() {
+        log.info("Closing TSDB");
         appendOnlyLogManager.close();
+        log.info("TSDB Close completed");
     }
 
 
-    public void writeMetric(String metric, double val) throws Exception {
-        writeMetric(metric, val, TimeUtils.currentTimestamp());
+    public WriteMetricResult writeMetric(String metric, double val) throws Exception {
+        return writeMetric(metric, val, TimeUtils.currentTimestamp());
     }
 
-    public void writeMetric(String metric, double val, long timestamp) throws Exception {
+    public WriteMetricResult writeMetric(String metric, double val, long timestamp) {
         if (StringUtils.isBlank(metric)) {
-            throw new Exception("metric can not be blank");
+            return WriteMetricResult.FAILED_METRIC_EMPTY;
         }
         Integer mIdx = metricsKeyManager.getMetricsIndex(metric);
-        appendOnlyLogManager.appendLog(mIdx, timestamp, val);
         TSBlock tsBlock = blockManager.getCurrentWriteBlock(mIdx, timestamp);
-        tsBlock.appendDataPoint(timestamp, val);
+        if (tsBlock != null) {
+            tsBlock.appendDataPoint(timestamp, val);
 
-    }
+            appendOnlyLogManager.appendLog(mIdx, timestamp, val);
 
-    /**
-     * update non current time range blocks,
-     * may disk io involved
-     *
-     * @param metric
-     * @param val
-     * @param timestamp
-     */
-    public void updatePastMetric(String metric, double val, long timestamp) {
-        Integer mIdx = metricsKeyManager.getMetricsIndex(metric);
-        HistoryTSBlock elderBlock = blockManager.searchHistoryBlock(mIdx, timestamp);
-
+            return WriteMetricResult.SUCCESS;
+        }
+        return WriteMetricResult.FAILED_TIME_EXPIRED;
     }
 
     public List<TSDataPoint> queryTimeSeriesData(TSQuery query) {

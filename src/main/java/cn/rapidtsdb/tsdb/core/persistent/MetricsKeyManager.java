@@ -18,6 +18,7 @@ import java.io.InputStream;
 import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -33,7 +34,7 @@ public class MetricsKeyManager implements Initializer, Persistently {
     /**
      * take care of this map's memory usage
      */
-    private AtomicInteger metricKeyIdx = new AtomicInteger(0);
+    private AtomicInteger metricKeyIdx = new AtomicInteger(1);
     private String metricsKeyFile = "mk.data";
     private String metricsKeyIdxFile = "mk.idx";
     private volatile boolean initialized = false;
@@ -68,12 +69,16 @@ public class MetricsKeyManager implements Initializer, Persistently {
         recoverFromFile();
     }
 
+    public Collection<String> getAllMetrics() {
+        return null;
+    }
+
     public int getMetricsIndex(String metrics) {
         if (StringUtils.isEmpty(metrics)) {
             throw new RuntimeException("Empty metrics");
         }
         Integer idx = idxCache.get(metrics);
-        if(idx!=null) {
+        if (idx != null) {
             return idx;
         }
         char[] chars = metrics.toCharArray();
@@ -82,7 +87,7 @@ public class MetricsKeyManager implements Initializer, Persistently {
                 throw new RuntimeException("Illegal Metrics char: " + c + " in metrics:" + metrics);
             }
         }
-        idx =  getMetricsIndexInternal(chars);
+        idx = getMetricsIndexInternal(chars);
         idxCache.put(metrics, idx);
         return idx;
     }

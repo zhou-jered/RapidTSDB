@@ -1,14 +1,14 @@
 package cn.rapidtsdb.tsdb;
 
+import cn.rapidtsdb.tsdb.app.Banner;
 import cn.rapidtsdb.tsdb.config.TSDBConfig;
 import cn.rapidtsdb.tsdb.context.AppContext;
+import cn.rapidtsdb.tsdb.core.TSDB;
 import cn.rapidtsdb.tsdb.exectors.GlobalExecutorHolder;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
 import cn.rapidtsdb.tsdb.lifecycle.Runner;
-import cn.rapidtsdb.tsdb.utils.CliParser;
-import cn.rapidtsdb.tsdb.app.Banner;
-import cn.rapidtsdb.tsdb.core.TSDB;
 import cn.rapidtsdb.tsdb.rpc.RpcManager;
+import cn.rapidtsdb.tsdb.utils.CliParser;
 import cn.rapidtsdb.tsdb.utils.ResourceUtils;
 import com.alibaba.fastjson.JSON;
 import lombok.Setter;
@@ -37,6 +37,7 @@ public class TinyTSDBApplication implements Initializer, Runner {
 
 
     public static void main(String[] args) {
+
         log.debug("debug");
         Map<String, String> configKV = new ConcurrentHashMap<>(128);
         Map<String, String> appProperties = getApplicationProerties();
@@ -60,14 +61,19 @@ public class TinyTSDBApplication implements Initializer, Runner {
 
     @Override
     public void init() {
+        log.info("start to init");
+        tsdb = new TSDB();
+        rpcManager = new RpcManager(tsdb);
+        rpcManager.init();
+        rpcManager.run();
 
-        appContext = AppContext.getDefaultContext();
         registShutdownHook();
     }
 
     @Override
     public void run() {
         log.info("Application Run!!!");
+
     }
 
     private void registShutdownHook() {
@@ -76,6 +82,8 @@ public class TinyTSDBApplication implements Initializer, Runner {
             if (appContext != null) {
                 appContext.close();
             }
+            rpcManager.close();
+            tsdb.close();
             log.info("TSDB ShutDown Finished, Bye.");
         }));
     }
