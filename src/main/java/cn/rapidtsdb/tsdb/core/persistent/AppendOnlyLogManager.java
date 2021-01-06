@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Log4j2
-public class AppendOnlyLogManager implements Initializer, Persistently , Closer {
+public class AppendOnlyLogManager implements Initializer, Persistently, Closer {
 
     private AtomicLong logIdx = new AtomicLong(0);
     private final String AOL_FILE = "aol.data";
@@ -36,7 +36,7 @@ public class AppendOnlyLogManager implements Initializer, Persistently , Closer 
 
     @Override
     public void init() {
-        if(initialized) {
+        if (initialized) {
             return;
         }
         initialized = true;
@@ -45,7 +45,7 @@ public class AppendOnlyLogManager implements Initializer, Persistently , Closer 
             currentLogOs = storeHandler.openFileAppendStream(AOL_FILE);
         } catch (IOException e) {
             e.printStackTrace();
-            log.error("GET AOLOF OUTPUT EX",e);
+            log.error("GET AOLOF OUTPUT EX", e);
             throw new RuntimeException(e);
         }
         recoverLog();
@@ -54,7 +54,7 @@ public class AppendOnlyLogManager implements Initializer, Persistently , Closer 
     public void appendLog(AOLog alog) {
         try {
             currentLogOs.write(alog.getSeri());
-            if(logIdx.incrementAndGet()%2730 == 0) {
+            if (logIdx.incrementAndGet() % 2730 == 0) {
                 currentLogOs.flush(); // flush disk file
             }
         } catch (IOException e) {
@@ -75,11 +75,11 @@ public class AppendOnlyLogManager implements Initializer, Persistently , Closer 
 
     public AOLog[] recoverLog() {
         try {
-            if(storeHandler.fileExisted(AOL_FILE)) {
+            if (storeHandler.fileExisted(AOL_FILE)) {
                 InputStream inputStream = storeHandler.openFileInputStream(AOL_FILE);
-                List<AOLog> aoLogList = new ArrayList<>(inputStream.available()/ AOLog.SERIES_BYTES_LENGTH);
+                List<AOLog> aoLogList = new ArrayList<>(inputStream.available() / AOLog.SERIES_BYTES_LENGTH);
                 byte[] series = new byte[AOLog.SERIES_BYTES_LENGTH];
-                while(inputStream.available()> AOLog.SERIES_BYTES_LENGTH) {
+                while (inputStream.available() > AOLog.SERIES_BYTES_LENGTH) {
                     inputStream.read(series);
                     AOLog aoLog = AOLog.fromSeries(series);
                     aoLogList.add(aoLog);
@@ -100,7 +100,7 @@ public class AppendOnlyLogManager implements Initializer, Persistently , Closer 
 
 
     public boolean resetLogBuf() {
-        if(persistLogIdx()) {
+        if (persistLogIdx()) {
             try {
                 currentLogOs = storeHandler.openFileOutputStream(AOL_FILE);
             } catch (IOException e) {
@@ -113,7 +113,7 @@ public class AppendOnlyLogManager implements Initializer, Persistently , Closer 
     }
 
     private boolean persistLogIdx() {
-        try (OutputStream outputStream = storeHandler.openFileOutputStream(LOG_IDX_FILE)){
+        try (OutputStream outputStream = storeHandler.openFileOutputStream(LOG_IDX_FILE)) {
             IOUtils.write(Longs.toByteArray(logIdx.get()), outputStream);
         } catch (IOException e) {
             e.printStackTrace();
@@ -126,8 +126,10 @@ public class AppendOnlyLogManager implements Initializer, Persistently , Closer 
     @Override
     public void close() {
         try {
-            currentLogOs.flush();
-            currentLogOs.close();
+            if (currentLogOs != null) {
+                currentLogOs.flush();
+                currentLogOs.close();
+            }
             persistLogIdx();
         } catch (IOException e) {
             e.printStackTrace();

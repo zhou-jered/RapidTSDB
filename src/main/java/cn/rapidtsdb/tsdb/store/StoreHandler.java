@@ -5,7 +5,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 /**
- * handle file io, note you need handle io lock youself
+ * handle file io, note you need handle io lock by yourself
  */
 public interface StoreHandler {
 

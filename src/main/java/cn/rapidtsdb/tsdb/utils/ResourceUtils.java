@@ -1,6 +1,6 @@
 package cn.rapidtsdb.tsdb.utils;
 
-import cn.rapidtsdb.tsdb.TinyTSDBApplication;
+import cn.rapidtsdb.tsdb.RapidTSDBApplication;
 import lombok.extern.log4j.Log4j2;
 
 import java.io.File;
@@ -11,7 +11,7 @@ import java.net.URL;
 public class ResourceUtils {
 
     public static URL getResourceUrl(String resourceName) {
-        ClassLoader cl = TinyTSDBApplication.class.getClassLoader();
+        ClassLoader cl = RapidTSDBApplication.class.getClassLoader();
         URL localResourceUrl = cl.getResource(resourceName);
         if (localResourceUrl == null) {
             log.info("FIRST get properties null");

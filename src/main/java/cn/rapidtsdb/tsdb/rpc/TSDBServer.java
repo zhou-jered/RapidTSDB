@@ -14,6 +14,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 
 public class TSDBServer implements Initializer, Runner, Closer {
 
+
     ServerBootstrap serverBootstrap;
     private String ip = "0.0.0.0";
     private int port;
@@ -26,11 +27,11 @@ public class TSDBServer implements Initializer, Runner, Closer {
     @Override
     public void init() {
         TSDBConfig config = TSDBConfig.getConfigInstance();
-        String bindIp = config.getRpc().getGrpc().getIp();
+        String bindIp = config.getRpcGrpcIp();
         if (bindIp != null && bindIp.length() > 0) {
             ip = bindIp;
         }
-        port = config.getRpc().getGrpc().getPort();
+        port = config.getRpcGrpcPort();
         serverBootstrap = new ServerBootstrap();
         //todo configurable
         EventLoopGroup boss = new NioEventLoopGroup(5);

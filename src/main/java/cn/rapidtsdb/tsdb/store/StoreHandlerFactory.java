@@ -21,7 +21,6 @@ public class StoreHandlerFactory {
                 if (ClassUtils.isAssignable(clazz, StoreHandler.class)) {
                     return (StoreHandler) clazz.newInstance();
                 }
-
             } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
                 e.printStackTrace();
             }

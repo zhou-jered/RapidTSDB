@@ -3,6 +3,7 @@ package cn.rapidtsdb.tsdb.core;
 import cn.rapidtsdb.tsdb.config.MetricConfig;
 import cn.rapidtsdb.tsdb.config.TSDBConfig;
 import cn.rapidtsdb.tsdb.core.io.TSBlockWriter;
+import cn.rapidtsdb.tsdb.core.persistent.MetricsKeyManager;
 import cn.rapidtsdb.tsdb.core.persistent.Persistently;
 import cn.rapidtsdb.tsdb.core.persistent.file.FileLocation;
 import cn.rapidtsdb.tsdb.exectors.GlobalExecutorHolder;
@@ -15,7 +16,6 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Iterator;
@@ -35,11 +35,12 @@ import java.util.concurrent.locks.ReentrantLock;
 @Log4j2
 public class TSBlockManager extends AbstractTSBlockManager implements Persistently, Initializer, Closer {
 
-    private final static String METRIC_LOCATION_SEPARATOR_FILE = "mp.idx";
 
-    TSDBConfig tsdbConfig;
+    private TSDBConfig tsdbConfig;
 
-    StoreHandler storeHandler;
+    private StoreHandler storeHandler;
+
+    private MetricsKeyManager metricsKeyManager;
 
     private static final int BLOCK_SIZE_SECONDS = 2 * 60;
 
@@ -68,15 +69,6 @@ public class TSBlockManager extends AbstractTSBlockManager implements Persistent
     @Override
     public void init() {
         currentBlockCacheRef.set(newTSMap());
-        if (storeHandler.fileExisted(METRIC_LOCATION_SEPARATOR_FILE)) {
-            try {
-                DataInputStream dataInputStream = new DataInputStream(storeHandler.openFileInputStream(METRIC_LOCATION_SEPARATOR_FILE));
-                dataInputStream.readInt();
-            } catch (IOException e) {
-                e.printStackTrace();
-                log.error("Read {} file Exception", METRIC_LOCATION_SEPARATOR_FILE, e);
-            }
-        }
     }
 
     public TSBlock getCurrentWriteBlock(int metricId, long timestamp) {
@@ -112,7 +104,7 @@ public class TSBlockManager extends AbstractTSBlockManager implements Persistent
         }
         return null;
     }
-    
+
 
     public TSBlock newTSBlock(int metricId, long timestamp) {
         TSBlock tsBlock = null;

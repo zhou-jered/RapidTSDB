@@ -28,6 +28,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Log4j2
 public class MetricsKeyManager implements Initializer, Persistently {
 
+    private final int STATUS_UNINIT = 1;
+    private final int STATUS_INITIALIZING = 2;
+    private final int STATUS_RUNNING = 3;
+    private AtomicInteger status = new AtomicInteger(STATUS_UNINIT);
+
+
     private TSDBConfig tsdbConfig;
 
     StoreHandler storeHandler;
@@ -37,7 +43,6 @@ public class MetricsKeyManager implements Initializer, Persistently {
     private AtomicInteger metricKeyIdx = new AtomicInteger(1);
     private String metricsKeyFile = "mk.data";
     private String metricsKeyIdxFile = "mk.idx";
-    private volatile boolean initialized = false;
     private String METRICS_LEGAL_CHARS = "plokmijnuhbygvtfcrdxeszwaqPLOKMIJNUHBYGVTFCRDXESZWAQ0987654321@#$-_.+=";
     private TrieNode trieNodeRoot = new TrieNode('0');
     private Kryo kryo = new Kryo();
@@ -57,10 +62,9 @@ public class MetricsKeyManager implements Initializer, Persistently {
 
     @Override
     public void init() {
-        if (initialized) {
+        if (!status.compareAndSet(STATUS_UNINIT, STATUS_INITIALIZING)) {
             return;
         }
-        initialized = true;
         kryo.register(TrieNode.class);
         kryo.register(ArrayList.class);
         if (tsdbConfig.getAdvancedConfig().getMetricsIdxCacheSize() != null && tsdbConfig.getAdvancedConfig().getMetricsIdxCacheSize() > 0) {
@@ -70,12 +74,15 @@ public class MetricsKeyManager implements Initializer, Persistently {
     }
 
     public Collection<String> getAllMetrics() {
-        return null;
+        throw new UnsupportedOperationException("why you call this method?");
     }
 
     public int getMetricsIndex(String metrics) {
         if (StringUtils.isEmpty(metrics)) {
             throw new RuntimeException("Empty metrics");
+        }
+        if (status.get() != STATUS_RUNNING) {
+            throw new RuntimeException("MetricsKeyManager not prepared");
         }
         Integer idx = idxCache.get(metrics);
         if (idx != null) {
@@ -153,6 +160,7 @@ public class MetricsKeyManager implements Initializer, Persistently {
         if (metricKeyIdx.get() < 1 || !tsdbConfig.getAdvancedConfig().isReadMkIdx()) {
             metricKeyIdx.set(trieNodeRoot.getMaxIndexValue());
         }
+        status.set(STATUS_RUNNING);
     }
 
 
