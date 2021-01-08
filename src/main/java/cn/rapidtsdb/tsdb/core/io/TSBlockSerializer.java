@@ -6,9 +6,9 @@ import cn.rapidtsdb.tsdb.core.TSBytes;
 import java.io.IOException;
 import java.io.OutputStream;
 
-public class TSBlockWriter {
+public class TSBlockSerializer {
 
-    public void writeToStream(TSBlockSnapshot snapshot, OutputStream outputStream) throws IOException {
+    public void serializeToStream(TSBlockSnapshot snapshot, OutputStream outputStream) throws IOException {
         TSBytes timeBytes = snapshot.getTsBlock().getTime();
         TSBytes valBytes = snapshot.getTsBlock().getValues();
         outputStream.write(timeBytes.getData(), 0, snapshot.getTimeBytesLength());

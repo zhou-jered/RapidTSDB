@@ -2,7 +2,7 @@ package cn.rapidtsdb.tsdb.core;
 
 import cn.rapidtsdb.tsdb.config.MetricConfig;
 import cn.rapidtsdb.tsdb.config.TSDBConfig;
-import cn.rapidtsdb.tsdb.core.io.TSBlockWriter;
+import cn.rapidtsdb.tsdb.core.io.TSBlockSerializer;
 import cn.rapidtsdb.tsdb.core.persistent.MetricsKeyManager;
 import cn.rapidtsdb.tsdb.core.persistent.Persistently;
 import cn.rapidtsdb.tsdb.core.persistent.file.FileLocation;
@@ -172,7 +172,7 @@ public class TSBlockManager extends AbstractTSBlockManager implements Persistent
         private FileLocation fileLocation;
         private TSBlockSnapshot snapshot;
         private StoreHandler storeHandler;
-        private static final TSBlockWriter blockWriter = new TSBlockWriter();
+        private static final TSBlockSerializer blockWriter = new TSBlockSerializer();
 
         public SimpleTSBlockStoreTask(int metricId, TSBlockSnapshot snapshot, StoreHandler storeHandler) {
             this.metricId = metricId;
@@ -201,7 +201,7 @@ public class TSBlockManager extends AbstractTSBlockManager implements Persistent
                     while (retry++ < 10) {
                         if (metricLock.tryLock(3, TimeUnit.SECONDS)) {
                             outputStream.write(blockMeta.series());
-                            blockWriter.writeToStream(snapshot, outputStream);
+                            blockWriter.serializeToStream(snapshot, outputStream);
                             snapshot.getTsBlock().markVersionClear(snapshot.getDataVersion());
                             snapshot.getTsBlock().markPersist();
                             break;

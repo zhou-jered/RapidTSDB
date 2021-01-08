@@ -1,6 +1,7 @@
-package cn.rapidtsdb.tsdb.rpc;
+package cn.rapidtsdb.tsdb.server;
 
 import cn.rapidtsdb.tsdb.config.TSDBConfig;
+import cn.rapidtsdb.tsdb.core.TSDB;
 import cn.rapidtsdb.tsdb.lifecycle.Closer;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
 import cn.rapidtsdb.tsdb.lifecycle.Runner;
@@ -14,10 +15,15 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 
 public class TSDBServer implements Initializer, Runner, Closer {
 
+    private TSDB db;
 
     ServerBootstrap serverBootstrap;
     private String ip = "0.0.0.0";
     private int port;
+
+    public TSDBServer(TSDB db) {
+        this.db = db;
+    }
 
     @Override
     public void close() {

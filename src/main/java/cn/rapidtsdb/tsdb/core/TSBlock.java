@@ -29,9 +29,9 @@ public class TSBlock {
     private TSBytes time;
     @Getter
     private TSBytes values;
-    private Long preTime;
-    private int preTimeDelta;
-    protected AtomicInteger dataVersion = new AtomicInteger(0);
+    private transient Long preTime;
+    private transient int preTimeDelta;
+    protected AtomicInteger blockVersion = new AtomicInteger(0);
     @Getter
     protected volatile int clearedVersion = -1;
 
@@ -41,7 +41,7 @@ public class TSBlock {
     private volatile transient boolean persisted;
 
     private Double preWrittenValue;
-    private TSDB.DoubleXorResult preWrittenValueXorResult;
+    private DoubleXor.DoubleXorResult preWrittenValueXorResult;
 
     @Getter
     private TimeUtils.TimeUnitAdaptor timeUnitAdapter;
@@ -137,11 +137,9 @@ public class TSBlock {
     }
 
 
-
-
     private void appendValue(double value) {
         if (preWrittenValue != null) {
-            TSDB.DoubleXorResult thisXor = TSDB.DoubleXor.doubleXor(preWrittenValue, value);
+            DoubleXor.DoubleXorResult thisXor = DoubleXor.doubleXor(preWrittenValue, value);
             if (thisXor.isZero()) {
                 values.incBitsOffset(1);
             } else {
@@ -289,7 +287,7 @@ public class TSBlock {
 
         long first = Longs.fromByteArray(data);
         long preVal = first;
-        TSDB.DoubleXorResult preXorResult = null;
+        DoubleXor.DoubleXorResult preXorResult = null;
         decodedValues.add(Double.longBitsToDouble(first));
         int readBitsIdx = 64;
         while (readBitsIdx < bitsLimit) {
@@ -316,7 +314,7 @@ public class TSBlock {
             double v = Double.longBitsToDouble(bitsVal);
             preVal = bitsVal;
             if (xor > 0) {
-                preXorResult = TSDB.DoubleXor.fromRawResult(xor);
+                preXorResult = DoubleXor.fromRawResult(xor);
             }
             decodedValues.add(v);
         }
@@ -360,7 +358,7 @@ public class TSBlock {
     }
 
     public void incrDataVersion() {
-        dataVersion.incrementAndGet();
+        blockVersion.incrementAndGet();
     }
 
     public void markVersionClear(int version) {
@@ -372,11 +370,11 @@ public class TSBlock {
     }
 
     public boolean isDirty() {
-        return dataVersion.get() == clearedVersion;
+        return blockVersion.get() == clearedVersion;
     }
 
-    public int getDataVersion() {
-        return dataVersion.get();
+    public int getBlockVersion() {
+        return blockVersion.get();
     }
 
 }

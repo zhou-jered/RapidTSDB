@@ -6,7 +6,7 @@ public class CalculatorFactory {
         return null;
     }
 
-    public static Downsampler getDownsample(String downsamplerConfig) {
+    public static DownSampler getDownSample(String downSamplerConfig) {
         return null;
     }
 

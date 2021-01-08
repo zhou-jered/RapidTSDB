@@ -18,7 +18,7 @@ public class TSBlockSnapshot {
 
     TSBlockSnapshot(TSBlock tsBlock) {
         this.tsBlock = tsBlock;
-        this.dataVersion = tsBlock.getDataVersion();
+        this.dataVersion = tsBlock.getBlockVersion();
         this.clearedVersion = tsBlock.getClearedVersion();
         this.dpsSize = tsBlock.getDataPoints().size();
         this.timeBytesLength = tsBlock.getTime().getBytesOffset();

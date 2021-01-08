@@ -6,7 +6,7 @@ import cn.rapidtsdb.tsdb.core.TSDB;
 import cn.rapidtsdb.tsdb.exectors.GlobalExecutorHolder;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
 import cn.rapidtsdb.tsdb.lifecycle.Runner;
-import cn.rapidtsdb.tsdb.rpc.TSDBServer;
+import cn.rapidtsdb.tsdb.server.TSDBServer;
 import cn.rapidtsdb.tsdb.utils.CliParser;
 import cn.rapidtsdb.tsdb.utils.ResourceUtils;
 import com.google.common.collect.Maps;
@@ -65,7 +65,7 @@ public class RapidTSDBApplication implements Initializer, Runner {
         log.info("start to init");
         tsdb = new TSDB();
         tsdb.init();
-        server = new TSDBServer();
+        server = new TSDBServer(tsdb);
         server.init();
         registShutdownHook();
     }

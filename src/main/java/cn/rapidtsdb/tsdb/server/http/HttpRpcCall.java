@@ -1,4 +1,4 @@
-package cn.rapidtsdb.tsdb.rpc.http;
+package cn.rapidtsdb.tsdb.server.http;
 
 import lombok.Data;
 
