@@ -3,21 +3,17 @@ package cn.rapidtsdb.tsdb.core;
 import cn.rapidtsdb.tsdb.config.TSDBConfig;
 import cn.rapidtsdb.tsdb.core.persistent.AppendOnlyLogManager;
 import cn.rapidtsdb.tsdb.core.persistent.MetricsKeyManager;
-import cn.rapidtsdb.tsdb.exectors.GlobalExecutorHolder;
+import cn.rapidtsdb.tsdb.executors.ManagedThreadPool;
 import cn.rapidtsdb.tsdb.lifecycle.Closer;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
 import cn.rapidtsdb.tsdb.obj.WriteMetricResult;
 import cn.rapidtsdb.tsdb.query.TSQuery;
+import cn.rapidtsdb.tsdb.tasks.TwoHoursTriggerTask;
 import cn.rapidtsdb.tsdb.utils.TimeUtils;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang.StringUtils;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -30,7 +26,7 @@ public class TSDB implements Initializer, Closer {
     private AbstractTSBlockManager blockManager;
     private AppendOnlyLogManager appendOnlyLogManager;
     private MetricsKeyManager metricsKeyManager;
-    private GlobalExecutorHolder globalExecutor = GlobalExecutorHolder.getInstance();
+    private ManagedThreadPool globalExecutor = ManagedThreadPool.getInstance();
 
 
     TSDBConfig config;
@@ -100,6 +96,10 @@ public class TSDB implements Initializer, Closer {
         return null;
     }
 
+    public void triggerBlockPersist() {
+        blockManager.triggerPersist();
+    }
+
     private void initMemDb() {
         appendOnlyLogManager.recoverLog();
     }
@@ -108,8 +108,9 @@ public class TSDB implements Initializer, Closer {
         log.info("schedule 2 hour trigger task");
         long currentSeconds = TimeUtils.currentTimestamp();
         long triggerInitDelay = TimeUnit.HOURS.toSeconds(2) - currentSeconds % TimeUnit.HOURS.toSeconds(2);
+        TwoHoursTriggerTask twoHoursTriggerTask = new TwoHoursTriggerTask(this);
+        globalExecutor.scheduledExecutor().scheduleAtFixedRate(twoHoursTriggerTask, triggerInitDelay, 2, TimeUnit.HOURS);
         log.info("initScheduleTimeTask with initDelay:{}", triggerInitDelay);
-
     }
 
 

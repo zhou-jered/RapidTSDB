@@ -1,36 +1,49 @@
-package cn.rapidtsdb.tsdb.exectors;
+package cn.rapidtsdb.tsdb.executors;
 
 import cn.rapidtsdb.tsdb.config.TSDBConfig;
+import cn.rapidtsdb.tsdb.lifecycle.Closer;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import lombok.extern.log4j.Log4j2;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  *
  */
 @Log4j2
-public class GlobalExecutorHolder {
+public class ManagedThreadPool implements Closer {
 
-    private ThreadPoolExecutor threadPoolExecutor;
+    private ThreadPoolExecutor ioExecutor;
     private ThreadPoolExecutor failedTaskExecutor;
     private ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1,
             new ThreadFactoryBuilder().setNameFormat("RapidTSDB-Scheduler-%d").build());
+    private List<Thread> managedThreads = new ArrayList<>();
+    private AtomicInteger threadIdx = new AtomicInteger(1);
 
-    private GlobalExecutorHolder() {
+    private ManagedThreadPool() {
     }
 
-    private GlobalExecutorHolder(TSDBConfig tsdbConfig) {
-        threadPoolExecutor = new ThreadPoolExecutor(tsdbConfig.getExecutorIoCore(), tsdbConfig.getExecutorIoMax(), 1, TimeUnit.HOURS, new LinkedBlockingDeque<>(),
+    private ManagedThreadPool(TSDBConfig tsdbConfig) {
+        ioExecutor = new ThreadPoolExecutor(tsdbConfig.getExecutorIoCore(), tsdbConfig.getExecutorIoMax(), 1, TimeUnit.HOURS, new LinkedBlockingDeque<>(),
                 new ThreadFactoryBuilder().setNameFormat("RapidTSDB-IO-%d").build());
     }
 
     public ThreadPoolExecutor ioExecutor() {
-        return threadPoolExecutor;
+        return ioExecutor;
     }
 
     public ScheduledExecutorService scheduledExecutor() {
         return scheduledExecutorService;
+    }
+
+    public Thread newThread(Runnable runnable) {
+        Thread thread = new Thread(runnable);
+        thread.setName("Rapid-Thread-Managed-" + threadIdx.incrementAndGet());
+        managedThreads.add(thread);
+        return thread;
     }
 
     public void submitFailedTask(Runnable failedTask) {
@@ -63,20 +76,33 @@ public class GlobalExecutorHolder {
      * @return
      */
     public int getSystemLoadLevel() {
-        int approximate = (int) (100 - threadPoolExecutor.getTaskCount());
+        int approximate = (int) (100 - ioExecutor.getTaskCount());
         return approximate < 0 ? -1 : approximate;
     }
 
 
-    private static GlobalExecutorHolder INSTANCE = null;
+    public void waitShutdownComplete() {
 
-    static {
-        INSTANCE = new GlobalExecutorHolder(TSDBConfig.getConfigInstance());
     }
 
-    public static GlobalExecutorHolder getInstance() {
+    private static ManagedThreadPool INSTANCE = null;
+
+    static {
+        INSTANCE = new ManagedThreadPool(TSDBConfig.getConfigInstance());
+    }
+
+    public static ManagedThreadPool getInstance() {
         return INSTANCE;
     }
 
-
+    @Override
+    public void close() {
+        ioExecutor.shutdown();
+        failedTaskExecutor.shutdown();
+        scheduledExecutorService.shutdown();
+        for (Thread thread : managedThreads) {
+            thread.interrupt();
+        }
+        log.info("ManagedThreadPool Closed");
+    }
 }

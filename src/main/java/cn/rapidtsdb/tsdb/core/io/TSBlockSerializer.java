@@ -16,4 +16,12 @@ public class TSBlockSerializer {
         outputStream.flush();
     }
 
+    public byte[] serializedToBytes(TSBlockSnapshot snapshot) {
+        byte[] series = new byte[snapshot.getTimeBytesLength() + snapshot.getValuesBytesLength()];
+        System.arraycopy(snapshot.getTsBlock().getTime(), 0, series, 0, snapshot.getTimeBytesLength());
+        System.arraycopy(snapshot.getTsBlock().getValues(), 0, series,
+                snapshot.getTimeBytesLength(), snapshot.getValuesBytesLength());
+        return series;
+    }
+
 }

@@ -4,9 +4,8 @@ import cn.rapidtsdb.tsdb.config.MetricConfig;
 import cn.rapidtsdb.tsdb.config.TSDBConfig;
 import cn.rapidtsdb.tsdb.core.io.TSBlockSerializer;
 import cn.rapidtsdb.tsdb.core.persistent.MetricsKeyManager;
-import cn.rapidtsdb.tsdb.core.persistent.Persistently;
 import cn.rapidtsdb.tsdb.core.persistent.file.FileLocation;
-import cn.rapidtsdb.tsdb.exectors.GlobalExecutorHolder;
+import cn.rapidtsdb.tsdb.executors.ManagedThreadPool;
 import cn.rapidtsdb.tsdb.lifecycle.Closer;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
 import cn.rapidtsdb.tsdb.store.StoreHandler;
@@ -33,7 +32,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * response for @TSBlock store, search, compress
  */
 @Log4j2
-public class TSBlockManager extends AbstractTSBlockManager implements Persistently, Initializer, Closer {
+public class TSBlockManager extends AbstractTSBlockManager implements Initializer, Closer {
 
 
     private TSDBConfig tsdbConfig;
@@ -50,10 +49,11 @@ public class TSBlockManager extends AbstractTSBlockManager implements Persistent
 
     /**
      * ???
+     * 我也忘了这是啥？
      */
     private Map<Integer, int[]> metricLocationSeparator = new ConcurrentHashMap<>(10240);
 
-    GlobalExecutorHolder globalExecutor = GlobalExecutorHolder.getInstance();
+    ManagedThreadPool globalExecutor = ManagedThreadPool.getInstance();
     ThreadPoolExecutor ioExecutor = globalExecutor.ioExecutor();
 
     TSBlockManager(TSDBConfig tsdbConfig) {
@@ -165,6 +165,8 @@ public class TSBlockManager extends AbstractTSBlockManager implements Persistent
 
     /**
      * Just write A TSBlock into a single file
+     * todo move this implementation to under layer,
+     * block manager do not need to know about the persist implementation
      */
     static class SimpleTSBlockStoreTask implements Runnable {
         private final static Logger log = LogManager.getLogger("asf");
@@ -219,7 +221,7 @@ public class TSBlockManager extends AbstractTSBlockManager implements Persistent
             } catch (IOException e) {
                 e.printStackTrace();
                 log.error("Write File {} Exception", fileLocation.getPathWithFilename(), e);
-                GlobalExecutorHolder.getInstance().submitFailedTask(this);
+                ManagedThreadPool.getInstance().submitFailedTask(this);
             }
         }
     }

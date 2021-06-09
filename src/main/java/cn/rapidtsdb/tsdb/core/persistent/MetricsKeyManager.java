@@ -26,7 +26,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 
 @Log4j2
-public class MetricsKeyManager implements Initializer, Persistently {
+public class MetricsKeyManager implements Initializer {
 
     private final int STATUS_UNINIT = 1;
     private final int STATUS_INITIALIZING = 2;

@@ -23,7 +23,7 @@ public class WriteMetricResult {
 
     public static final WriteMetricResult SUCCESS = new WriteMetricResult(0, "ok");
     public static final WriteMetricResult FAILED_METRIC_EMPTY = new WriteMetricResult(CODE_METRIC_EMPTY, "metric empty");
-    public static final WriteMetricResult FAILED_TIME_EXPIRED = new WriteMetricResult(CODE_TIME_EXPIRED, "metric empty");
+    public static final WriteMetricResult FAILED_TIME_EXPIRED = new WriteMetricResult(CODE_TIME_EXPIRED, "metric expired");
 
 
 }

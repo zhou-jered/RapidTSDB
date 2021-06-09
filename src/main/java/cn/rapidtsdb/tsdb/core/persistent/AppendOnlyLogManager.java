@@ -14,9 +14,11 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 @Log4j2
-public class AppendOnlyLogManager implements Initializer, Persistently, Closer {
+public class AppendOnlyLogManager implements Initializer, Closer {
 
     private AtomicLong logIdx = new AtomicLong(0);
     private final String AOL_FILE = "aol.data";
@@ -24,6 +26,7 @@ public class AppendOnlyLogManager implements Initializer, Persistently, Closer {
     private volatile boolean initialized = false;
     private StoreHandler storeHandler;
     private OutputStream currentLogOs;
+    private ReadWriteLock readWriteLock = new ReentrantReadWriteLock();
 
     private static AppendOnlyLogManager instance = null;
 
@@ -45,13 +48,14 @@ public class AppendOnlyLogManager implements Initializer, Persistently, Closer {
             currentLogOs = storeHandler.openFileAppendStream(AOL_FILE);
         } catch (IOException e) {
             e.printStackTrace();
-            log.error("GET AOLOF OUTPUT EX", e);
+            log.error("GET AOLOG OUTPUT EX", e);
             throw new RuntimeException(e);
         }
         recoverLog();
     }
 
     public void appendLog(AOLog alog) {
+
         try {
             currentLogOs.write(alog.getSeri());
             if (logIdx.incrementAndGet() % 2730 == 0) {

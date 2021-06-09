@@ -3,7 +3,7 @@ package cn.rapidtsdb.tsdb;
 import cn.rapidtsdb.tsdb.app.Banner;
 import cn.rapidtsdb.tsdb.config.TSDBConfig;
 import cn.rapidtsdb.tsdb.core.TSDB;
-import cn.rapidtsdb.tsdb.exectors.GlobalExecutorHolder;
+import cn.rapidtsdb.tsdb.executors.ManagedThreadPool;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
 import cn.rapidtsdb.tsdb.lifecycle.Runner;
 import cn.rapidtsdb.tsdb.server.TSDBServer;
@@ -25,7 +25,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class RapidTSDBApplication implements Initializer, Runner {
 
 
-    private GlobalExecutorHolder commonExecutor = GlobalExecutorHolder.getInstance();
+    private ManagedThreadPool commonExecutor = ManagedThreadPool.getInstance();
     private TSDBServer server;
     private TSDB tsdb;
 
@@ -61,13 +61,17 @@ public class RapidTSDBApplication implements Initializer, Runner {
 
 
     @Override
-    public void init() {
+    public synchronized void init() {
         log.info("start to init");
         tsdb = new TSDB();
         tsdb.init();
         server = new TSDBServer(tsdb);
         server.init();
         registShutdownHook();
+    }
+
+    public synchronized void recovery() {
+
     }
 
     @Override

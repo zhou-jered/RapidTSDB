@@ -17,12 +17,18 @@ import java.util.stream.Collectors;
 @Log4j2
 public class TSDBConfig {
 
+    /**
+     * 存储在文件或者是Hbase
+     */
     @Getter
     private String storeScheme = "file";
     @Getter
     private String dataDir;
     @Getter
     private String cacheDir;
+    /**
+     * 存储接口的实现类
+     */
     @Getter
     private String storeHandlerImplClass;
 
@@ -38,16 +44,16 @@ public class TSDBConfig {
     @Getter
     private String rpcHttpIp = "0.0.0.0";
     @Getter
-    private int rpcHttpPort = 9090;
+    private int rpcHttpPort = 9889;
 
     @Getter
     private Boolean printBanner = true;
 
     //io executor config
     @Getter
-    private Integer executorIoCore = 3;
+    private Integer executorIoCore = Runtime.getRuntime().availableProcessors();
     @Getter
-    private Integer executorIoMax = 5;
+    private Integer executorIoMax = Runtime.getRuntime().availableProcessors() * 4;
 
     @Getter
     Integer failedTaskExecutorIoCore = 1;
@@ -57,6 +63,12 @@ public class TSDBConfig {
 
     @Getter
     Integer failedTaskQueueSize = 4096;
+
+    @Getter
+    Integer maxAllowedDelaySeconds = 0;
+
+    @Getter
+    Boolean allowOverwrite = false;
 
     @Getter
     private AdvancedConfig advancedConfig = new AdvancedConfig();

@@ -3,7 +3,7 @@ package cn.rapidtsdb.tsdb.core;
 import lombok.Getter;
 
 /**
- *
+ * Immutable TSBlock
  */
 @Getter
 public class TSBlockSnapshot {

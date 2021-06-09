@@ -19,6 +19,7 @@ public abstract class AbstractTSBlockManager {
 
     protected static final TimeUtils.TimeUnitAdaptor TIME_UNIT_ADAPTOR_SECONDS = TimeUtils.ADAPTER_SECONDS;
 
+    @Deprecated
     protected Set<TSBlock> dirtyBlocks = new HashSet<>();
 
     public abstract TSBlock getCurrentWriteBlock(int metricId, long timestamp);
