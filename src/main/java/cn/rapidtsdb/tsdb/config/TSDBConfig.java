@@ -81,6 +81,10 @@ public class TSDBConfig {
         return INSTANCE;
     }
 
+
+    private TSDBConfig() {
+    }
+
     @Data
     @NoArgsConstructor
     public static class AdvancedConfig {

@@ -29,7 +29,7 @@ public class FileStoreHandler implements StoreHandler {
         if (!baseDirFile.exists()) {
             boolean mkDirSuccess = baseDirFile.mkdirs();
             if (!mkDirSuccess) {
-                throw new RuntimeException("Can not create data directory, check the file permission please.");
+                throw new RuntimeException("Can not create data directory:" + baseDir + ", check the file permission please.");
             }
         }
         if (!baseDirFile.canWrite()) {

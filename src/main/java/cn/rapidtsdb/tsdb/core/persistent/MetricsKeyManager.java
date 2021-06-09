@@ -13,14 +13,9 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.Serializable;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -43,6 +38,7 @@ public class MetricsKeyManager implements Initializer {
     private AtomicInteger metricKeyIdx = new AtomicInteger(1);
     private String metricsKeyFile = "mk.data";
     private String metricsKeyIdxFile = "mk.idx";
+    private String metricsKeyListFile = "mk.list";
     private String METRICS_LEGAL_CHARS = "plokmijnuhbygvtfcrdxeszwaqPLOKMIJNUHBYGVTFCRDXESZWAQ0987654321@#$-_.+=";
     private TrieNode trieNodeRoot = new TrieNode('0');
     private Kryo kryo = new Kryo();
@@ -74,7 +70,23 @@ public class MetricsKeyManager implements Initializer {
     }
 
     public Collection<String> getAllMetrics() {
-        throw new UnsupportedOperationException("why you call this method?");
+        if (!storeHandler.fileExisted(metricsKeyListFile)) {
+            return new HashSet<>();
+        }
+        try {
+            Set<String> allMetrics = new HashSet<>();
+            InputStream inputStream = storeHandler.openFileInputStream(metricsKeyListFile);
+            BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+            String line = null;
+            while ((line = reader.readLine()) != null) {
+                allMetrics.add(line);
+            }
+            return allMetrics;
+        } catch (IOException e) {
+            e.printStackTrace();
+            log.error("");
+            throw new RuntimeException(e);
+        }
     }
 
     public int getMetricsIndex(String metrics) {

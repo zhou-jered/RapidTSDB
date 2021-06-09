@@ -15,6 +15,7 @@ import java.util.Set;
  */
 public abstract class AbstractTSBlockManager {
 
+    //todo leave or stay here
     protected TSDBCheckPointManager checkPointManager;
 
     protected static final TimeUtils.TimeUnitAdaptor TIME_UNIT_ADAPTOR_SECONDS = TimeUtils.ADAPTER_SECONDS;
@@ -30,7 +31,7 @@ public abstract class AbstractTSBlockManager {
     /**
      * Every Two Hours Trigger once
      */
-    public abstract void triggerPersist();
+    public abstract void triggerPersist(Runnable completedCallback);
 
     public abstract List<TSBlock> getBlockWithTimeRange(int metricId, long start, long end);
 

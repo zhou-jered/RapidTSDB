@@ -8,9 +8,7 @@ import com.google.common.primitives.Longs;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.IOUtils;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
@@ -46,13 +44,17 @@ public class AppendOnlyLogManager implements Initializer, Closer {
         storeHandler = StoreHandlerFactory.getStoreHandler();
         try {
             currentLogOs = storeHandler.openFileAppendStream(AOL_FILE);
+            InputStream idxInputStream = storeHandler.openFileInputStream(LOG_IDX_FILE);
+            DataInputStream dis = new DataInputStream(idxInputStream);
+            long idxVal = dis.readLong();
+            logIdx.set(idxVal);
         } catch (IOException e) {
             e.printStackTrace();
             log.error("GET AOLOG OUTPUT EX", e);
             throw new RuntimeException(e);
         }
-        recoverLog();
     }
+
 
     public void appendLog(AOLog alog) {
 
@@ -73,11 +75,15 @@ public class AppendOnlyLogManager implements Initializer, Closer {
         }
     }
 
+    public long getLogIndex() {
+        return logIdx.get();
+    }
+
     public void appendLog(long idx, long timestamp, double val) {
         appendLog(new AOLog(idx, timestamp, val));
     }
 
-    public AOLog[] recoverLog() {
+    public AOLog[] recoverLog(long offset) {
         try {
             if (storeHandler.fileExisted(AOL_FILE)) {
                 InputStream inputStream = storeHandler.openFileInputStream(AOL_FILE);
@@ -119,6 +125,8 @@ public class AppendOnlyLogManager implements Initializer, Closer {
     private boolean persistLogIdx() {
         try (OutputStream outputStream = storeHandler.openFileOutputStream(LOG_IDX_FILE)) {
             IOUtils.write(Longs.toByteArray(logIdx.get()), outputStream);
+            DataOutputStream dos = new DataOutputStream(outputStream);
+            dos.writeLong(logIdx.get());
         } catch (IOException e) {
             e.printStackTrace();
             log.error("AOLOG INDEX OUTPUT EX", e);

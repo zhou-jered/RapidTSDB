@@ -20,7 +20,7 @@ public class AppendOnlyLogManagerTest {
         AppendOnlyLogManager appendOnlyLogManager = new AppendOnlyLogManager();
         appendOnlyLogManager.init();
 
-        appendOnlyLogManager.recoverLog();
+
        // appendOnlyLogManager.close();
     }
 }

@@ -3,7 +3,7 @@ package cn.rapidtsdb.tsdb.core;
 import cn.rapidtsdb.tsdb.config.MetricConfig;
 import cn.rapidtsdb.tsdb.config.TSDBConfig;
 import cn.rapidtsdb.tsdb.core.io.TSBlockSerializer;
-import cn.rapidtsdb.tsdb.core.persistent.MetricsKeyManager;
+import cn.rapidtsdb.tsdb.core.persistent.TSBlockPersister;
 import cn.rapidtsdb.tsdb.core.persistent.file.FileLocation;
 import cn.rapidtsdb.tsdb.executors.ManagedThreadPool;
 import cn.rapidtsdb.tsdb.lifecycle.Closer;
@@ -29,7 +29,11 @@ import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * TSBlock Logical Manager, File Implementation
- * response for @TSBlock store, search, compress
+ * response for @TSBlock store, search, compress。
+ * <p>
+ * 启动过程:
+ * 1. 恢复检查
+ * 1.1 恢复内存数据，从AOL恢复。
  */
 @Log4j2
 public class TSBlockManager extends AbstractTSBlockManager implements Initializer, Closer {
@@ -39,10 +43,11 @@ public class TSBlockManager extends AbstractTSBlockManager implements Initialize
 
     private StoreHandler storeHandler;
 
-    private MetricsKeyManager metricsKeyManager;
+    private TSBlockPersister blockPersister;
+
+    private TSBlockTime tsTime = new TSBlockTime();
 
     private static final int BLOCK_SIZE_SECONDS = 2 * 60;
-
 
     private AtomicReference<Map<Integer, TSBlock>> currentBlockCacheRef = new AtomicReference<>();
     private Map<Integer, TSBlock> lastBlockCache = null;
@@ -59,6 +64,7 @@ public class TSBlockManager extends AbstractTSBlockManager implements Initialize
     TSBlockManager(TSDBConfig tsdbConfig) {
         this.tsdbConfig = tsdbConfig;
         storeHandler = StoreHandlerFactory.getStoreHandler();
+        blockPersister = TSBlockPersister.getINSTANCE();
     }
 
     @Override
@@ -141,10 +147,14 @@ public class TSBlockManager extends AbstractTSBlockManager implements Initialize
 
 
     @Override
-    public void triggerPersist() {
+    public void triggerPersist(Runnable completedCallback) {
         Map<Integer, TSBlock> newRoundTSMap = newTSMap();
-        Map old = currentBlockCacheRef.get();
+        Map<Integer, TSBlock> old = currentBlockCacheRef.get();
         currentBlockCacheRef.compareAndSet(old, newRoundTSMap);
+        ioExecutor.submit(() -> {
+            blockPersister.persistTSBlock(old);
+            completedCallback.run();
+        });
     }
 
     public List<TSBlock> getBlockWithTimeRange(int metricId, long start, long end) {
@@ -156,7 +166,7 @@ public class TSBlockManager extends AbstractTSBlockManager implements Initialize
     }
 
     private void flushMemoryBlock() {
-
+        blockPersister.persistTSBlock(currentBlockCacheRef.get());
     }
 
     public Map<Integer, TSBlock> newTSMap() {
@@ -254,7 +264,7 @@ public class TSBlockManager extends AbstractTSBlockManager implements Initialize
      * 30 Day Data: {metricid}/mon/{yyyy-MM}.data
      * 3000 Day Data: {metricid}/history/{yyyy-MM}.data
      */
-    private static class FilenameStrategy {
+    public static class FilenameStrategy {
 
         public static FileLocation getTodayFileLocation(int metric, long baseTimeSeconds) {
             return new FileLocation(getTodayDirectory(metric, baseTimeSeconds), getTodayBlockFilename(metric, baseTimeSeconds));

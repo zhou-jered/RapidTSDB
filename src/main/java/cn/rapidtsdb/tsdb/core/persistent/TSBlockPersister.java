@@ -19,6 +19,10 @@ public class TSBlockPersister implements Initializer, Closer {
     private TSDBConfig tsdbConfig = TSDBConfig.getConfigInstance();
     private AppendOnlyLogManager appendOnlyLogManager = AppendOnlyLogManager.getInstance();
     private TSDBCheckPointManager tsdbCheckPointManager = TSDBCheckPointManager.getInstance();
+    private static TSBlockPersister INSTANCE = null;
+
+    private TSBlockPersister() {
+    }
 
     @Override
     public void init() {
@@ -42,5 +46,15 @@ public class TSBlockPersister implements Initializer, Closer {
         return null;
     }
 
-
+    public static TSBlockPersister getINSTANCE() {
+        if (INSTANCE == null) {
+            synchronized (TSBlockPersister.class) {
+                if(INSTANCE == null) {
+                    INSTANCE = new TSBlockPersister();
+                    INSTANCE.init();
+                }
+            }
+        }
+        return INSTANCE;
+    }
 }

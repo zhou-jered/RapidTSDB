@@ -1,8 +1,10 @@
 package cn.rapidtsdb.tsdb.core;
 
 import cn.rapidtsdb.tsdb.config.TSDBConfig;
+import cn.rapidtsdb.tsdb.core.persistent.AOLog;
 import cn.rapidtsdb.tsdb.core.persistent.AppendOnlyLogManager;
 import cn.rapidtsdb.tsdb.core.persistent.MetricsKeyManager;
+import cn.rapidtsdb.tsdb.core.persistent.TSDBCheckPointManager;
 import cn.rapidtsdb.tsdb.executors.ManagedThreadPool;
 import cn.rapidtsdb.tsdb.lifecycle.Closer;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
@@ -26,6 +28,7 @@ public class TSDB implements Initializer, Closer {
     private AbstractTSBlockManager blockManager;
     private AppendOnlyLogManager appendOnlyLogManager;
     private MetricsKeyManager metricsKeyManager;
+    private TSDBCheckPointManager checkPointManager;
     private ManagedThreadPool globalExecutor = ManagedThreadPool.getInstance();
 
 
@@ -42,7 +45,7 @@ public class TSDB implements Initializer, Closer {
         metricsKeyManager = MetricsKeyManager.getInstance();
         blockManager = new TSBlockManager(config);
         appendOnlyLogManager = new AppendOnlyLogManager();
-
+        checkPointManager = TSDBCheckPointManager.getInstance();
     }
 
 
@@ -57,10 +60,6 @@ public class TSDB implements Initializer, Closer {
         appendOnlyLogManager.init();
         initMemDb();
         initScheduleTimeTask();
-        long currentMills = TimeUtils.currentMills();
-        long initDelay = currentMills - currentMills % TimeUnit.HOURS.toMillis(2);
-        initDelay = Math.max(initDelay, TimeUnit.MINUTES.toMillis(30));
-        globalExecutor.scheduledExecutor().scheduleAtFixedRate(() -> blockManager.triggerPersist(), initDelay, TimeUnit.HOURS.toMillis(2), TimeUnit.HOURS);
     }
 
 
@@ -72,11 +71,11 @@ public class TSDB implements Initializer, Closer {
     }
 
 
-    public WriteMetricResult writeMetric(String metric, double val) throws Exception {
+    public synchronized WriteMetricResult writeMetric(String metric, double val) throws Exception {
         return writeMetric(metric, val, TimeUtils.currentTimestamp());
     }
 
-    public WriteMetricResult writeMetric(String metric, double val, long timestamp) {
+    public synchronized WriteMetricResult writeMetric(String metric, double val, long timestamp) {
         if (StringUtils.isBlank(metric)) {
             return WriteMetricResult.FAILED_METRIC_EMPTY;
         }
@@ -96,12 +95,16 @@ public class TSDB implements Initializer, Closer {
         return null;
     }
 
-    public void triggerBlockPersist() {
-        blockManager.triggerPersist();
+    public synchronized void triggerBlockPersist() {
+        long aolLogIdx = appendOnlyLogManager.getLogIndex();
+        blockManager.triggerPersist(() -> {
+            checkPointManager.savePoint(aolLogIdx);
+        });
     }
 
     private void initMemDb() {
-        appendOnlyLogManager.recoverLog();
+        AOLog[] logs = appendOnlyLogManager.recoverLog(checkPointManager.getSavedPoint());
+
     }
 
     private void initScheduleTimeTask() {
