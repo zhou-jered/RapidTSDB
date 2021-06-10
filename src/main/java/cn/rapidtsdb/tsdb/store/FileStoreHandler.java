@@ -71,6 +71,11 @@ public class FileStoreHandler implements StoreHandler {
     }
 
     @Override
+    public File getFile(String filePath) {
+        return new File(baseDir + filePath);
+    }
+
+    @Override
     public long getFileSize(String filePath) {
         return new File(baseDir + filePath).length();
     }

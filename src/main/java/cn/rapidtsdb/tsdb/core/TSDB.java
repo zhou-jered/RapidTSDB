@@ -80,12 +80,15 @@ public class TSDB implements Initializer, Closer {
             return WriteMetricResult.FAILED_METRIC_EMPTY;
         }
         Integer mIdx = metricsKeyManager.getMetricsIndex(metric);
-        TSBlock tsBlock = blockManager.getCurrentWriteBlock(mIdx, timestamp);
+        writeMetricInternal(mIdx, timestamp, val);
+        appendOnlyLogManager.appendLog(mIdx, timestamp, val);
+        return WriteMetricResult.FAILED_TIME_EXPIRED;
+    }
+
+    private synchronized WriteMetricResult writeMetricInternal(int mid, long timestamp, double val) {
+        TSBlock tsBlock = blockManager.getCurrentWriteBlock(mid, timestamp);
         if (tsBlock != null) {
             tsBlock.appendDataPoint(timestamp, val);
-
-            appendOnlyLogManager.appendLog(mIdx, timestamp, val);
-
             return WriteMetricResult.SUCCESS;
         }
         return WriteMetricResult.FAILED_TIME_EXPIRED;
@@ -103,8 +106,17 @@ public class TSDB implements Initializer, Closer {
     }
 
     private void initMemDb() {
-        AOLog[] logs = appendOnlyLogManager.recoverLog(checkPointManager.getSavedPoint());
-
+        long aolIdx = appendOnlyLogManager.getLogIndex();
+        long cpIdx = checkPointManager.getSavedPoint();
+        if (cpIdx < aolIdx) {
+            AOLog[] logs = appendOnlyLogManager.recoverLog(checkPointManager.getSavedPoint());
+            for (AOLog log : logs) {
+                int mid = log.getMetricsIdx();
+                long time = log.getTimestamp();
+                double val = log.getVal();
+                writeMetricInternal(mid, time, val);
+            }
+        }
     }
 
     private void initScheduleTimeTask() {

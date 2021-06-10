@@ -1,5 +1,6 @@
 package cn.rapidtsdb.tsdb.store;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -20,6 +21,8 @@ public interface StoreHandler {
     OutputStream openFileOutputStream(String filePath) throws IOException;
 
     OutputStream openFileAppendStream(String filePath) throws IOException;
+
+    File getFile(String filePath);
 
     long getFileSize(String filePath);
 
