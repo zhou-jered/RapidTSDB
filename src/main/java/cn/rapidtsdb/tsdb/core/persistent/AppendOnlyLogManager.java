@@ -1,19 +1,21 @@
 package cn.rapidtsdb.tsdb.core.persistent;
 
+import cn.rapidtsdb.tsdb.executors.ManagedThreadPool;
 import cn.rapidtsdb.tsdb.lifecycle.Closer;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
+import cn.rapidtsdb.tsdb.metrics.DBMetrics;
 import cn.rapidtsdb.tsdb.store.StoreHandler;
 import cn.rapidtsdb.tsdb.store.StoreHandlerFactory;
 import com.google.common.primitives.Longs;
-import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.IOUtils;
 
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Log4j2
@@ -21,7 +23,7 @@ public class AppendOnlyLogManager implements Initializer, Closer {
 
     private AtomicLong logIdx = new AtomicLong(0);
     private final String AOL_FILE = "aol.data";
-    private final String LOG_START_IDX_FILE = "aol.start.idx"; // the logical log offset of the file start
+    private final String LOG_START_IDX_FILE = "aol.stagi prt.idx"; // the logical log offset of the file start
     private final String LOG_END_IDX_FILE = "aol.end.idx"; // the logical log length
     private volatile boolean initialized = false;
     private StoreHandler storeHandler;
@@ -30,6 +32,8 @@ public class AppendOnlyLogManager implements Initializer, Closer {
     private RandomAccessFile seekableAolFile = null;
     private FileChannel writeChannel;
     private int writeLength = 0;
+    private Thread writeThread;
+    private BlockingQueue<AOLog> bufferQ = new LinkedBlockingQueue<>();
 
     private static AppendOnlyLogManager instance = null;
 
@@ -47,38 +51,14 @@ public class AppendOnlyLogManager implements Initializer, Closer {
         }
         initialized = true;
         storeHandler = StoreHandlerFactory.getStoreHandler();
-        try {
-            File aolFile = storeHandler.getFile(AOL_FILE);
-            seekableAolFile = new RandomAccessFile(aolFile, "rw");
-            writeChannel = seekableAolFile.getChannel();
-            long idxVal = getLogFileIdx(LOG_END_IDX_FILE);
-            logIdx.set(idxVal);
-            long startIdx = getLogFileIdx(LOG_START_IDX_FILE);
-            writeLength = (int) (idxVal - startIdx + 1);
-        } catch (IOException e) {
-            e.printStackTrace();
-            log.error("GET AOLOG OUTPUT EX", e);
-            throw new RuntimeException(e);
-        }
+        writeThread = ManagedThreadPool.getInstance().newThread(new WriteLogTask(bufferQ));
+        writeThread.start();
+
     }
 
 
     public void appendLog(AOLog alog) {
-
-        try {
-            currentLogOs.write(alog.getSeri());
-            if (logIdx.incrementAndGet() % 2730 == 0) {
-                currentLogOs.flush(); // flush disk file
-            }
-        } catch (IOException e) {
-            try {
-                currentLogOs = storeHandler.openFileAppendStream(AOL_FILE);
-                currentLogOs.write(alog.getSeri());
-            } catch (IOException ioException) {
-                ioException.printStackTrace();
-                log.error("AOL EX", ioException);
-            }
-        }
+        bufferQ.offer(alog);
     }
 
     public long getLogIndex() {
@@ -90,26 +70,88 @@ public class AppendOnlyLogManager implements Initializer, Closer {
     }
 
     public AOLog[] recoverLog(long offset) {
-        try {
-            if (storeHandler.fileExisted(AOL_FILE)) {
-                InputStream inputStream = storeHandler.openFileInputStream(AOL_FILE);
-                List<AOLog> aoLogList = new ArrayList<>(inputStream.available() / AOLog.SERIES_BYTES_LENGTH);
-                byte[] series = new byte[AOLog.SERIES_BYTES_LENGTH];
-                while (inputStream.available() > AOLog.SERIES_BYTES_LENGTH) {
-                    inputStream.read(series);
-                    AOLog aoLog = AOLog.fromSeries(series);
-                    aoLogList.add(aoLog);
+        final long checkpoint = offset;
+        long startIdx = getLogFileIdx(LOG_START_IDX_FILE);
+        long endIdx = getLogFileIdx(LOG_END_IDX_FILE);
+        int logForwardWriteLength = (int) (endIdx - startIdx + 1); // the logical startIdx and endIdx will never distance too long to match int type
+        assert startIdx <= endIdx;
+        if (offset > endIdx) {
+            log.error("unsatisfied checkpoint offset:{}, maxLogIdx:{}, Sorry you had lost some data.", offset, endIdx);
+            return null;
+        }
+
+        AOLog[] preRollingLogs = null;
+        AOLog[] forwardLogs = null;
+        if (checkpoint < startIdx) {
+            int preReadLength = (int) (startIdx - checkpoint); // should be safe to cast to int
+            long fileByteSize = storeHandler.getFileSize(AOL_FILE);
+            if (fileByteSize == MAX_WRITE_LENGTH * AOLog.SERIES_BYTES_LENGTH) {
+                if (MAX_WRITE_LENGTH - preReadLength < logForwardWriteLength) {
+                    log.error("Sorry for rolling range overwrite. Something wrong happened");
+                } else {
+                    preRollingLogs = readAoLogFileContent((MAX_WRITE_LENGTH - preReadLength) * AOLog.SERIES_BYTES_LENGTH,
+                            preReadLength);
                 }
-                log.info("Recover AOL Length : {}", aoLogList.size());
-                AOLog[] logArray = new AOLog[aoLogList.size()];
-                aoLogList.toArray(logArray);
-                return logArray;
+            } else {
+                log.error("Sorry you can not read rolling back file content");
             }
+            forwardLogs = readAoLogFileContent(0, logForwardWriteLength);
+        } else {
+            forwardLogs = readAoLogFileContent((int) ((checkpoint - startIdx) * AOLog.SERIES_BYTES_LENGTH),
+                    (int) (endIdx - checkpoint));
+        }
+        if (preRollingLogs == null) {
+            return forwardLogs;
+        } else if (forwardLogs != null) {
+            AOLog[] retLogs = new AOLog[preRollingLogs.length + forwardLogs.length];
+            System.arraycopy(preRollingLogs, 0, retLogs, 0, preRollingLogs.length);
+            System.arraycopy(forwardLogs, 0, retLogs, preRollingLogs.length, forwardLogs.length);
+            return retLogs;
+        }
+        return null;
+    }
+
+    private AOLog[] readAoLogFileContent(int fileOffsetByte, final int readLogSize) {
+        if (!storeHandler.fileExisted(AOL_FILE)) {
+            log.error("AOLOG file not exists. data lost");
+            return null;
+        }
+        long fileSize = storeHandler.getFileSize(AOL_FILE);
+        long needReadByteSize = fileOffsetByte + readLogSize * AOLog.SERIES_BYTES_LENGTH;
+        if (needReadByteSize > fileSize) {
+            log.error("Sorry, needReadByteSize:{}  is more than total AOLOG file size:{}.", needReadByteSize, fileSize);
+            return null;
+        }
+        File aolFile = storeHandler.getFile(AOL_FILE);
+        try (RandomAccessFile randomAccessFile = new RandomAccessFile(aolFile, "r");
+             FileChannel fileChannel = randomAccessFile.getChannel();) {
+            randomAccessFile.seek(fileOffsetByte);
+            ByteBuffer byteBuffer = ByteBuffer.allocate(AOLog.SERIES_BYTES_LENGTH);
+            AOLog[] aoLogs = new AOLog[readLogSize];
+            int i = 0;
+            byte[] logSeries = new byte[AOLog.SERIES_BYTES_LENGTH];
+            while (true) {
+                int readByte = fileChannel.read(byteBuffer);
+                if (readByte < AOLog.SERIES_BYTES_LENGTH) {
+                    log.error("AOLOG ENTRY ERROR");
+                    AOLog[] breakReturnLogs = new AOLog[i];
+                    System.arraycopy(aolFile, 0, breakReturnLogs, 0, i);
+                    aoLogs = breakReturnLogs;
+                    break;
+                }
+                byteBuffer.flip();
+                byteBuffer.get(logSeries);
+                AOLog aoLog = AOLog.fromSeries(logSeries);
+                aoLogs[i] = aoLog;
+                i++;
+            }
+            return aoLogs;
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+            log.error(e);
         } catch (IOException e) {
             e.printStackTrace();
-            log.error("READ AOL EX", e);
-
-            throw new RuntimeException(e);
+            log.error(e);
         }
         return null;
     }
@@ -118,10 +160,6 @@ public class AppendOnlyLogManager implements Initializer, Closer {
         initialized = false;
         this.close();
         this.init();
-    }
-
-    private void rollingFile() {
-
     }
 
     private long getLogFileIdx(String idxFilename) {
@@ -143,9 +181,9 @@ public class AppendOnlyLogManager implements Initializer, Closer {
     }
 
 
-    private boolean persistLogIdx() {
-        try (OutputStream outputStream = storeHandler.openFileOutputStream(LOG_END_IDX_FILE)) {
-            IOUtils.write(Longs.toByteArray(logIdx.get()), outputStream);
+    private boolean persistLogIdx(String filename, long val) {
+        try (OutputStream outputStream = storeHandler.openFileOutputStream(filename)) {
+            IOUtils.write(Longs.toByteArray(val), outputStream);
             DataOutputStream dos = new DataOutputStream(outputStream);
             dos.writeLong(logIdx.get());
         } catch (IOException e) {
@@ -160,36 +198,77 @@ public class AppendOnlyLogManager implements Initializer, Closer {
     public void close() {
         try {
             writeChannel.close();
-            persistLogIdx();
+            persistLogIdx(LOG_END_IDX_FILE, logIdx.get());
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
+    private class WriteLogTask implements Runnable {
 
-    @SneakyThrows
-    public static void main(String[] args) {
+        private BlockingQueue<AOLog> logQueue = null;
 
-        RandomAccessFile randomAccessFile = new RandomAccessFile("op.log", "rw");
-        FileChannel fileChannel = randomAccessFile.getChannel();
-        ByteBuffer byteBuffer = ByteBuffer.allocate(1024);
-        int c = 0;
-        int writeLen = 0;
-        while (true) {
-            byte[] bs = ("log-" + c++ + "\n").getBytes();
-            byteBuffer.put(bs);
-            byteBuffer.flip();
-            fileChannel.write(byteBuffer);
-            byteBuffer.clear();
-            writeLen += bs.length;
-            Thread.sleep((long) (Math.random() * 50));
-            if (writeLen > 3000) {
-                randomAccessFile.seek(0);
-                writeLen = 0;
-                System.err.println("Reset Zero: c:" + fileChannel.size() + "   f:" + randomAccessFile.length());
-            }
-            System.out.println("write :" + c);
+        public WriteLogTask(BlockingQueue<AOLog> logQueue) {
+            this.logQueue = logQueue;
         }
+
+        @Override
+        public void run() {
+            File aolFile = storeHandler.getFile(AOL_FILE);
+            try {
+                seekableAolFile = new RandomAccessFile(aolFile, "rw");
+                long logicalEndIdx = getLogFileIdx(LOG_END_IDX_FILE);
+                logIdx.set(logicalEndIdx);
+                long startIdx = getLogFileIdx(LOG_START_IDX_FILE);
+                writeLength = (int) (logicalEndIdx - startIdx + 1);
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+                log.error(e);
+            }
+            writeChannel = seekableAolFile.getChannel();
+            ByteBuffer byteBuffer = ByteBuffer.allocate(AOLog.SERIES_BYTES_LENGTH + 1);
+            while (true) {
+                AOLog aoLog = null;
+                try {
+                    aoLog = logQueue.poll(1, TimeUnit.SECONDS);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                    log.warn(e);
+                    DBMetrics.getInstance().event("Interrupted");
+                }
+                if (aoLog != null) {
+                    byteBuffer.clear();
+                    byteBuffer.put(aoLog.getSeri());
+                    byteBuffer.flip();
+                    try {
+                        writeChannel.write(byteBuffer);
+                        logIdx.incrementAndGet();
+                        writeLength++;
+                        if (writeLength % MAX_WRITE_LENGTH == 0) {
+                            rollingAolFIle();
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        log.error(e);
+                        DBMetrics.getInstance().event("IOException");
+                    }
+                }
+            }
+        }
+
+        private void rollingAolFIle() {
+            try {
+                seekableAolFile.seek(0);
+                final long fileStartIdx = logIdx.get();
+                persistLogIdx(LOG_START_IDX_FILE, fileStartIdx);
+                writeLength = 0;
+            } catch (IOException e) {
+                e.printStackTrace();
+                log.error(e);
+            }
+        }
+
     }
+
 
 }
