@@ -35,11 +35,6 @@ public class TSBlock {
     @Getter
     protected volatile int clearedVersion = -1;
 
-    /**
-     * help to mark dirty status,
-     */
-    private volatile transient boolean persisted;
-
     private Double preWrittenValue;
     private DoubleXor.DoubleXorResult preWrittenValueXorResult;
 
@@ -364,10 +359,7 @@ public class TSBlock {
     public void markVersionClear(int version) {
         this.clearedVersion = version;
     }
-
-    public void markPersist() {
-        this.persisted = true;
-    }
+    
 
     public boolean isDirty() {
         return blockVersion.get() == clearedVersion;

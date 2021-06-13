@@ -10,7 +10,14 @@ import com.google.common.primitives.Longs;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.IOUtils;
 
-import java.io.*;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.BlockingQueue;
@@ -23,7 +30,7 @@ public class AppendOnlyLogManager implements Initializer, Closer {
 
     private AtomicLong logIdx = new AtomicLong(0);
     private final String AOL_FILE = "aol.data";
-    private final String LOG_START_IDX_FILE = "aol.stagi prt.idx"; // the logical log offset of the file start
+    private final String LOG_START_IDX_FILE = "aol.start.idx"; // the logical log offset of the file start
     private final String LOG_END_IDX_FILE = "aol.end.idx"; // the logical log length
     private volatile boolean initialized = false;
     private StoreHandler storeHandler;
@@ -89,16 +96,14 @@ public class AppendOnlyLogManager implements Initializer, Closer {
                 if (MAX_WRITE_LENGTH - preReadLength < logForwardWriteLength) {
                     log.error("Sorry for rolling range overwrite. Something wrong happened");
                 } else {
-                    preRollingLogs = readAoLogFileContent((MAX_WRITE_LENGTH - preReadLength) * AOLog.SERIES_BYTES_LENGTH,
-                            preReadLength);
+                    preRollingLogs = readAoLogFileContent((MAX_WRITE_LENGTH - preReadLength) * AOLog.SERIES_BYTES_LENGTH, preReadLength);
                 }
             } else {
                 log.error("Sorry you can not read rolling back file content");
             }
             forwardLogs = readAoLogFileContent(0, logForwardWriteLength);
         } else {
-            forwardLogs = readAoLogFileContent((int) ((checkpoint - startIdx) * AOLog.SERIES_BYTES_LENGTH),
-                    (int) (endIdx - checkpoint));
+            forwardLogs = readAoLogFileContent((int) ((checkpoint - startIdx) * AOLog.SERIES_BYTES_LENGTH), (int) (endIdx - checkpoint));
         }
         if (preRollingLogs == null) {
             return forwardLogs;
@@ -123,8 +128,7 @@ public class AppendOnlyLogManager implements Initializer, Closer {
             return null;
         }
         File aolFile = storeHandler.getFile(AOL_FILE);
-        try (RandomAccessFile randomAccessFile = new RandomAccessFile(aolFile, "r");
-             FileChannel fileChannel = randomAccessFile.getChannel();) {
+        try (RandomAccessFile randomAccessFile = new RandomAccessFile(aolFile, "r"); FileChannel fileChannel = randomAccessFile.getChannel();) {
             randomAccessFile.seek(fileOffsetByte);
             ByteBuffer byteBuffer = ByteBuffer.allocate(AOLog.SERIES_BYTES_LENGTH);
             AOLog[] aoLogs = new AOLog[readLogSize];
