@@ -14,6 +14,10 @@ public class TimeUtils {
         return timestamp / 1000;
     }
 
+    public static long currentSeconds() {
+        return currentTimestamp();
+    }
+
     public static long currentMills() {
         return timestamp;
     }
@@ -133,7 +137,7 @@ public class TimeUtils {
     public static TimeUnitAdaptor ADAPTER_MILLIS_SECONDS = new MillisAdapter();
 
     //formatter
-    private static ThreadLocal<SimpleDateFormat> dailyFormatter = ThreadLocal.withInitial(()->new SimpleDateFormat("yyyy-MM-dd"));
-    private static ThreadLocal<SimpleDateFormat> monthlyFormatter = ThreadLocal.withInitial(()->new SimpleDateFormat("yyyy-MM"));
+    private static ThreadLocal<SimpleDateFormat> dailyFormatter = ThreadLocal.withInitial(() -> new SimpleDateFormat("yyyy-MM-dd"));
+    private static ThreadLocal<SimpleDateFormat> monthlyFormatter = ThreadLocal.withInitial(() -> new SimpleDateFormat("yyyy-MM"));
 
 }

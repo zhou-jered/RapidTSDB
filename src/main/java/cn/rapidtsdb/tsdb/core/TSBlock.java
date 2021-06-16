@@ -68,6 +68,10 @@ public class TSBlock {
         return diffSeconds >= blockLengthSeconds;
     }
 
+    public boolean isNextAfjacentBlock(TSBlock tsBlock) {
+        return tsBlock.getBaseTime() - baseTime == TSBlockManager.BLOCK_SIZE_SECONDS;
+    }
+
 
     /**
      * allow 2 hours time range  data points dis ordered
@@ -359,7 +363,7 @@ public class TSBlock {
     public void markVersionClear(int version) {
         this.clearedVersion = version;
     }
-    
+
 
     public boolean isDirty() {
         return blockVersion.get() == clearedVersion;

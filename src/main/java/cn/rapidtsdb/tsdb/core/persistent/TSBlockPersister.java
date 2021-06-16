@@ -7,6 +7,7 @@ import cn.rapidtsdb.tsdb.lifecycle.Initializer;
 import lombok.extern.log4j.Log4j2;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.Map;
 
 /**
@@ -34,7 +35,16 @@ public class TSBlockPersister implements Initializer, Closer {
 
     }
 
-    public void persistTSBlock(Map<Integer, TSBlock> tsBlocks) {
+    /**
+     * Create or Merge Block
+     *
+     * @param tsBlocks
+     */
+    public void persistTSBlockSync(Map<Integer, TSBlock> tsBlocks) {
+
+    }
+
+    public void persistTSBlockAsync(Map<Integer, TSBlock> tsBlocks) {
 
     }
 
@@ -46,10 +56,14 @@ public class TSBlockPersister implements Initializer, Closer {
         return null;
     }
 
+    public Iterator<TSBlock> getTSBlockIter(Integer metricId, long timeSecondsStart, Long timeSecondsEnd) {
+        return null;
+    }
+
     public static TSBlockPersister getINSTANCE() {
         if (INSTANCE == null) {
             synchronized (TSBlockPersister.class) {
-                if(INSTANCE == null) {
+                if (INSTANCE == null) {
                     INSTANCE = new TSBlockPersister();
                     INSTANCE.init();
                 }

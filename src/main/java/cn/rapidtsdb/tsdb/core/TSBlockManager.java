@@ -10,6 +10,7 @@ import cn.rapidtsdb.tsdb.lifecycle.Closer;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
 import cn.rapidtsdb.tsdb.store.StoreHandler;
 import cn.rapidtsdb.tsdb.store.StoreHandlerFactory;
+import cn.rapidtsdb.tsdb.tasks.ClearDirtyBlockTask;
 import cn.rapidtsdb.tsdb.utils.TimeUtils;
 import lombok.extern.log4j.Log4j2;
 import org.apache.logging.log4j.LogManager;
@@ -17,9 +18,7 @@ import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -45,12 +44,13 @@ public class TSBlockManager extends AbstractTSBlockManager implements Initialize
 
     private TSBlockPersister blockPersister;
 
-    private TSBlockTime tsTime = new TSBlockTime();
 
-    private static final int BLOCK_SIZE_SECONDS = 2 * 60;
+    public static final int BLOCK_SIZE_SECONDS = (int) TimeUnit.HOURS.toSeconds(2);
 
     private AtomicReference<Map<Integer, TSBlock>> currentBlockCacheRef = new AtomicReference<>();
-    private Map<Integer, TSBlock> lastBlockCache = null;
+    private AtomicReference<Map<Integer, TSBlock>> preRoundBlockRef = new AtomicReference<>();
+    private AtomicReference<Map<Integer, TSBlock>> forwardRoundBlockRef = new AtomicReference<>();
+
 
     /**
      * ???
@@ -74,10 +74,14 @@ public class TSBlockManager extends AbstractTSBlockManager implements Initialize
 
     @Override
     public void init() {
+        dirtyBlocksRef.set(new HashSet<>());
+        preRoundBlockRef.set(newTSMap());
         currentBlockCacheRef.set(newTSMap());
+        forwardRoundBlockRef.set(newTSMap());
     }
 
     public TSBlock getCurrentWriteBlock(int metricId, long timestamp) {
+
         Map<Integer, TSBlock> currentBlockCache = currentBlockCacheRef.get();
         TSBlock currentBlock = currentBlockCache.get(metricId);
         if (currentBlock == null) {
@@ -93,20 +97,31 @@ public class TSBlockManager extends AbstractTSBlockManager implements Initialize
         }
 
         if (currentBlock.afterBlock(timestamp)) {
-            // A new Round Come here
-            TSBlock expiredBlock = currentBlock;
-            // persist expired current block todo
-            persistTSBlock(metricId, expiredBlock);
-            lastBlockCache.put(metricId, currentBlock);
+            TSBlock forwardBlock = forwardRoundBlockRef.get().get(metricId);
+            if (forwardBlock != null) {
+                return forwardBlock;
+            }
+            forwardBlock = newTSBlock(metricId, timestamp);
 
-            currentBlock = newTSBlock(metricId, timestamp);
-            currentBlockCache.put(metricId, currentBlock);
-            return currentBlock;
-        }
-
-        TSBlock lastBlock = lastBlockCache.get(metricId);
-        if (lastBlock != null && lastBlock.inBlock(timestamp)) {
-            return lastBlock;
+            if (currentBlock.isNextAfjacentBlock(forwardBlock)) {
+                forwardBlock = forwardRoundBlockRef.get().putIfAbsent(metricId, forwardBlock);
+                return forwardBlock;
+            } else {
+                log.error("Refused to Write too much ahead of time data, metricId:{}, write time:{}, currentTime:{}",
+                        metricId,
+                        timestamp, currentBlock.getBaseTime());
+                return null;
+            }
+        } else {
+            if (tsdbConfig.getAllowOverwrite()) {
+                //Warning, if Code running here, Too Much Memory could be used.
+                TSBlock preBlock = preRoundBlockRef.get().get(metricId);
+                if (preBlock == null || !preBlock.inBlock(timestamp)) {
+                    preBlock = newTSBlock(metricId, timestamp);
+                }
+                markDirtyBlock(preBlock);
+                return preBlock;
+            }
         }
         return null;
     }
@@ -124,37 +139,16 @@ public class TSBlockManager extends AbstractTSBlockManager implements Initialize
     }
 
 
-    /**
-     * persist a TSBlock
-     *
-     * @param tsBlock
-     */
-    public void persistTSBlock(int metricId, TSBlock tsBlock) {
-        long baseTime = tsBlock.getBaseTime();
-        baseTime = TIME_UNIT_ADAPTOR_SECONDS.adapt(baseTime);
-        long currentSeconds = TimeUtils.currentTimestamp();
-        long todayBase = TimeUtils.truncateDaySeconds(currentSeconds);
-        if (baseTime >= todayBase) {
-            // store a fresh block
-            TSBlockSnapshot blockSnapshot = new TSBlockSnapshot(tsBlock);
-            SimpleTSBlockStoreTask storeTask = new SimpleTSBlockStoreTask(metricId, blockSnapshot, storeHandler);
-            ioExecutor.submit(storeTask);
-        } else {
-            // store a history block
-        }
-
-    }
-
-
     @Override
-    public void triggerPersist(Runnable completedCallback) {
-        Map<Integer, TSBlock> newRoundTSMap = newTSMap();
-        Map<Integer, TSBlock> old = currentBlockCacheRef.get();
-        currentBlockCacheRef.compareAndSet(old, newRoundTSMap);
-        ioExecutor.submit(() -> {
-            blockPersister.persistTSBlock(old);
-            completedCallback.run();
-        });
+    public void triggerRoundCheck(Runnable completedCallback) {
+        preRoundBlockRef.set(currentBlockCacheRef.get());
+        blockPersister.persistTSBlockSync(currentBlockCacheRef.get());
+        currentBlockCacheRef.set(forwardRoundBlockRef.get());
+        forwardRoundBlockRef.set(newTSMap());
+        blockPersister.persistTSBlockAsync(preRoundBlockRef.get());
+        Set<TSBlock> dirtyBlock = dirtyBlocksRef.get();
+        dirtyBlocksRef.set(new HashSet<>());
+        ioExecutor.submit(new ClearDirtyBlockTask(dirtyBlock, blockPersister));
     }
 
     public List<TSBlock> getBlockWithTimeRange(int metricId, long start, long end) {
@@ -166,9 +160,14 @@ public class TSBlockManager extends AbstractTSBlockManager implements Initialize
     }
 
     private void flushMemoryBlock() {
-        blockPersister.persistTSBlock(currentBlockCacheRef.get());
+        blockPersister.persistTSBlockSync(currentBlockCacheRef.get());
     }
 
+    /**
+     * this most important data struct of the time series data
+     *
+     * @return
+     */
     public Map<Integer, TSBlock> newTSMap() {
         return new ConcurrentHashMap<Integer, TSBlock>();
     }
@@ -215,7 +214,7 @@ public class TSBlockManager extends AbstractTSBlockManager implements Initialize
                             outputStream.write(blockMeta.series());
                             blockWriter.serializeToStream(snapshot, outputStream);
                             snapshot.getTsBlock().markVersionClear(snapshot.getDataVersion());
-                            snapshot.getTsBlock().markPersist();
+//                            snapshot.getTsBlock().markPersist();
                             break;
                         } else {
                             log.warn("metric IOLock failed: {}", metricId);

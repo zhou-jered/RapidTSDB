@@ -5,10 +5,10 @@ import cn.rapidtsdb.tsdb.utils.TimeUtils;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Define the Manager Rules of TSBlocks.
@@ -20,8 +20,7 @@ public abstract class AbstractTSBlockManager {
 
     protected static final TimeUtils.TimeUnitAdaptor TIME_UNIT_ADAPTOR_SECONDS = TimeUtils.ADAPTER_SECONDS;
 
-    @Deprecated
-    protected Set<TSBlock> dirtyBlocks = new HashSet<>();
+    protected AtomicReference<Set<TSBlock>> dirtyBlocksRef = new AtomicReference<>();
 
     public abstract TSBlock getCurrentWriteBlock(int metricId, long timestamp);
 
@@ -31,15 +30,15 @@ public abstract class AbstractTSBlockManager {
     /**
      * Every Two Hours Trigger once
      */
-    public abstract void triggerPersist(Runnable completedCallback);
+    public abstract void triggerRoundCheck(Runnable completedCallback);
 
     public abstract List<TSBlock> getBlockWithTimeRange(int metricId, long start, long end);
 
     public abstract Iterator<TSBlock> getBlockStreamByTimeRange(int metricId, long start, long end);
 
-    @Deprecated
+
     public void markDirtyBlock(TSBlock block) {
-        dirtyBlocks.add(block);
+        dirtyBlocksRef.get().add(block);
     }
 
     protected static TSBlockMeta createTSBlockMeta(TSBlockSnapshot snapshot, int metricId) {

@@ -100,7 +100,7 @@ public class TSDB implements Initializer, Closer {
 
     public synchronized void triggerBlockPersist() {
         long aolLogIdx = appendOnlyLogManager.getLogIndex();
-        blockManager.triggerPersist(() -> {
+        blockManager.triggerRoundCheck(() -> {
             checkPointManager.savePoint(aolLogIdx);
         });
     }
