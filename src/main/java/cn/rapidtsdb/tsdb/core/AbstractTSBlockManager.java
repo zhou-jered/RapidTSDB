@@ -25,8 +25,6 @@ public abstract class AbstractTSBlockManager {
 
     public abstract TSBlock getCurrentWriteBlock(int metricId, long timestamp);
 
-    public abstract TSBlock newTSBlock(int metricId, long timestamp);
-
 
     /**
      * Every Two Hours Trigger once

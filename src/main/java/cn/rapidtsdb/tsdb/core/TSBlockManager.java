@@ -1,6 +1,5 @@
 package cn.rapidtsdb.tsdb.core;
 
-import cn.rapidtsdb.tsdb.config.MetricConfig;
 import cn.rapidtsdb.tsdb.config.TSDBConfig;
 import cn.rapidtsdb.tsdb.core.io.TSBlockSerializer;
 import cn.rapidtsdb.tsdb.core.persistent.TSBlockPersister;
@@ -25,7 +24,6 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * TSBlock Logical Manager, File Implementation
@@ -50,7 +48,11 @@ public class TSBlockManager extends AbstractTSBlockManager implements Initialize
     private static final int BLOCK_SIZE_SECONDS = 2 * 60;
 
     private AtomicReference<Map<Integer, TSBlock>> currentBlockCacheRef = new AtomicReference<>();
-    private Map<Integer, TSBlock> lastBlockCache = null;
+
+    //waiting the later data
+    private AtomicReference<Map<Integer, TSBlock>> preBlock = new AtomicReference<>();
+
+    private AtomicReference<Map<Integer, TSBlock>> forwardBlock = new AtomicReference<>();
 
     /**
      * ???
@@ -75,6 +77,8 @@ public class TSBlockManager extends AbstractTSBlockManager implements Initialize
     @Override
     public void init() {
         currentBlockCacheRef.set(newTSMap());
+
+
     }
 
     public TSBlock getCurrentWriteBlock(int metricId, long timestamp) {
@@ -93,18 +97,13 @@ public class TSBlockManager extends AbstractTSBlockManager implements Initialize
         }
 
         if (currentBlock.afterBlock(timestamp)) {
-            // A new Round Come here
-            TSBlock expiredBlock = currentBlock;
-            // persist expired current block todo
-            persistTSBlock(metricId, expiredBlock);
-            lastBlockCache.put(metricId, currentBlock);
 
-            currentBlock = newTSBlock(metricId, timestamp);
+            currentBlock = nextTSBlock(metricId, timestamp);
             currentBlockCache.put(metricId, currentBlock);
             return currentBlock;
         }
 
-        TSBlock lastBlock = lastBlockCache.get(metricId);
+        TSBlock lastBlock = preBlock.get().get(metricId);
         if (lastBlock != null && lastBlock.inBlock(timestamp)) {
             return lastBlock;
         }
@@ -112,37 +111,13 @@ public class TSBlockManager extends AbstractTSBlockManager implements Initialize
     }
 
 
-    public TSBlock newTSBlock(int metricId, long timestamp) {
-        TSBlock tsBlock = null;
-        MetricConfig mc = MetricConfig.getMetricConfig(metricId);
-        TimeUtils.TimeUnitAdaptor timeUnitAdaptor = TimeUtils.TimeUnitAdaptorFactory.getTimeAdaptor(mc.getTimeUnit());
-        long secondsTimestamp = TIME_UNIT_ADAPTOR_SECONDS.adapt(timestamp);
-        long secondsBasetime = secondsTimestamp - (secondsTimestamp % BLOCK_SIZE_SECONDS);
-        long blockBasetime = timeUnitAdaptor.adapt(secondsBasetime);
-        tsBlock = new TSBlock(blockBasetime, BLOCK_SIZE_SECONDS, timeUnitAdaptor);
-        return tsBlock;
-    }
-
-
-    /**
-     * persist a TSBlock
-     *
-     * @param tsBlock
-     */
-    public void persistTSBlock(int metricId, TSBlock tsBlock) {
-        long baseTime = tsBlock.getBaseTime();
-        baseTime = TIME_UNIT_ADAPTOR_SECONDS.adapt(baseTime);
-        long currentSeconds = TimeUtils.currentTimestamp();
-        long todayBase = TimeUtils.truncateDaySeconds(currentSeconds);
-        if (baseTime >= todayBase) {
-            // store a fresh block
-            TSBlockSnapshot blockSnapshot = new TSBlockSnapshot(tsBlock);
-            SimpleTSBlockStoreTask storeTask = new SimpleTSBlockStoreTask(metricId, blockSnapshot, storeHandler);
-            ioExecutor.submit(storeTask);
+    public TSBlock nextTSBlock(int metricId, long timestamp) {
+        TSBlock tsBlock = new TSBlock(tsTime.getCurrentBlockTimeSeconds() + BLOCK_SIZE_SECONDS, BLOCK_SIZE_SECONDS, TimeUtils.TimeUnitAdaptorFactory.DEFAULT);
+        if (tsBlock.inBlock(timestamp)) {
+            return tsBlock;
         } else {
-            // store a history block
+            return null;
         }
-
     }
 
 
@@ -158,7 +133,8 @@ public class TSBlockManager extends AbstractTSBlockManager implements Initialize
     }
 
     public List<TSBlock> getBlockWithTimeRange(int metricId, long start, long end) {
-        return null;
+        List<TSBlock> tsBlocks = blockPersister.getTSBlocks(metricId, start, end);
+        return tsBlocks;
     }
 
     public Iterator<TSBlock> getBlockStreamByTimeRange(int metricId, long start, long end) {
@@ -173,161 +149,5 @@ public class TSBlockManager extends AbstractTSBlockManager implements Initialize
         return new ConcurrentHashMap<Integer, TSBlock>();
     }
 
-    /**
-     * Just write A TSBlock into a single file
-     * todo move this implementation to under layer,
-     * block manager do not need to know about the persist implementation
-     */
-    static class SimpleTSBlockStoreTask implements Runnable {
-        private final static Logger log = LogManager.getLogger("asf");
-        private int metricId;
-        private FileLocation fileLocation;
-        private TSBlockSnapshot snapshot;
-        private StoreHandler storeHandler;
-        private static final TSBlockSerializer blockWriter = new TSBlockSerializer();
-
-        public SimpleTSBlockStoreTask(int metricId, TSBlockSnapshot snapshot, StoreHandler storeHandler) {
-            this.metricId = metricId;
-            this.fileLocation = FilenameStrategy.getTodayFileLocation(metricId, snapshot.getTsBlock().getBaseTime());
-            this.snapshot = snapshot;
-            this.storeHandler = storeHandler;
-        }
-
-        @Override
-        public void run() {
-            TSBlockMeta blockMeta = createTSBlockMeta(snapshot, metricId);
-            if (log.isDebugEnabled()) {
-                log.debug("Store {}, dpsSize:{}, md5:{}, file:{}", blockMeta.getBaseTime(), blockMeta.getDpsSize(), blockMeta.getMd5Checksum(), fileLocation);
-            }
-            final String fullFilename = fileLocation.getPathWithFilename();
-            if (storeHandler.fileExisted(fullFilename)) {
-                log.warn("Store {}, file already Existed. Overrided", blockMeta.getSimpleInfo());
-            }
-            try {
-                log.debug("{} start write:{}", metricId, fileLocation);
-                OutputStream outputStream = storeHandler.openFileOutputStream(fullFilename);
-                Lock metricLock = IOLock.getMetricLock(metricId);
-
-                try {
-                    int retry = 0;
-                    while (retry++ < 10) {
-                        if (metricLock.tryLock(3, TimeUnit.SECONDS)) {
-                            outputStream.write(blockMeta.series());
-                            blockWriter.serializeToStream(snapshot, outputStream);
-                            snapshot.getTsBlock().markVersionClear(snapshot.getDataVersion());
-                            snapshot.getTsBlock().markPersist();
-                            break;
-                        } else {
-                            log.warn("metric IOLock failed: {}", metricId);
-                        }
-                    }
-                } catch (InterruptedException e) {
-                } finally {
-                    outputStream.close();
-                    metricLock.unlock();
-                }
-                log.debug("{} write :{}, completed", metricId, fileLocation);
-
-            } catch (IOException e) {
-                e.printStackTrace();
-                log.error("Write File {} Exception", fileLocation.getPathWithFilename(), e);
-                ManagedThreadPool.getInstance().submitFailedTask(this);
-            }
-        }
-    }
-
-    /**
-     * write tsblock into a compressed file.
-     * file seek invovled
-     */
-    static class OldTsBlockUpdateTask implements Runnable {
-
-        private int metricId;
-        private TSBlockSnapshot blockSnapshot;
-
-        public OldTsBlockUpdateTask(int metricId, TSBlockSnapshot blockSnapshot) {
-            this.metricId = metricId;
-            this.blockSnapshot = blockSnapshot;
-        }
-
-        @Override
-        public void run() {
-
-        }
-    }
-
-
-    /**
-     * file structure
-     * Today HotData: {metricid}/{timebased_hourlyIndex)}.mdata
-     * Daily Data : {metricid}/day/{yyyy-MM-dd}.mdata
-     * 30 Day Data: {metricid}/mon/{yyyy-MM}.data
-     * 3000 Day Data: {metricid}/history/{yyyy-MM}.data
-     */
-    public static class FilenameStrategy {
-
-        public static FileLocation getTodayFileLocation(int metric, long baseTimeSeconds) {
-            return new FileLocation(getTodayDirectory(metric, baseTimeSeconds), getTodayBlockFilename(metric, baseTimeSeconds));
-        }
-
-        public static FileLocation getDailyFileLocation(int metric, long baseTimeSeconds) {
-            return new FileLocation(getDailyBlockFilename(metric, baseTimeSeconds), getDailyBlockFilename(metric, baseTimeSeconds));
-        }
-
-        public static FileLocation getMonthlyFileLocation(int metric, long baseTimeSeconds) {
-            return new FileLocation(getMonthlyDirectory(metric, baseTimeSeconds), getMonthBlockFilename(metric, baseTimeSeconds));
-        }
-
-        /**
-         * Hot data
-         *
-         * @param metric
-         * @param baseTimeSecconds
-         * @return
-         */
-        public static String getTodayDirectory(int metric, long baseTimeSecconds) {
-            return String.valueOf(metric);
-        }
-
-        public static String getDailyDirectory(int metric, long baseTimeSeconds) {
-            return metric + "/day";
-        }
-
-        public static String getMonthlyDirectory(int metric, long baseTimeSeconds) {
-            return metric + "/mon";
-        }
-
-
-        public static String getTodayBlockFilename(int metricId, long baseTimeSeconds) {
-            return "T" + metricId + ":" + baseTimeSeconds + ".data";
-        }
-
-        public static String getDailyBlockFilename(int metricId, long timeSeconds) {
-            timeSeconds = TimeUtils.truncateDaySeconds(timeSeconds);
-            return "D" + metricId + ":" + timeSeconds + ".data";
-        }
-
-        public static String getMonthBlockFilename(int metricId, long timeSeconds) {
-            timeSeconds = TimeUtils.truncateMonthSeconds(timeSeconds);
-            return "M" + metricId + ":" + timeSeconds + ".data";
-        }
-
-        public static String getYearBlockFilename(int metricId, long timeSeconds) {
-            timeSeconds = TimeUtils.truncateYearSeconds(timeSeconds);
-            return "Y" + metricId + ":" + timeSeconds + ".data";
-        }
-    }
-
-
-    private static class IOLock {
-        private static ConcurrentHashMap<Integer, Lock> mLocks = new ConcurrentHashMap<>();
-
-        public static Lock getMetricLock(int metric) {
-            if (!mLocks.contains(metric)) {
-                mLocks.putIfAbsent(metric, new ReentrantLock());
-            }
-            return mLocks.get(metric);
-        }
-    }
 
 }

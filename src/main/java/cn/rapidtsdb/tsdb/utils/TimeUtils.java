@@ -10,8 +10,12 @@ public class TimeUtils {
 
     private static volatile long timestamp = System.currentTimeMillis();
 
-    public static long currentTimestamp() {
+    public static long currentSeconds() {
         return timestamp / 1000;
+    }
+
+    public static long currentTimestamp() {
+        return timestamp;
     }
 
     public static long currentMills() {
@@ -87,6 +91,8 @@ public class TimeUtils {
 
     public static class TimeUnitAdaptorFactory {
 
+        public static final TimeUnitAdaptor DEFAULT = getTimeAdaptor("ms");
+
         /**
          * @param timeUnit only 's' and 'ms' supported
          * @return
@@ -133,7 +139,7 @@ public class TimeUtils {
     public static TimeUnitAdaptor ADAPTER_MILLIS_SECONDS = new MillisAdapter();
 
     //formatter
-    private static ThreadLocal<SimpleDateFormat> dailyFormatter = ThreadLocal.withInitial(()->new SimpleDateFormat("yyyy-MM-dd"));
-    private static ThreadLocal<SimpleDateFormat> monthlyFormatter = ThreadLocal.withInitial(()->new SimpleDateFormat("yyyy-MM"));
+    private static ThreadLocal<SimpleDateFormat> dailyFormatter = ThreadLocal.withInitial(() -> new SimpleDateFormat("yyyy-MM-dd"));
+    private static ThreadLocal<SimpleDateFormat> monthlyFormatter = ThreadLocal.withInitial(() -> new SimpleDateFormat("yyyy-MM"));
 
 }
