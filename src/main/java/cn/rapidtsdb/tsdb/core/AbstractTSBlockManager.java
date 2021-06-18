@@ -24,9 +24,6 @@ public abstract class AbstractTSBlockManager {
 
     public abstract TSBlock getCurrentWriteBlock(int metricId, long timestamp);
 
-    public abstract TSBlock newTSBlock(int metricId, long timestamp);
-
-
     /**
      * Every Two Hours Trigger once
      */
@@ -41,7 +38,7 @@ public abstract class AbstractTSBlockManager {
         dirtyBlocksRef.get().add(block);
     }
 
-    protected static TSBlockMeta createTSBlockMeta(TSBlockSnapshot snapshot, int metricId) {
+    public static TSBlockMeta createTSBlockMeta(TSBlockSnapshot snapshot, int metricId) {
 
         TSBlockMeta blockMeta = new TSBlockMeta();
         blockMeta.setMetricId(metricId);

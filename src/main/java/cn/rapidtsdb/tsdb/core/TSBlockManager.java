@@ -1,6 +1,5 @@
 package cn.rapidtsdb.tsdb.core;
 
-import cn.rapidtsdb.tsdb.config.MetricConfig;
 import cn.rapidtsdb.tsdb.config.TSDBConfig;
 import cn.rapidtsdb.tsdb.core.io.TSBlockSerializer;
 import cn.rapidtsdb.tsdb.core.persistent.TSBlockPersister;
@@ -26,6 +25,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import static cn.rapidtsdb.tsdb.core.TSBlockFactory.newTSBlock;
+
 /**
  * TSBlock Logical Manager, File Implementation
  * response for @TSBlock store, search, compress。
@@ -43,9 +44,6 @@ public class TSBlockManager extends AbstractTSBlockManager implements Initialize
     private StoreHandler storeHandler;
 
     private TSBlockPersister blockPersister;
-
-
-    public static final int BLOCK_SIZE_SECONDS = (int) TimeUnit.HOURS.toSeconds(2);
 
     private AtomicReference<Map<Integer, TSBlock>> currentBlockCacheRef = new AtomicReference<>();
     private AtomicReference<Map<Integer, TSBlock>> preRoundBlockRef = new AtomicReference<>();
@@ -103,7 +101,7 @@ public class TSBlockManager extends AbstractTSBlockManager implements Initialize
             }
             forwardBlock = newTSBlock(metricId, timestamp);
 
-            if (currentBlock.isNextAfjacentBlock(forwardBlock)) {
+            if (currentBlock.isNextAjacentBlock(forwardBlock)) {
                 forwardBlock = forwardRoundBlockRef.get().putIfAbsent(metricId, forwardBlock);
                 return forwardBlock;
             } else {
@@ -124,18 +122,6 @@ public class TSBlockManager extends AbstractTSBlockManager implements Initialize
             }
         }
         return null;
-    }
-
-
-    public TSBlock newTSBlock(int metricId, long timestamp) {
-        TSBlock tsBlock = null;
-        MetricConfig mc = MetricConfig.getMetricConfig(metricId);
-        TimeUtils.TimeUnitAdaptor timeUnitAdaptor = TimeUtils.TimeUnitAdaptorFactory.getTimeAdaptor(mc.getTimeUnit());
-        long secondsTimestamp = TIME_UNIT_ADAPTOR_SECONDS.adapt(timestamp);
-        long secondsBasetime = secondsTimestamp - (secondsTimestamp % BLOCK_SIZE_SECONDS);
-        long blockBasetime = timeUnitAdaptor.adapt(secondsBasetime);
-        tsBlock = new TSBlock(blockBasetime, BLOCK_SIZE_SECONDS, timeUnitAdaptor);
-        return tsBlock;
     }
 
 

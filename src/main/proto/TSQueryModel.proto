@@ -1,0 +1,12 @@
+syntax = "proto3";
+package cn.rapidtsdb.tsdb.model;
+
+message TSQuery {
+    string metrics = 1;
+    int64 startTime = 2;
+    int64 endTime = 3;
+    string aggregator = 4;
+    string downSampler = 5;
+}
+
+

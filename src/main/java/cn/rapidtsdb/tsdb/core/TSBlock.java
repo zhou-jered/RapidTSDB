@@ -10,6 +10,8 @@ import lombok.extern.log4j.Log4j2;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import static cn.rapidtsdb.tsdb.core.ByteMask.RIGHT_MASK;
 
@@ -42,6 +44,7 @@ public class TSBlock {
     private TimeUtils.TimeUnitAdaptor timeUnitAdapter;
     private static final TimeUtils.TimeUnitAdaptor secondAdapter = TimeUtils.TimeUnitAdaptorFactory.getTimeAdaptor("s");
 
+    private Lock writeLock = new ReentrantLock();
     /**
      * data point int flat mode
      */
@@ -68,8 +71,8 @@ public class TSBlock {
         return diffSeconds >= blockLengthSeconds;
     }
 
-    public boolean isNextAfjacentBlock(TSBlock tsBlock) {
-        return tsBlock.getBaseTime() - baseTime == TSBlockManager.BLOCK_SIZE_SECONDS;
+    public boolean isNextAjacentBlock(TSBlock tsBlock) {
+        return tsBlock.getBaseTime() - baseTime == TSBlockFactory.BLOCK_SIZE_SECONDS;
     }
 
 
@@ -79,17 +82,21 @@ public class TSBlock {
      * @param timestamp
      * @param val
      */
-    public synchronized void appendDataPoint(long timestamp, double val) {
+    public void appendDataPoint(long timestamp, double val) {
         if (!inBlock(timestamp)) {
             throw new BlockDataMissMatchException(timestamp, baseTime, blockLengthSeconds);
         }
+        writeLock.lock();
         appendTime(timestamp);
         appendValue(val);
         incrDataVersion();
+        writeLock.unlock();
     }
 
-    public synchronized TSBlockSnapshot snapshot() {
+    public TSBlockSnapshot snapshot() {
+        writeLock.lock();
         TSBlockSnapshot snapshot = new TSBlockSnapshot(this);
+        writeLock.unlock();
         return snapshot;
     }
 
@@ -186,6 +193,7 @@ public class TSBlock {
 
 
     private void handleDuplicateDatapoint(ArrayList<TSDataPoint> dps) {
+
         TSDataPoint dp1 = null, dp2 = null;
         boolean swapped = false;
         for (int i = 0; i < dps.size(); i++) {
