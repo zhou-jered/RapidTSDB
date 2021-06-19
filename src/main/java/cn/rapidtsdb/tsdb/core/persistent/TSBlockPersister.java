@@ -5,6 +5,7 @@ import cn.rapidtsdb.tsdb.core.TSBlock;
 import cn.rapidtsdb.tsdb.core.TSBlockManager;
 import cn.rapidtsdb.tsdb.core.TSBlockMeta;
 import cn.rapidtsdb.tsdb.core.TSBlockSnapshot;
+import cn.rapidtsdb.tsdb.core.io.IOLock;
 import cn.rapidtsdb.tsdb.core.io.TSBlockSerializer;
 import cn.rapidtsdb.tsdb.core.persistent.file.FileLocation;
 import cn.rapidtsdb.tsdb.executors.ManagedThreadPool;
@@ -19,9 +20,12 @@ import org.apache.logging.log4j.Logger;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
+
+import static cn.rapidtsdb.tsdb.core.AbstractTSBlockManager.createTSBlockMeta;
 
 /**
  * The Logical TSBlock Persister
@@ -49,7 +53,16 @@ public class TSBlockPersister implements Initializer, Closer {
 
     }
 
-    public void persistTSBlock(Map<Integer, TSBlock> tsBlocks) {
+    /**
+     * Create or Merge Block
+     *
+     * @param tsBlocks
+     */
+    public void persistTSBlockSync(Map<Integer, TSBlock> tsBlocks) {
+
+    }
+
+    public void persistTSBlockAsync(Map<Integer, TSBlock> tsBlocks) {
 
     }
 
@@ -58,6 +71,10 @@ public class TSBlockPersister implements Initializer, Closer {
     }
 
     public ArrayList<TSBlock> getTSBlocks(Integer metricId, long timeSecondsStart, long timeSecondsEnd) {
+        return null;
+    }
+
+    public Iterator<TSBlock> getTSBlockIter(Integer metricId, long timeSecondsStart, Long timeSecondsEnd) {
         return null;
     }
 
