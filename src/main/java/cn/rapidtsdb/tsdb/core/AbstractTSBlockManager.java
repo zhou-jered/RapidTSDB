@@ -23,8 +23,7 @@ public abstract class AbstractTSBlockManager {
     protected AtomicReference<Set<TSBlock>> dirtyBlocksRef = new AtomicReference<>();
 
     public abstract TSBlock getCurrentWriteBlock(int metricId, long timestamp);
-
-
+    
     /**
      * Every Two Hours Trigger once
      */

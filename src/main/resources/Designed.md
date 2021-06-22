@@ -15,5 +15,7 @@ one day per file
 File divided into block
 block LEN, startTimestamp Offset
 
-
 tag kv arrangment
+
+
+# protobuf 定义了哪些内容？

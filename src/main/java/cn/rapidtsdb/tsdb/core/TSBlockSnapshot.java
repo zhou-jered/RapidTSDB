@@ -7,6 +7,7 @@ import lombok.Getter;
  */
 @Getter
 public class TSBlockSnapshot {
+
     private TSBlock tsBlock;
     private int dataVersion;
     private int clearedVersion;

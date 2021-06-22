@@ -1,6 +1,5 @@
 package cn.rapidtsdb.tsdb.core;
 
-import cn.rapidtsdb.tsdb.config.MetricConfig;
 import cn.rapidtsdb.tsdb.config.TSDBConfig;
 import cn.rapidtsdb.tsdb.core.persistent.TSBlockPersister;
 import cn.rapidtsdb.tsdb.executors.ManagedThreadPool;
@@ -9,7 +8,6 @@ import cn.rapidtsdb.tsdb.lifecycle.Initializer;
 import cn.rapidtsdb.tsdb.store.StoreHandler;
 import cn.rapidtsdb.tsdb.store.StoreHandlerFactory;
 import cn.rapidtsdb.tsdb.tasks.ClearDirtyBlockTask;
-import cn.rapidtsdb.tsdb.utils.TimeUtils;
 import lombok.extern.log4j.Log4j2;
 
 import java.util.HashSet;
@@ -19,8 +17,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+
+import static cn.rapidtsdb.tsdb.core.TSBlockFactory.newTSBlock;
 
 /**
  * TSBlock Logical Manager, File Implementation
@@ -39,9 +38,6 @@ public class TSBlockManager extends AbstractTSBlockManager implements Initialize
     private StoreHandler storeHandler;
 
     private TSBlockPersister blockPersister;
-
-
-    public static final int BLOCK_SIZE_SECONDS = (int) TimeUnit.HOURS.toSeconds(2);
 
     private AtomicReference<Map<Integer, TSBlock>> currentBlockCacheRef = new AtomicReference<>();
     private AtomicReference<Map<Integer, TSBlock>> preRoundBlockRef = new AtomicReference<>();
@@ -100,7 +96,7 @@ public class TSBlockManager extends AbstractTSBlockManager implements Initialize
             }
             forwardBlock = newTSBlock(metricId, timestamp);
 
-            if (currentBlock.isNextAfjacentBlock(forwardBlock)) {
+            if (currentBlock.isNextAjacentBlock(forwardBlock)) {
                 forwardBlock = forwardRoundBlockRef.get().putIfAbsent(metricId, forwardBlock);
                 return forwardBlock;
             } else {
@@ -120,19 +116,6 @@ public class TSBlockManager extends AbstractTSBlockManager implements Initialize
 
         }
         return null;
-    }
-
-
-    public TSBlock newTSBlock(int metricId, long timestamp) {
-        TSBlock tsBlock = null;
-        MetricConfig mc = MetricConfig.getMetricConfig(metricId);
-        TimeUtils.TimeUnitAdaptor timeUnitAdaptor = TimeUtils.TimeUnitAdaptorFactory.getTimeAdaptor(mc.getTimeUnit());
-        long secondsTimestamp = TIME_UNIT_ADAPTOR_SECONDS.adapt(timestamp);
-        long secondsBasetime = secondsTimestamp - (secondsTimestamp % BLOCK_SIZE_SECONDS);
-        long blockBasetime = timeUnitAdaptor.adapt(secondsBasetime);
-        tsBlock = new TSBlock(blockBasetime, BLOCK_SIZE_SECONDS, timeUnitAdaptor);
-        return tsBlock;
-
     }
 
 
@@ -171,8 +154,6 @@ public class TSBlockManager extends AbstractTSBlockManager implements Initialize
     private Map<Integer, TSBlock> newTSMap() {
         return new ConcurrentHashMap<Integer, TSBlock>();
     }
-
-    private void load
-
+    
 
 }
