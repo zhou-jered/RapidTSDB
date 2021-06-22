@@ -19,7 +19,7 @@ import java.security.NoSuchAlgorithmException;
 public class TSBlockMeta implements Serializable {
 
     private int metricId;
-    private long baseTime;
+    private long baseTime; //seconds
     private int dpsSize;
     private int timeBitsLen;
     private int valuesBitsLen;
