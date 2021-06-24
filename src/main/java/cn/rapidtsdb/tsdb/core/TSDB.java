@@ -66,6 +66,8 @@ public class TSDB implements Initializer, Closer {
     @Override
     public void close() {
         log.info("Closing TSDB");
+        globalExecutor.close();
+        blockManager.close();
         appendOnlyLogManager.close();
         log.info("TSDB Close completed");
     }
