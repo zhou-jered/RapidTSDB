@@ -98,7 +98,9 @@ public class ManagedThreadPool implements Closer {
     @Override
     public void close() {
         ioExecutor.shutdown();
-        failedTaskExecutor.shutdown();
+        if (failedTaskExecutor != null) {
+            failedTaskExecutor.shutdown();
+        }
         scheduledExecutorService.shutdown();
         for (Thread thread : managedThreads) {
             thread.interrupt();
