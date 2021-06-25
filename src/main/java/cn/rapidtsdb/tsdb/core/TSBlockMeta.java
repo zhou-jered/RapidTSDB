@@ -25,7 +25,7 @@ public class TSBlockMeta implements Serializable {
     private int valuesBitsLen;
     private byte[] md5Checksum;
 
-    private final static int SERIES_LEN = 4 + 8 + 4 + 4 + 4 + 16;
+    public final static int SERIES_LEN = 4 + 8 + 4 + 4 + 4 + 16;
 
     public String getSimpleInfo() {
         return "baseTime:" + baseTime + ", size:" + dpsSize + ", md5:" + BinaryUtils.hexBytes(md5Checksum);

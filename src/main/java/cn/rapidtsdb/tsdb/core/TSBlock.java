@@ -100,6 +100,38 @@ public class TSBlock {
         return snapshot;
     }
 
+    public void recoveryTimeBytes(byte[] bs, int byteOffset, int timeBitsLength) {
+        writeLock.lock();
+        if (time.getBytesOffset() != 0) {
+            throw new RuntimeException("Can not recovery Time Bytes, because Block time had been written.");
+        }
+        time.setByteData(bs, byteOffset, timeBitsLength);
+        List<Long> timePoints = decodeTimestamp();
+        if (timePoints.size() > 0) {
+            preTime = timePoints.get(timePoints.size() - 1);
+        }
+        if (timePoints.size() > 1) {
+            preTimeDelta = (int) (preTime - timePoints.get(timePoints.size() - 2));
+        }
+        writeLock.unlock();
+    }
+
+    public void recovertValueBytes(byte[] bs, int byteOffset, int valueBitsLength) {
+        writeLock.lock();
+        if (values.getBytesOffset() != 0) {
+            throw new RuntimeException("Can not recovery Value Bytes, because the Value Block had been written.");
+        }
+        values.setByteData(bs, byteOffset, valueBitsLength);
+        List<Double> vals = decodeValues();
+        if (vals.size() > 0) {
+            preWrittenValue = vals.get(vals.size() - 1);
+        }
+        if (vals.size() > 1) {
+            preWrittenValueXorResult = DoubleXor.doubleXor(vals.get(vals.size() - 2), vals.get(vals.size() - 1));
+        }
+        writeLock.unlock();
+    }
+
     public double getMemoryUsedKB() {
         double kb = time.getMemoryUsedKB() + values.getMemoryUsedKB();
         return kb;

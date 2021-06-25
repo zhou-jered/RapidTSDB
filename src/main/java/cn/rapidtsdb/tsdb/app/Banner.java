@@ -42,8 +42,4 @@ public class Banner {
         }
     }
 
-    public static void main(String[] args) {
-        printBanner(System.out);
-    }
-
 }

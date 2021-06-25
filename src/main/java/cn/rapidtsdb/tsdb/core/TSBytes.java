@@ -97,11 +97,11 @@ public class TSBytes {
             for (int i = 0; i < bitsSize / 8; i++) {
                 byte b = bytes[i];
                 data[bytesOffset] |= (b >> bitsOffset) & RIGHT_MASK[remainBits];
-                data[bytesOffset + 1] |= b<<(8-bitsOffset);
-                bytesOffset ++;
+                data[bytesOffset + 1] |= b << (8 - bitsOffset);
+                bytesOffset++;
             }
-            if(bitsSize%8>0) {
-                appendBitesDataInternal((byte) ((byte) (bytes[bitsSize/8] >> (8-bitsSize%8)) & RIGHT_MASK[bitsSize%8]), bitsSize%8);
+            if (bitsSize % 8 > 0) {
+                appendBitesDataInternal((byte) ((byte) (bytes[bitsSize / 8] >> (8 - bitsSize % 8)) & RIGHT_MASK[bitsSize % 8]), bitsSize % 8);
             }
         }
     }
@@ -118,6 +118,12 @@ public class TSBytes {
         this.bitsOffset += incBits;
         this.incBytesOffset(bitsOffset / 8);
         this.bitsOffset %= 8;
+    }
+
+    void setByteData(byte[] bytes, int byteOffset, int bitsLength) {
+        System.arraycopy(bytes, byteOffset, bytes, 0, bitsLength / 8 + 1);
+        this.bytesOffset = bitsLength / 8;
+        this.bitsOffset = bitsLength % 8;
     }
 
     private void expandDataSize() {
