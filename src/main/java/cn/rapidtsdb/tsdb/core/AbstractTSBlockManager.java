@@ -1,6 +1,8 @@
 package cn.rapidtsdb.tsdb.core;
 
 import cn.rapidtsdb.tsdb.core.persistent.TSDBCheckPointManager;
+import cn.rapidtsdb.tsdb.lifecycle.Closer;
+import cn.rapidtsdb.tsdb.lifecycle.Initializer;
 import cn.rapidtsdb.tsdb.utils.TimeUtils;
 
 import java.security.MessageDigest;
@@ -13,7 +15,7 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * Define the Manager Rules of TSBlocks.
  */
-public abstract class AbstractTSBlockManager {
+public abstract class AbstractTSBlockManager implements Initializer, Closer {
 
     //todo leave or stay here
     protected TSDBCheckPointManager checkPointManager;
