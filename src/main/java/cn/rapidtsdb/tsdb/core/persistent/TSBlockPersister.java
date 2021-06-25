@@ -2,7 +2,6 @@ package cn.rapidtsdb.tsdb.core.persistent;
 
 import cn.rapidtsdb.tsdb.config.TSDBConfig;
 import cn.rapidtsdb.tsdb.core.TSBlock;
-import cn.rapidtsdb.tsdb.core.TSBlockManager;
 import cn.rapidtsdb.tsdb.core.TSBlockMeta;
 import cn.rapidtsdb.tsdb.core.TSBlockSnapshot;
 import cn.rapidtsdb.tsdb.core.io.IOLock;
@@ -24,6 +23,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 
@@ -38,8 +38,9 @@ import static cn.rapidtsdb.tsdb.core.AbstractTSBlockManager.createTSBlockMeta;
 public class TSBlockPersister implements Initializer, Closer {
 
     private TSDBConfig tsdbConfig = TSDBConfig.getConfigInstance();
-    private AppendOnlyLogManager appendOnlyLogManager = AppendOnlyLogManager.getInstance();
-    private TSDBCheckPointManager tsdbCheckPointManager = TSDBCheckPointManager.getInstance();
+    private AppendOnlyLogManager appendOnlyLogManager = AppendOnlyLogManager.getInstance(); //todo
+    private TSDBCheckPointManager tsdbCheckPointManager = TSDBCheckPointManager.getInstance();//todo
+    private ThreadPoolExecutor ioExecutor = ManagedThreadPool.getInstance().ioExecutor();
     private static TSBlockPersister INSTANCE = null;
     private StoreHandler storeHandler;
 
@@ -69,9 +70,8 @@ public class TSBlockPersister implements Initializer, Closer {
         Map<Integer, TSBlock> writingBlocks = new HashMap<>(tsBlocks);
         for (Integer metricId : writingBlocks.keySet()) {
             TSBlockSnapshot blockSnapshot = writingBlocks.get(metricId).snapshot();
-            TSBlockMeta tsBlockMeta = TSBlockManager.createTSBlockMeta(blockSnapshot, metricId);
-            FileLocation fileLocation = FilenameStrategy.getTodayFileLocation(metricId, tsBlockMeta.getBaseTime());
-
+            SimpleTSBlockStoreTask simpleTSBlockStoreTask = new SimpleTSBlockStoreTask(metricId, blockSnapshot, storeHandler);
+            ioExecutor.submit(simpleTSBlockStoreTask);
         }
     }
 
