@@ -5,7 +5,8 @@
 # 特点
 - 内存存储数据，写内存成功即返回
 - 非常高效的数据压缩
-- 高可用的失败恢复机制
+- 失败恢复机制
+- 灵活的自定义持久化存储
 - openTSDB http 接口兼容
 - 高效的 rpc 通信协议
 
@@ -27,3 +28,7 @@ Append Only Log 管理器，在写入数据的同时写一份Log，Append Only�
 
 ### Metric key Manager
 分配Metric Name 到 int ID 的映射和查询管理器。
+
+### StoreHandler
+持久化存储的接口协议，通过不同的实现，可以将数据存储在任何你希望的地方，文件，Hadoop，分布式文件系统，
+Hbase，S3。。。从而实现了存储和计算分离。
