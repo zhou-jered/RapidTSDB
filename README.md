@@ -5,5 +5,5 @@
 
 # 架构图 （暂时）
 相关的概念可以参考论文
-![asf](docs/images/TSBlock Management.jpg)
+![asf](https://github.com/zhou-jered/RapidTSDB/raw/master/docs/images/TSBlock%20Management.jpg)
 
