@@ -1,5 +1,6 @@
 package cn.rapidtsdb.tsdb.executors;
 
+import cn.rapidtsdb.tsdb.app.TsdbRunnableTask;
 import cn.rapidtsdb.tsdb.config.TSDBConfig;
 import cn.rapidtsdb.tsdb.lifecycle.Closer;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -39,14 +40,14 @@ public class ManagedThreadPool implements Closer {
         return scheduledExecutorService;
     }
 
-    public Thread newThread(Runnable runnable) {
+    public Thread newThread(TsdbRunnableTask runnable) {
         Thread thread = new Thread(runnable);
         thread.setName("Rapid-Thread-Managed-" + threadIdx.incrementAndGet());
         managedThreads.add(thread);
         return thread;
     }
 
-    public void submitFailedTask(Runnable failedTask) {
+    public void submitFailedTask(TsdbRunnableTask failedTask) {
         if (failedTaskExecutor == null) {
             TSDBConfig config = TSDBConfig.getConfigInstance();
             synchronized (this) {

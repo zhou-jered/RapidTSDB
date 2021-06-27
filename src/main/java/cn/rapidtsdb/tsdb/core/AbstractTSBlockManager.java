@@ -1,5 +1,6 @@
 package cn.rapidtsdb.tsdb.core;
 
+import cn.rapidtsdb.tsdb.TSDBTaskCallback;
 import cn.rapidtsdb.tsdb.core.persistent.TSDBCheckPointManager;
 import cn.rapidtsdb.tsdb.lifecycle.Closer;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
@@ -25,11 +26,11 @@ public abstract class AbstractTSBlockManager implements Initializer, Closer {
     protected AtomicReference<Set<TSBlock>> dirtyBlocksRef = new AtomicReference<>();
 
     public abstract TSBlock getCurrentWriteBlock(int metricId, long timestamp);
-    
+
     /**
      * Every Two Hours Trigger once
      */
-    public abstract void triggerRoundCheck(Runnable completedCallback);
+    public abstract void triggerRoundCheck(TSDBTaskCallback completedCallback);
 
     public abstract List<TSBlock> getBlockWithTimeRange(int metricId, long start, long end);
 

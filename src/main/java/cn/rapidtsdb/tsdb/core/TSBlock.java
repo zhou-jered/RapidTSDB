@@ -57,7 +57,7 @@ public class TSBlock {
         this.blockLengthSeconds = blockLengthSeconds;
         this.timeUnitAdapter = timeUnitAdapter;
         time = new TSBytes(Math.max(2 * blockLengthSeconds, 800));
-        values = new TSBytes(Math.max(4 * blockLengthSeconds * 800, 21600));
+        values = new TSBytes(21600);
 
     }
 

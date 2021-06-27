@@ -1,10 +1,14 @@
 package cn.rapidtsdb.tsdb.core.persistent;
 
+import cn.rapidtsdb.tsdb.TSDBTaskCallback;
+import cn.rapidtsdb.tsdb.app.TsdbRunnableTask;
 import cn.rapidtsdb.tsdb.config.TSDBConfig;
 import cn.rapidtsdb.tsdb.core.TSBlock;
 import cn.rapidtsdb.tsdb.core.TSBlockMeta;
 import cn.rapidtsdb.tsdb.core.TSBlockSnapshot;
 import cn.rapidtsdb.tsdb.core.io.IOLock;
+import cn.rapidtsdb.tsdb.core.io.TSBlockDeserializer;
+import cn.rapidtsdb.tsdb.core.io.TSBlockDeserializer.TSBlockAndMeta;
 import cn.rapidtsdb.tsdb.core.io.TSBlockSerializer;
 import cn.rapidtsdb.tsdb.core.persistent.file.FileLocation;
 import cn.rapidtsdb.tsdb.executors.ManagedThreadPool;
@@ -18,6 +22,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -25,6 +30,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 
 import static cn.rapidtsdb.tsdb.core.AbstractTSBlockManager.createTSBlockMeta;
@@ -43,6 +49,7 @@ public class TSBlockPersister implements Initializer, Closer {
     private ThreadPoolExecutor ioExecutor = ManagedThreadPool.getInstance().ioExecutor();
     private static TSBlockPersister INSTANCE = null;
     private StoreHandler storeHandler;
+    private TSBlockDeserializer blockReader = new TSBlockDeserializer();
 
     private TSBlockPersister() {
     }
@@ -63,19 +70,49 @@ public class TSBlockPersister implements Initializer, Closer {
      * @param tsBlocks
      */
     public void persistTSBlockSync(Map<Integer, TSBlock> tsBlocks) {
-
+        if (tsBlocks != null) {
+            Map<Integer, TSBlock> writingBlocks = new HashMap<>(tsBlocks);
+            for (Integer metricId : writingBlocks.keySet()) {
+                TSBlockSnapshot blockSnapshot = writingBlocks.get(metricId).snapshot();
+                SimpleTSBlockStoreTask simpleTSBlockStoreTask = new SimpleTSBlockStoreTask(metricId, blockSnapshot, storeHandler, null);
+                simpleTSBlockStoreTask.run();
+            }
+        }
     }
 
-    public void persistTSBlockAsync(Map<Integer, TSBlock> tsBlocks) {
+    public void persistTSBlockAsync(Map<Integer, TSBlock> tsBlocks, TSDBTaskCallback completeCallback) {
+        SingleTaskPersistCallback persisterTaskCallback = new SingleTaskPersistCallback(completeCallback, tsBlocks.size());
         Map<Integer, TSBlock> writingBlocks = new HashMap<>(tsBlocks);
         for (Integer metricId : writingBlocks.keySet()) {
             TSBlockSnapshot blockSnapshot = writingBlocks.get(metricId).snapshot();
-            SimpleTSBlockStoreTask simpleTSBlockStoreTask = new SimpleTSBlockStoreTask(metricId, blockSnapshot, storeHandler);
+            SimpleTSBlockStoreTask simpleTSBlockStoreTask = new SimpleTSBlockStoreTask(metricId, blockSnapshot, storeHandler, persisterTaskCallback);
             ioExecutor.submit(simpleTSBlockStoreTask);
         }
     }
 
     public TSBlock getTSBlock(Integer metricId, long timeSeconds) {
+        long blockBaseTime = TimeUtils.getBlockBaseTimeSeconds(timeSeconds);
+        FileLocation fl = FilenameStrategy.getTodayFileLocation(metricId, blockBaseTime);
+        if (!storeHandler.fileExisted(fl.getPathWithFilename())) {
+            fl = FilenameStrategy.getDailyFileLocation(metricId, blockBaseTime);
+        }
+        if (!storeHandler.fileExisted(fl.getPathWithFilename())) {
+            fl = FilenameStrategy.getMonthlyFileLocation(metricId, blockBaseTime);
+        }
+        if (!storeHandler.fileExisted(fl.getPathWithFilename())) {
+            //todo, yearly block may be too large to be held in memory, using a stream with downsampler to handle it
+            fl = FilenameStrategy.getyearlyFileLocation(metricId, blockBaseTime);
+        }
+
+        if (storeHandler.fileExisted(fl.getPathWithFilename())) {
+            try {
+                InputStream inputStream = storeHandler.openFileInputStream(fl.getPathWithFilename());
+                TSBlockAndMeta blockAndMeta = blockReader.deserializeFromStream(inputStream);
+                return blockAndMeta.getData();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
         return null;
     }
 
@@ -100,6 +137,47 @@ public class TSBlockPersister implements Initializer, Closer {
     }
 
 
+    private static class SingleTaskPersistCallback implements TSDBTaskCallback {
+        TSDBTaskCallback allCompleteCallback;
+        private int subTaskNumber = 0;
+        private AtomicInteger successTaskNumber = new AtomicInteger(0);
+
+        public SingleTaskPersistCallback(TSDBTaskCallback allCompleteCallback, int subTaskNumber) {
+            this.allCompleteCallback = allCompleteCallback;
+            this.subTaskNumber = subTaskNumber;
+        }
+
+        @Override
+        public Object onSuccess(Object data) {
+            final int finishedTaskNumber = successTaskNumber.incrementAndGet();
+            if (finishedTaskNumber == subTaskNumber) {
+                allCompleteCallback.onSuccess(subTaskNumber);
+            }
+            return null;
+        }
+
+
+        @Override
+        public void onFailed(TsdbRunnableTask task, Object data) {
+            if (task.getRetryCount() < task.getRetryLimit()) {
+                task.markRetry();
+                ManagedThreadPool.getInstance().submitFailedTask(task);
+            } else {
+                allCompleteCallback.onFailed(task, data);
+            }
+        }
+
+        @Override
+        public void onException(TsdbRunnableTask task, Object data, Throwable exception) {
+            if (task.getRetryCount() < task.getRetryLimit()) {
+                task.markRetry();
+                ManagedThreadPool.getInstance().submitFailedTask(task);
+            } else {
+                allCompleteCallback.onException(task, data, exception);
+            }
+        }
+    }
+
     /**
      * file structure
      * Today HotData: {metricid}/{timebased_hourlyIndex)}.mdata
@@ -114,11 +192,15 @@ public class TSBlockPersister implements Initializer, Closer {
         }
 
         public static FileLocation getDailyFileLocation(int metric, long baseTimeSeconds) {
-            return new FileLocation(getDailyBlockFilename(metric, baseTimeSeconds), getDailyBlockFilename(metric, baseTimeSeconds));
+            return new FileLocation(getDailyDirectory(metric, baseTimeSeconds), getDailyBlockFilename(metric, baseTimeSeconds));
         }
 
         public static FileLocation getMonthlyFileLocation(int metric, long baseTimeSeconds) {
             return new FileLocation(getMonthlyDirectory(metric, baseTimeSeconds), getMonthBlockFilename(metric, baseTimeSeconds));
+        }
+
+        public static FileLocation getyearlyFileLocation(int metric, long baseTimeSeconds) {
+            return new FileLocation(getYearyDirectory(metric, baseTimeSeconds), getYearBlockFilename(metric, baseTimeSeconds));
         }
 
         /**
@@ -138,6 +220,10 @@ public class TSBlockPersister implements Initializer, Closer {
 
         public static String getMonthlyDirectory(int metric, long baseTimeSeconds) {
             return metric + "/mon";
+        }
+
+        public static String getYearyDirectory(int metric, long baseTimeSeconds) {
+            return metric + "/year";
         }
 
 
@@ -166,24 +252,33 @@ public class TSBlockPersister implements Initializer, Closer {
      * todo move this implementation to under layer,
      * block manager do not need to know about the persist implementation
      */
-    static class SimpleTSBlockStoreTask implements Runnable {
-        private final static Logger log = LogManager.getLogger("asf");
+    static class SimpleTSBlockStoreTask extends TsdbRunnableTask {
+        private final static Logger log = LogManager.getLogger("SimpleTSBlockStoreTask");
         private int metricId;
         private FileLocation fileLocation;
         private TSBlockSnapshot snapshot;
         private StoreHandler storeHandler;
+        private TSDBTaskCallback<TSBlockAndMeta, Void> completeCallback;
         private static final TSBlockSerializer blockWriter = new TSBlockSerializer();
 
-        public SimpleTSBlockStoreTask(int metricId, TSBlockSnapshot snapshot, StoreHandler storeHandler) {
+
+        @Override
+        public String getTaskName() {
+            return String.format("SimpleTSBlockStoreTask:%s:%s", metricId, snapshot.getTsBlock().getBaseTime());
+        }
+
+        public SimpleTSBlockStoreTask(int metricId, TSBlockSnapshot snapshot, StoreHandler storeHandler, TSDBTaskCallback completeCallback) {
             this.metricId = metricId;
             this.fileLocation = FilenameStrategy.getTodayFileLocation(metricId, snapshot.getTsBlock().getBaseTime());
             this.snapshot = snapshot;
             this.storeHandler = storeHandler;
+            this.completeCallback = completeCallback;
         }
 
         @Override
         public void run() {
             TSBlockMeta blockMeta = createTSBlockMeta(snapshot, metricId);
+            TSBlockAndMeta taskData = new TSBlockAndMeta(blockMeta, snapshot.getTsBlock());
             if (log.isDebugEnabled()) {
                 log.debug("Store {}, dpsSize:{}, md5:{}, file:{}", blockMeta.getBaseTime(), blockMeta.getDpsSize(), blockMeta.getMd5Checksum(), fileLocation);
             }
@@ -193,33 +288,47 @@ public class TSBlockPersister implements Initializer, Closer {
             }
             try {
                 log.debug("{} start write:{}", metricId, fileLocation);
-                OutputStream outputStream = storeHandler.openFileOutputStream(fullFilename);
+
                 Lock metricLock = IOLock.getMetricLock(metricId);
 
-                try {
-                    int retry = 0;
-                    while (retry++ < 10) {
-                        if (metricLock.tryLock(3, TimeUnit.SECONDS)) {
-                            outputStream.write(blockMeta.series());
-                            blockWriter.serializeToStream(blockMeta.getMetricId(), snapshot, outputStream);
-                            snapshot.getTsBlock().markVersionClear(snapshot.getDataVersion());
-                            break;
-                        } else {
-                            log.warn("metric IOLock failed: {}", metricId);
+                try (OutputStream outputStream = storeHandler.openFileOutputStream(fullFilename);) {
+                    if (metricLock.tryLock(3, TimeUnit.SECONDS)) {
+
+                        blockWriter.serializeToStream(blockMeta.getMetricId(), snapshot, outputStream);
+                        snapshot.getTsBlock().markVersionClear(snapshot.getDataVersion());
+                        if (completeCallback != null) {
+                            completeCallback.onSuccess(taskData);
+                        }
+                        log.debug("{} write :{}, completed", metricId, fileLocation);
+                    } else {
+                        log.warn("metric IOLock failed: {}", metricId);
+                        if (completeCallback != null) {
+                            completeCallback.onFailed(this, taskData);
                         }
                     }
                 } catch (InterruptedException e) {
+                    if (completeCallback != null) {
+                        completeCallback.onException(this, taskData, e);
+                    }
                 } finally {
-                    outputStream.close();
+
                     metricLock.unlock();
                 }
-                log.debug("{} write :{}, completed", metricId, fileLocation);
 
             } catch (IOException e) {
                 e.printStackTrace();
                 log.error("Write File {} Exception", fileLocation.getPathWithFilename(), e);
-                ManagedThreadPool.getInstance().submitFailedTask(this);
+                if (completeCallback != null) {
+                    TSBlockAndMeta failedData = new TSBlockAndMeta(blockMeta, snapshot.getTsBlock());
+                    completeCallback.onException(this, failedData, e);
+                }
             }
+        }
+
+
+        @Override
+        public int getRetryLimit() {
+            return 10;
         }
     }
 

@@ -1,5 +1,6 @@
 package cn.rapidtsdb.tsdb.core.persistent;
 
+import cn.rapidtsdb.tsdb.app.TsdbRunnableTask;
 import cn.rapidtsdb.tsdb.executors.ManagedThreadPool;
 import cn.rapidtsdb.tsdb.lifecycle.Closer;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
@@ -208,7 +209,7 @@ public class AppendOnlyLogManager implements Initializer, Closer {
         }
     }
 
-    private class WriteLogTask implements Runnable {
+    private class WriteLogTask extends TsdbRunnableTask {
 
         private BlockingQueue<AOLog> logQueue = null;
 
@@ -236,7 +237,6 @@ public class AppendOnlyLogManager implements Initializer, Closer {
                 try {
                     aoLog = logQueue.poll(1, TimeUnit.SECONDS);
                 } catch (InterruptedException e) {
-                    e.printStackTrace();
                     log.warn(e);
                     DBMetrics.getInstance().event("Interrupted");
                 }
@@ -272,6 +272,15 @@ public class AppendOnlyLogManager implements Initializer, Closer {
             }
         }
 
+        @Override
+        public int getRetryLimit() {
+            return 3;
+        }
+
+        @Override
+        public String getTaskName() {
+            return "WriteLogTask";
+        }
     }
 
 

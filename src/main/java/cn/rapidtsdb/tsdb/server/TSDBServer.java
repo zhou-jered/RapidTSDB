@@ -1,7 +1,9 @@
 package cn.rapidtsdb.tsdb.server;
 
+import cn.rapidtsdb.tsdb.app.TsdbRunnableTask;
 import cn.rapidtsdb.tsdb.config.TSDBConfig;
 import cn.rapidtsdb.tsdb.core.TSDB;
+import cn.rapidtsdb.tsdb.executors.ManagedThreadPool;
 import cn.rapidtsdb.tsdb.lifecycle.Closer;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
 import cn.rapidtsdb.tsdb.lifecycle.Runner;
@@ -38,6 +40,9 @@ public class TSDBServer implements Initializer, Runner, Closer {
             try {
                 serverChannelFuture.channel().closeFuture().sync();
             } catch (InterruptedException e) {
+            } finally {
+                bossGroup.shutdownGracefully();
+                workerGroup.shutdownGracefully();
             }
         }
     }
@@ -54,22 +59,38 @@ public class TSDBServer implements Initializer, Runner, Closer {
         //todo configurable
         bossGroup = new NioEventLoopGroup(5);
         workerGroup = new NioEventLoopGroup(10);
-        serverBootstrap.group(bossGroup, workerGroup)
-                .channel(NioServerSocketChannel.class)
-                .childHandler(new ChannelInitializer<SocketChannel>() {
-                    @Override
-                    protected void initChannel(SocketChannel ch) throws Exception {
-                        ch.pipeline().addFirst(new ProtocolHandler());
-                        ch.pipeline().addLast(new NumberDecoderHandler());
-                    }
-                }).option(ChannelOption.SO_BACKLOG, 128)
-                .childOption(ChannelOption.SO_KEEPALIVE, true);
+        serverBootstrap.group(bossGroup, workerGroup).channel(NioServerSocketChannel.class).childHandler(new ChannelInitializer<SocketChannel>() {
+            @Override
+            protected void initChannel(SocketChannel ch) throws Exception {
+                ch.pipeline().addFirst(new ProtocolHandler());
+                ch.pipeline().addLast(new NumberDecoderHandler());
+            }
+        }).option(ChannelOption.SO_BACKLOG, 128).childOption(ChannelOption.SO_KEEPALIVE, true);
     }
 
     @Override
     public void run() {
-        try {
+        Thread serverThread = ManagedThreadPool.getInstance().newThread(new TsdbRunnableTask() {
+            @Override
+            public int getRetryLimit() {
+                return 0;
+            }
 
+            @Override
+            public String getTaskName() {
+                return "TSDB-Rpc-Server";
+            }
+
+            @Override
+            public void run() {
+                run0();
+            }
+        });
+        serverThread.start();
+    }
+
+    private void run0() {
+        try {
             serverChannelFuture = serverBootstrap.bind(port);
             serverChannelFuture.sync();
             log.info("Server listening: {}", port);

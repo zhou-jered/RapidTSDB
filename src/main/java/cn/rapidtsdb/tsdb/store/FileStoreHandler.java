@@ -4,7 +4,12 @@ import cn.rapidtsdb.tsdb.config.TSDBConfig;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang.StringUtils;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 
 
 @Log4j2
@@ -62,11 +67,13 @@ public class FileStoreHandler implements StoreHandler {
 
     @Override
     public OutputStream openFileOutputStream(String filePath) throws IOException {
+        ensureDirs(baseDir + filePath);
         return new FileOutputStream(baseDir + filePath);
     }
 
     @Override
     public OutputStream openFileAppendStream(String filePath) throws IOException {
+        ensureDirs(baseDir + filePath);
         return new FileOutputStream(baseDir + filePath, true);
     }
 
@@ -102,5 +109,13 @@ public class FileStoreHandler implements StoreHandler {
             return false;
         }
         return file.delete();
+    }
+
+    private void ensureDirs(String filepath) {
+        int partIdx = filepath.lastIndexOf('/');
+        if (partIdx > 0) {
+            String dirPart = filepath.substring(0, partIdx);
+            new File(dirPart).mkdirs();
+        }
     }
 }

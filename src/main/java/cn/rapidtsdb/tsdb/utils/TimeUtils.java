@@ -37,6 +37,9 @@ public class TimeUtils {
         timerThread.start();
     }
 
+    public static long getBlockBaseTimeSeconds(long timeSeconds) {
+        return timeSeconds - timeSeconds % TimeUnit.HOURS.toSeconds(2);
+    }
 
     /**
      * get the base time of the timeSeconds.

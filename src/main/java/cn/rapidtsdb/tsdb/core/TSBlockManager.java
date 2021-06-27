@@ -1,5 +1,7 @@
 package cn.rapidtsdb.tsdb.core;
 
+import cn.rapidtsdb.tsdb.TSDBTaskCallback;
+import cn.rapidtsdb.tsdb.app.TsdbRunnableTask;
 import cn.rapidtsdb.tsdb.config.TSDBConfig;
 import cn.rapidtsdb.tsdb.core.persistent.TSBlockPersister;
 import cn.rapidtsdb.tsdb.executors.ManagedThreadPool;
@@ -120,12 +122,12 @@ public class TSBlockManager extends AbstractTSBlockManager implements Initialize
 
 
     @Override
-    public void triggerRoundCheck(Runnable completedCallback) {
+    public void triggerRoundCheck(TSDBTaskCallback completedCallback) {
         preRoundBlockRef.set(currentBlockCacheRef.get());
-        blockPersister.persistTSBlockSync(currentBlockCacheRef.get());
+        blockPersister.persistTSBlockAsync(currentBlockCacheRef.get(), completedCallback);
         currentBlockCacheRef.set(forwardRoundBlockRef.get());
         forwardRoundBlockRef.set(newTSMap());
-        blockPersister.persistTSBlockAsync(preRoundBlockRef.get());
+        blockPersister.persistTSBlockAsync(preRoundBlockRef.get(), completedCallback);
         Set<TSBlock> dirtyBlock = dirtyBlocksRef.get();
         if (dirtyBlock.size() > 0) {
             dirtyBlocksRef.set(new HashSet<>());
@@ -154,6 +156,6 @@ public class TSBlockManager extends AbstractTSBlockManager implements Initialize
     private Map<Integer, TSBlock> newTSMap() {
         return new ConcurrentHashMap<Integer, TSBlock>();
     }
-    
+
 
 }

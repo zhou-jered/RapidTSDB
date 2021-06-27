@@ -127,7 +127,7 @@ public class TSBytes {
     }
 
     private void expandDataSize() {
-        int toSize = (int) (bytesOffset * 1.5);
+        int toSize = (int) (bytesOffset * 1.1);
         expandDataSize(toSize);
     }
 
