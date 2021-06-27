@@ -10,7 +10,7 @@
 
 # 架构图 （暂时）
 相关的概念可以参考论文
-![asf](https://github.com/zhou-jered/RapidTSDB/raw/master/docs/images/TSBlock%20Management.jpg)
+![Architecture](https://github.com/zhou-jered/RapidTSDB/raw/master/docs/images/TSBlock%20Management.jpg)
 
 
 # 模块功能
