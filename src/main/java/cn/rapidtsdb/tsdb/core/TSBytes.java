@@ -121,7 +121,7 @@ public class TSBytes {
     }
 
     void setByteData(byte[] bytes, int byteOffset, int bitsLength) {
-        System.arraycopy(bytes, byteOffset, bytes, 0, bitsLength / 8 + 1);
+        System.arraycopy(bytes, byteOffset, data, 0, bitsLength / 8 + 1);
         this.bytesOffset = bitsLength / 8;
         this.bitsOffset = bitsLength % 8;
     }
@@ -139,6 +139,10 @@ public class TSBytes {
 
     public int getTotalBitsLength() {
         return bytesOffset * 8 + bitsOffset;
+    }
+
+    public int getByteLengthIncludeUnWrittenBits() {
+        return bytesOffset + (bitsOffset > 0 ? 1 : 0);
     }
 
     public double getMemoryUsedKB() {

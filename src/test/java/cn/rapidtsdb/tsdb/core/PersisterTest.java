@@ -14,7 +14,6 @@ import org.junit.Test;
 import org.junit.runners.MethodSorters;
 
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,7 +38,11 @@ public class PersisterTest {
         for (int i = 0; i < 1000; i++) {
             double val = ((int) (Math.random() * 1000)) * 1.0 / 100;
             tsBlock.appendDataPoint(basetime + i, val);
+            if (i % 123 == 0) {
+                System.out.println(i + ":" + val);
+            }
         }
+
         TSBlockPersister persister = TSBlockPersister.getINSTANCE();
         Map<Integer, TSBlock> memoryBlock = new HashMap<>();
         memoryBlock.put(1, tsBlock);
@@ -60,6 +63,11 @@ public class PersisterTest {
         Assert.assertNotNull(tsBlock);
         List<TSDataPoint> dps = tsBlock.getDataPoints();
         Assert.assertEquals(1000, dps.size());
+        for (int i = 0; i < 1000; i++) {
+            if (i % 123 == 0) {
+                System.out.println("recoiver:  " + i + ":" + dps.get(i));
+            }
+        }
         System.out.println(dps);
     }
 
@@ -67,7 +75,9 @@ public class PersisterTest {
     public void test3_testMeta() {
         TSBlockDeserializer blockReader = new TSBlockDeserializer();
         try {
-            TSBlockDeserializer.TSBlockAndMeta blockAndMeta = blockReader.deserializeFromStream(new FileInputStream("/tmp/data/tsdb/1/T1:1624766400.data"));
+            String tp = String.valueOf(TimeUtils.getBlockBaseTimeSeconds(testingTime / 1000));
+
+            TSBlockDeserializer.TSBlockAndMeta blockAndMeta = blockReader.deserializeFromStream(new FileInputStream("/tmp/data/tsdb/1/T1:" + tp + ".data"));
             System.out.println(blockAndMeta.getMeta());
         } catch (Exception e) {
             e.printStackTrace();

@@ -293,7 +293,6 @@ public class TSBlockPersister implements Initializer, Closer {
 
                 try (OutputStream outputStream = storeHandler.openFileOutputStream(fullFilename);) {
                     if (metricLock.tryLock(3, TimeUnit.SECONDS)) {
-
                         blockWriter.serializeToStream(blockMeta.getMetricId(), snapshot, outputStream);
                         snapshot.getTsBlock().markVersionClear(snapshot.getDataVersion());
                         if (completeCallback != null) {
