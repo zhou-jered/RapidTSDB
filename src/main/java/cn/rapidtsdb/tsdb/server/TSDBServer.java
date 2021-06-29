@@ -7,14 +7,10 @@ import cn.rapidtsdb.tsdb.executors.ManagedThreadPool;
 import cn.rapidtsdb.tsdb.lifecycle.Closer;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
 import cn.rapidtsdb.tsdb.lifecycle.Runner;
-import cn.rapidtsdb.tsdb.server.handler.netty.NumberDecoderHandler;
-import cn.rapidtsdb.tsdb.server.handler.netty.ProtocolHandler;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import lombok.extern.log4j.Log4j2;
 
@@ -59,13 +55,11 @@ public class TSDBServer implements Initializer, Runner, Closer {
         //todo configurable
         bossGroup = new NioEventLoopGroup(5);
         workerGroup = new NioEventLoopGroup(10);
-        serverBootstrap.group(bossGroup, workerGroup).channel(NioServerSocketChannel.class).childHandler(new ChannelInitializer<SocketChannel>() {
-            @Override
-            protected void initChannel(SocketChannel ch) throws Exception {
-                ch.pipeline().addFirst(new ProtocolHandler());
-                ch.pipeline().addLast(new NumberDecoderHandler());
-            }
-        }).option(ChannelOption.SO_BACKLOG, 128).childOption(ChannelOption.SO_KEEPALIVE, true);
+        serverBootstrap.group(bossGroup, workerGroup)
+                .channel(NioServerSocketChannel.class)
+                .childHandler(new TSDBChannelInitializer())
+                .option(ChannelOption.SO_BACKLOG, 128)
+                .childOption(ChannelOption.SO_KEEPALIVE, true);
     }
 
     @Override

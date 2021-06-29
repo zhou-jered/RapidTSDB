@@ -1,0 +1,10 @@
+syntax = "proto3";
+package cn.rapidtsdb.tsdb.model;
+
+
+message AuthMessage {
+    int64 authVerison = 1;
+    string authType = 2;
+    string token = 3;
+    string ext = 4;
+}
