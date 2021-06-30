@@ -1,23 +1,24 @@
-# 简介
-English Version: [English Version](/README_EN.md)
-一个时序数据库，提供非常快速的时序数据插入和查询，同时提供丰富的数据聚合功能。
-实现了论文 [Gorilla: A Fast, Scalable, In-Memory Time Series DataBase](http://www.vldb.org/pvldb/vol8/p1816-teller.pdf)
+# Overview
+中文: [Chinese Version](/README.md)
+A Time Series Database，Providing very fast TS data insert and query service, with
+many useful aggregation function.
+This Repo is an implementation of the paper: [Gorilla: A Fast, Scalable, In-Memory Time Series DataBase](http://www.vldb.org/pvldb/vol8/p1816-teller.pdf)
 
-# 特点
-- 内存存储数据，写内存成功即返回
-- 非常高效的数据压缩
-- 失败恢复机制
-- 灵活的自定义持久化存储
-- openTSDB http 接口兼容
-- 高效的 rpc 通信协议
+# Feature
+- Memory Store
+- Very high Ratio data compression
+- Fault Tolerance
+- Flexible Persistence Storage
+- Compatible with the openTSDB HTTP API
+- High performance Rpc protocol&implementation
 
 
-# 架构图 （暂时）
-相关的概念可以参考论文
+# Architecture （Temporarily）
+For any DESIGN information about the module, see the paper.
 ![Architecture](https://github.com/zhou-jered/RapidTSDB/raw/master/docs/images/TSBlock%20Management.jpg)
 
 
-# 模块功能
+# Module
 
 ### AOL Manager
 Append Only Log 管理器，在写入数据的同时写一份Log，Append Only，每64KB 刷新一次到磁盘。同时作为失败恢复的Log。
