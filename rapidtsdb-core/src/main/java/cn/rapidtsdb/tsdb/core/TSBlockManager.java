@@ -1,7 +1,6 @@
 package cn.rapidtsdb.tsdb.core;
 
 import cn.rapidtsdb.tsdb.TSDBTaskCallback;
-import cn.rapidtsdb.tsdb.app.TsdbRunnableTask;
 import cn.rapidtsdb.tsdb.config.TSDBConfig;
 import cn.rapidtsdb.tsdb.core.persistent.TSBlockPersister;
 import cn.rapidtsdb.tsdb.executors.ManagedThreadPool;

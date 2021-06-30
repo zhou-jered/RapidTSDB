@@ -8,10 +8,7 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang.BooleanUtils;
 
 import java.lang.reflect.Field;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Log4j2
@@ -145,7 +142,9 @@ public class TSDBConfig {
             }
 
         } catch (NoSuchFieldException e) {
-            log.warn("No [{}] config item", configItem);
+            if (!isSystemConfig(configItem)) {
+                log.warn("No [{}] config item", configItem);
+            }
         } catch (IllegalAccessException eae) {
 
         }
@@ -167,6 +166,11 @@ public class TSDBConfig {
             }
         }
         return sb.toString();
+    }
+
+    private boolean isSystemConfig(String configName) {
+        Properties properties = System.getProperties();
+        return properties.containsKey(configName);
     }
 
 }

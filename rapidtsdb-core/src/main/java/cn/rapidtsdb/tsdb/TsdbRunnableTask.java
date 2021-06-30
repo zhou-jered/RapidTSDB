@@ -1,4 +1,4 @@
-package cn.rapidtsdb.tsdb.app;
+package cn.rapidtsdb.tsdb;
 
 public abstract class TsdbRunnableTask implements Runnable {
     private int retryCount = 0;

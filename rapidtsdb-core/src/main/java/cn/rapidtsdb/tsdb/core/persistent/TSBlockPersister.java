@@ -1,7 +1,7 @@
 package cn.rapidtsdb.tsdb.core.persistent;
 
 import cn.rapidtsdb.tsdb.TSDBTaskCallback;
-import cn.rapidtsdb.tsdb.app.TsdbRunnableTask;
+import cn.rapidtsdb.tsdb.TsdbRunnableTask;
 import cn.rapidtsdb.tsdb.config.TSDBConfig;
 import cn.rapidtsdb.tsdb.core.TSBlock;
 import cn.rapidtsdb.tsdb.core.TSBlockMeta;

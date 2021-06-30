@@ -1,7 +1,5 @@
 package cn.rapidtsdb.tsdb;
 
-import cn.rapidtsdb.tsdb.app.TsdbRunnableTask;
-
 public interface TSDBTaskCallback<T, R> {
 
     R onSuccess(T data);

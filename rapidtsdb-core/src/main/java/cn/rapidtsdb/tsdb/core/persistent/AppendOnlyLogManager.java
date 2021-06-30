@@ -1,6 +1,6 @@
 package cn.rapidtsdb.tsdb.core.persistent;
 
-import cn.rapidtsdb.tsdb.app.TsdbRunnableTask;
+import cn.rapidtsdb.tsdb.TsdbRunnableTask;
 import cn.rapidtsdb.tsdb.executors.ManagedThreadPool;
 import cn.rapidtsdb.tsdb.lifecycle.Closer;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;

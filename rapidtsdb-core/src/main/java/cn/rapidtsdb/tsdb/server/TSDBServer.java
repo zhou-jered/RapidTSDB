@@ -1,14 +1,13 @@
 package cn.rapidtsdb.tsdb.server;
 
-import cn.rapidtsdb.tsdb.app.TsdbRunnableTask;
 import cn.rapidtsdb.tsdb.config.TSDBConfig;
 import cn.rapidtsdb.tsdb.core.TSDB;
-import cn.rapidtsdb.tsdb.executors.ManagedThreadPool;
 import cn.rapidtsdb.tsdb.lifecycle.Closer;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
 import cn.rapidtsdb.tsdb.lifecycle.Runner;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -64,33 +63,18 @@ public class TSDBServer implements Initializer, Runner, Closer {
 
     @Override
     public void run() {
-        Thread serverThread = ManagedThreadPool.getInstance().newThread(new TsdbRunnableTask() {
-            @Override
-            public int getRetryLimit() {
-                return 0;
-            }
-
-            @Override
-            public String getTaskName() {
-                return "TSDB-Rpc-Server";
-            }
-
-            @Override
-            public void run() {
-                run0();
-            }
-        });
-        serverThread.start();
+        serverChannelFuture = serverBootstrap.bind(port);
+        serverChannelFuture.addListener((ChannelFutureListener) future -> {
+                    if (future.isDone() && future.isSuccess()) {
+                        log.info("Server listening: {}", port);
+                    } else if (future.isCancelled()) {
+                        log.error("Server Launch Cancelled");
+                    } else if (!future.isSuccess()) {
+                        log.error("Server Failed");
+                    }
+                }
+        );
     }
 
-    private void run0() {
-        try {
-            serverChannelFuture = serverBootstrap.bind(port);
-            serverChannelFuture.sync();
-            log.info("Server listening: {}", port);
-            serverChannelFuture.channel().closeFuture().sync();
-        } catch (InterruptedException e) {
 
-        }
-    }
 }

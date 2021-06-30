@@ -1,6 +1,6 @@
 package cn.rapidtsdb.tsdb.executors;
 
-import cn.rapidtsdb.tsdb.app.TsdbRunnableTask;
+import cn.rapidtsdb.tsdb.TsdbRunnableTask;
 import cn.rapidtsdb.tsdb.config.TSDBConfig;
 import cn.rapidtsdb.tsdb.lifecycle.Closer;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;

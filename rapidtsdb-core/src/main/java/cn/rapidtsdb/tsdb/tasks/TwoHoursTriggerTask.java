@@ -1,6 +1,6 @@
 package cn.rapidtsdb.tsdb.tasks;
 
-import cn.rapidtsdb.tsdb.app.TsdbRunnableTask;
+import cn.rapidtsdb.tsdb.TsdbRunnableTask;
 import cn.rapidtsdb.tsdb.core.TSDB;
 import lombok.extern.log4j.Log4j2;
 
