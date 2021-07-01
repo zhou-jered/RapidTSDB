@@ -33,3 +33,5 @@ Append Only Log 管理器，在写入数据的同时写一份Log，Append Only�
 ### StoreHandler
 持久化存储的接口协议，通过不同的实现，可以将数据存储在任何你希望的地方，文件，Hadoop，分布式文件系统，
 Hbase，S3。。。从而实现了存储和计算分离。
+
+

@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 public class TSDBConfig {
 
     /**
-     * 存储在文件或者是Hbase
+     * 存储在文件或者是Hbase, Hadoop, S3,
      */
     @Getter
     private String storeScheme = "file";

@@ -30,7 +30,6 @@ public class RapidTSDBApplication implements Initializer, Runner {
     private TSDB tsdb;
 
     public static void main(String[] args) {
-
         initConfig(args);
         printBanner();
         RapidTSDBApplication application = new RapidTSDBApplication();

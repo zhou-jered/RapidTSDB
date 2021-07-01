@@ -70,7 +70,7 @@ public class TSDBServer implements Initializer, Runner, Closer {
                     } else if (future.isCancelled()) {
                         log.error("Server Launch Cancelled");
                     } else if (!future.isSuccess()) {
-                        log.error("Server Failed");
+                        log.error("Server Failed,{}", future.cause());
                     }
                 }
         );
