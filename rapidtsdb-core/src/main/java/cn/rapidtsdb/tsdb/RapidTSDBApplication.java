@@ -3,7 +3,6 @@ package cn.rapidtsdb.tsdb;
 import cn.rapidtsdb.tsdb.app.Banner;
 import cn.rapidtsdb.tsdb.config.TSDBConfig;
 import cn.rapidtsdb.tsdb.core.TSDB;
-import cn.rapidtsdb.tsdb.executors.ManagedThreadPool;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
 import cn.rapidtsdb.tsdb.lifecycle.Runner;
 import cn.rapidtsdb.tsdb.server.TSDBServer;
@@ -24,8 +23,6 @@ import java.util.concurrent.ConcurrentHashMap;
 @Log4j2
 public class RapidTSDBApplication implements Initializer, Runner {
 
-
-    private ManagedThreadPool commonExecutor = ManagedThreadPool.getInstance();
     private TSDBServer server;
     private TSDB tsdb;
 
@@ -35,7 +32,7 @@ public class RapidTSDBApplication implements Initializer, Runner {
         RapidTSDBApplication application = new RapidTSDBApplication();
         application.init();
         application.run();
-        log.info("TinyTSDB Application Start!!!");
+        log.info("RapidTSDB Application Start!!!");
     }
 
 

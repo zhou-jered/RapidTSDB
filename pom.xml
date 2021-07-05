@@ -17,6 +17,8 @@
         <module>rapidtsdb-meta</module>
         <module>rapidtsdb-server</module>
         <module>rapidtsdb-client</module>
+        <module>rapidtsdb-cluster</module>
+        <module>rapidtsdb-plugin</module>
     </modules>
 
 

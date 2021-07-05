@@ -1,0 +1,14 @@
+syntax = "proto3";
+package cn.rapidtsdb.tsdb.model;
+import "TSData.proto";
+
+message ConnectionReponse {
+    int32 code = 1;
+    string msg = 2;
+}
+
+message ReadDataResponse {
+    string aggregator = 1;
+    string downsampler = 2;
+    Datapoints dps = 3;
+}

@@ -6,3 +6,7 @@ message Datapoint {
     int64 timestamp = 1;
     double val = 2;
 }
+
+message Datapoints {
+    repeated Datapoint dps =1;
+}
