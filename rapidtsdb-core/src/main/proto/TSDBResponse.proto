@@ -1,14 +1,14 @@
 syntax = "proto3";
-package cn.rapidtsdb.tsdb.model;
+package cn.rapidtsdb.tsdb.model.proto;
 import "TSData.proto";
 
-message ConnectionReponse {
+message ProtoConnectionReponse {
     int32 code = 1;
     string msg = 2;
 }
 
-message ReadDataResponse {
+message ProtoReadDataResponse {
     string aggregator = 1;
     string downsampler = 2;
-    Datapoints dps = 3;
+    ProtoDatapoints dps = 3;
 }

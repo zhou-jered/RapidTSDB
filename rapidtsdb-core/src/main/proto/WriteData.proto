@@ -1,13 +1,13 @@
 syntax = "proto3";
-package cn.rapidtsdb.tsdb.model;
+package cn.rapidtsdb.tsdb.model.proto;
 import "TSData.proto";
 
-message SinglePointWriteRequest {
+message ProtoSinglePointWriteRequest {
     string metric = 1;
-    Datapoint dp = 2;
+    ProtoDatapoint dp = 2;
 }
 
-message MultiPointWriteRequest {
+message ProtoMultiPointWriteRequest {
     string metric = 1;
-    repeated Datapoint dps = 2;
+    repeated ProtoDatapoint dps = 2;
 }

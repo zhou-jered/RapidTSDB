@@ -1,8 +1,8 @@
 syntax = "proto3";
-package cn.rapidtsdb.tsdb.model;
+package cn.rapidtsdb.tsdb.model.proto;
 
 
-message AuthMessage {
+message ProtoAuthMessage {
     int64 authVerison = 1;
     string authType = 2;
     string token = 3;

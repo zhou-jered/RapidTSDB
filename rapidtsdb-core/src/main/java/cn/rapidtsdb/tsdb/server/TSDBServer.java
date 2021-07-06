@@ -1,7 +1,6 @@
 package cn.rapidtsdb.tsdb.server;
 
 import cn.rapidtsdb.tsdb.config.TSDBConfig;
-import cn.rapidtsdb.tsdb.core.TSDB;
 import cn.rapidtsdb.tsdb.lifecycle.Closer;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
 import cn.rapidtsdb.tsdb.lifecycle.Runner;
@@ -16,8 +15,6 @@ import lombok.extern.log4j.Log4j2;
 @Log4j2
 public class TSDBServer implements Initializer, Runner, Closer {
 
-    private TSDB db;
-
     NioEventLoopGroup workerGroup = null;
     NioEventLoopGroup bossGroup = null;
     ServerBootstrap serverBootstrap;
@@ -25,8 +22,8 @@ public class TSDBServer implements Initializer, Runner, Closer {
     private int port;
     ChannelFuture serverChannelFuture = null;
 
-    public TSDBServer(TSDB db) {
-        this.db = db;
+    public TSDBServer() {
+
     }
 
     @Override

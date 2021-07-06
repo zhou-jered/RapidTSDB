@@ -89,25 +89,25 @@ public class MetricsKeyManager implements Initializer {
         }
     }
 
-    public int getMetricsIndex(String metrics) {
-        if (StringUtils.isEmpty(metrics)) {
+    public int getMetricsIndex(String metric) {
+        if (StringUtils.isEmpty(metric)) {
             throw new RuntimeException("Empty metrics");
         }
         if (status.get() != STATUS_RUNNING) {
             throw new RuntimeException("MetricsKeyManager not prepared");
         }
-        Integer idx = idxCache.get(metrics);
+        Integer idx = idxCache.get(metric);
         if (idx != null) {
             return idx;
         }
-        char[] chars = metrics.toCharArray();
+        char[] chars = metric.toCharArray();
         for (char c : chars) {
             if (METRICS_LEGAL_CHARS.indexOf(c) < 0) {
-                throw new RuntimeException("Illegal Metrics char: " + c + " in metrics:" + metrics);
+                throw new RuntimeException("Illegal Metrics char: " + c + " in metrics:" + metric);
             }
         }
         idx = getMetricsIndexInternal(chars);
-        idxCache.put(metrics, idx);
+        idxCache.put(metric, idx);
         return idx;
     }
 

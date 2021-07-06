@@ -61,7 +61,7 @@ public class RapidTSDBApplication implements Initializer, Runner {
         log.info("start to init");
         tsdb = new TSDB();
         tsdb.init();
-        server = new TSDBServer(tsdb);
+        server = new TSDBServer();
         server.init();
         registShutdownHook();
     }

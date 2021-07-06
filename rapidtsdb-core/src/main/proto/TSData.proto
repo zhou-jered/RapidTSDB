@@ -1,12 +1,12 @@
 syntax = "proto3";
-package cn.rapidtsdb.tsdb.model;
+package cn.rapidtsdb.tsdb.model.proto;
 
 
-message Datapoint {
+message ProtoDatapoint {
     int64 timestamp = 1;
     double val = 2;
 }
 
-message Datapoints {
-    repeated Datapoint dps =1;
+message ProtoDatapoints {
+    repeated ProtoDatapoint dps =1;
 }

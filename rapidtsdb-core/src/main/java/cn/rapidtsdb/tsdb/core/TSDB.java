@@ -10,6 +10,7 @@ import cn.rapidtsdb.tsdb.lifecycle.Closer;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
 import cn.rapidtsdb.tsdb.model.TSQueryModel.TSQuery;
 import cn.rapidtsdb.tsdb.obj.WriteMetricResult;
+import cn.rapidtsdb.tsdb.server.TSDBBridge;
 import cn.rapidtsdb.tsdb.tasks.TwoHoursTriggerTask;
 import cn.rapidtsdb.tsdb.utils.TimeUtils;
 import lombok.extern.log4j.Log4j2;
@@ -46,6 +47,7 @@ public class TSDB implements Initializer, Closer {
         blockManager = new TSBlockManager(config);
         appendOnlyLogManager = new AppendOnlyLogManager();
         checkPointManager = TSDBCheckPointManager.getInstance();
+        TSDBBridge.regist(this);
     }
 
 
@@ -73,21 +75,24 @@ public class TSDB implements Initializer, Closer {
     }
 
 
-    public synchronized WriteMetricResult writeMetric(String metric, double val) throws Exception {
+    public WriteMetricResult writeMetric(String metric, double val) throws Exception {
         return writeMetric(metric, val, TimeUtils.currentTimestamp());
     }
 
-    public synchronized WriteMetricResult writeMetric(String metric, double val, long timestamp) {
+    public WriteMetricResult writeMetric(String metric, double val, long timestamp) {
         if (StringUtils.isBlank(metric)) {
             return WriteMetricResult.FAILED_METRIC_EMPTY;
         }
         Integer mIdx = metricsKeyManager.getMetricsIndex(metric);
-        writeMetricInternal(mIdx, timestamp, val);
-        appendOnlyLogManager.appendLog(mIdx, timestamp, val);
-        return WriteMetricResult.FAILED_TIME_EXPIRED;
+        WriteMetricResult internalWResult = writeMetricInternal(mIdx, timestamp, val);
+        if (internalWResult.isSuccess()) {
+            appendOnlyLogManager.appendLog(mIdx, timestamp, val);
+        }
+        return internalWResult;
     }
 
-    private synchronized WriteMetricResult writeMetricInternal(int mid, long timestamp, double val) {
+
+    private WriteMetricResult writeMetricInternal(int mid, long timestamp, double val) {
         TSBlock tsBlock = blockManager.getCurrentWriteBlock(mid, timestamp);
         if (tsBlock != null) {
             tsBlock.appendDataPoint(timestamp, val);
@@ -100,7 +105,7 @@ public class TSDB implements Initializer, Closer {
         return null;
     }
 
-    public synchronized void triggerBlockPersist() {
+    public void triggerBlockPersist() {
         final long aolLogIdx = appendOnlyLogManager.getLogIndex();
         blockManager.triggerRoundCheck((data) -> {
             checkPointManager.savePoint(aolLogIdx);

@@ -1,5 +1,10 @@
 package cn.rapidtsdb.tsdb.obj;
 
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
 public class WriteMetricResult {
     private int code;
     private String msg;
@@ -7,6 +12,10 @@ public class WriteMetricResult {
     public WriteMetricResult(int code, String msg) {
         this.code = code;
         this.msg = msg;
+    }
+
+    public boolean isSuccess() {
+        return code == 0;
     }
 
 

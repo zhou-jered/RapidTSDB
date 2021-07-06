@@ -20,7 +20,7 @@ public class FileStoreHandler implements StoreHandler {
 
     public FileStoreHandler(TSDBConfig tsdbConfig) {
         this.tsdbConfig = tsdbConfig;
-        String configDataDir = tsdbConfig.getDataDir();
+        String configDataDir = tsdbConfig.getDataPath();
         if (StringUtils.isBlank(configDataDir)) {
             baseDir = "";
         } else {

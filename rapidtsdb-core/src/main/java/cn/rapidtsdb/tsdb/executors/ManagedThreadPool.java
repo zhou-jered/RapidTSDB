@@ -56,7 +56,7 @@ public class ManagedThreadPool implements Closer {
                     if (qSize < 0) {
                         qSize = Integer.MAX_VALUE;
                     }
-                    failedTaskExecutor = new ThreadPoolExecutor(config.getFailedTaskExecutorIoCore(), config.getFailedTaskExecutorIoMax(), 1, TimeUnit.HOURS, new LinkedBlockingQueue<>(qSize),
+                    failedTaskExecutor = new ThreadPoolExecutor(config.getFailedTaskExecutorThreadCoreNumber(), config.getFailedTaskExecutorThreadMaxNumber(), 1, TimeUnit.HOURS, new LinkedBlockingQueue<>(qSize),
                             new ThreadFactoryBuilder().setNameFormat("RapidTSDB-FailedTask-%d").build());
                     failedTaskExecutor.setRejectedExecutionHandler(new RejectedExecutionHandler() {
                         @Override

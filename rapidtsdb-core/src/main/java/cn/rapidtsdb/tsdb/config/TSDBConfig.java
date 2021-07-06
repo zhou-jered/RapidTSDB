@@ -19,10 +19,18 @@ public class TSDBConfig {
      */
     @Getter
     private String storeScheme = "file";
+
+    /**
+     * the global store path prefix
+     */
     @Getter
-    private String dataDir;
+    private String dataPath;
+
+    /**
+     * the global store cache path
+     */
     @Getter
-    private String cacheDir;
+    private String cachePath;
     /**
      * 存储接口的实现类
      */
@@ -53,10 +61,10 @@ public class TSDBConfig {
     private Integer executorIoMax = Runtime.getRuntime().availableProcessors() * 4;
 
     @Getter
-    Integer failedTaskExecutorIoCore = 1;
+    Integer failedTaskExecutorThreadCoreNumber = 1;
 
     @Getter
-    Integer failedTaskExecutorIoMax = 5;
+    Integer failedTaskExecutorThreadMaxNumber = 5;
 
     @Getter
     Integer failedTaskQueueSize = 4096;
@@ -70,10 +78,22 @@ public class TSDBConfig {
     @Getter
     private AdvancedConfig advancedConfig = new AdvancedConfig();
 
+    private static Object initWaiter = new Object();
 
     public static TSDBConfig getConfigInstance() {
         if (INSTANCE == null) {
-            throw new IllegalStateException("Config not init");
+            synchronized (initWaiter) {
+                while (true) {
+                    try {
+                        initWaiter.wait(500);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    if (INSTANCE != null) {
+                        break;
+                    }
+                }
+            }
         }
         return INSTANCE;
     }
@@ -96,11 +116,15 @@ public class TSDBConfig {
     private static TSDBConfig INSTANCE = null;
 
     public static void init(Map<String, String> rawConfig) {
-        INSTANCE = new TSDBConfig();
+        TSDBConfig temp = new TSDBConfig();
         if (rawConfig != null) {
             for (String configItem : rawConfig.keySet()) {
-                INSTANCE.setConfigVal(configItem, rawConfig.get(configItem));
+                temp.setConfigVal(configItem, rawConfig.get(configItem));
             }
+        }
+        INSTANCE = temp;
+        synchronized (initWaiter) {
+            initWaiter.notifyAll();
         }
     }
 
