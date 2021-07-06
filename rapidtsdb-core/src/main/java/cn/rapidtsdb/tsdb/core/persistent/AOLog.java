@@ -2,16 +2,16 @@ package cn.rapidtsdb.tsdb.core.persistent;
 
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
-import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-@Data
 @NoArgsConstructor
-@AllArgsConstructor
 public class AOLog {
+    @Getter
     private int metricsIdx;
+    @Getter
     private long timestamp;
+    @Getter
     private double val;
     private byte[] seri;
 

@@ -61,6 +61,7 @@ public class TSDB implements Initializer, Closer {
     public void init() {
         appendOnlyLogManager.init();
         metricsKeyManager.init();
+        blockManager.init();
         initMemDb();
         initScheduleTimeTask();
     }

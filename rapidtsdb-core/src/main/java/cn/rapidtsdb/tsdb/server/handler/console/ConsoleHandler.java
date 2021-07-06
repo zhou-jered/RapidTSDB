@@ -48,6 +48,10 @@ public class ConsoleHandler extends SimpleChannelInboundHandler<ByteBuf> {
     }
 
     private void handleMethodCall(ChannelHandlerContext ctx, String method, String... params) {
+        if (method.trim().length() == 0) {
+            newLine(ctx);
+            return;
+        }
         switch (method.toLowerCase()) {
             case "bye":
                 ctx.close();
@@ -65,7 +69,6 @@ public class ConsoleHandler extends SimpleChannelInboundHandler<ByteBuf> {
             default:
                 methodUnknown(ctx, method);
         }
-        newLine(ctx);
     }
 
     TSDataOperationQueue operationQueue = TSDataOperationQueue.getQ();
@@ -104,6 +107,7 @@ public class ConsoleHandler extends SimpleChannelInboundHandler<ByteBuf> {
                 = ctx.alloc().buffer(10);
         nb.writeBytes("success".getBytes());
         ctx.writeAndFlush(nb);
+        newLine(ctx);
     }
 
     private void methodUnknown(ChannelHandlerContext ctx, String method) {
@@ -111,14 +115,12 @@ public class ConsoleHandler extends SimpleChannelInboundHandler<ByteBuf> {
         byteBuf.writeBytes("unknown command:".getBytes());
         byteBuf.writeBytes(method.getBytes());
         ctx.writeAndFlush(byteBuf);
+        newLine(ctx);
     }
 
 
-    private void newLine(ChannelHandlerContext ctx) {
-        ByteBuf newLineByteBuf = null;
-        newLineByteBuf = ctx.alloc().buffer(10);
-        newLineByteBuf.writeBytes("\n>>".getBytes());
-        ctx.writeAndFlush(newLineByteBuf);
+    private static void newLine(ChannelHandlerContext ctx) {
+        ctx.writeAndFlush("\n>> ");
     }
 
     private void writeResponse(ChannelHandlerContext ctx, String resp, Object... values) {
@@ -169,6 +171,7 @@ public class ConsoleHandler extends SimpleChannelInboundHandler<ByteBuf> {
                 if (callback != null) {
                     callback.onException(this, dp, e);
                 }
+                return;
             }
             if (writeMetricResult.isSuccess()) {
                 if (callback != null) {
@@ -189,9 +192,9 @@ public class ConsoleHandler extends SimpleChannelInboundHandler<ByteBuf> {
 
         @Override
         public Object onSuccess(Object data) {
-            ByteBuf okBuf = ctx.alloc().buffer(10);
-            okBuf.writeBytes("ok".getBytes());
-            ctx.writeAndFlush(okBuf);
+
+            ctx.writeAndFlush("ok");
+            newLine(ctx);
             return null;
         }
 
@@ -206,7 +209,7 @@ public class ConsoleHandler extends SimpleChannelInboundHandler<ByteBuf> {
                 }
                 ctx.writeAndFlush(byteBuf);
             }
-
+            newLine(ctx);
         }
 
         @Override
@@ -218,13 +221,13 @@ public class ConsoleHandler extends SimpleChannelInboundHandler<ByteBuf> {
                 } else {
                     ctx.writeAndFlush("Failed:code:" + wmr.getCode());
                 }
-            } else {
-                ctx.writeAndFlush(data.toString());
             }
             if (exception != null) {
                 ctx.writeAndFlush("\n");
-                ctx.writeAndFlush("Exception:".getBytes());
+                ctx.writeAndFlush("Exception:" + exception.getMessage());
+                log.error("", exception);
             }
+            newLine(ctx);
         }
     }
 }

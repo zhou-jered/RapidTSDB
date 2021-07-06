@@ -121,7 +121,7 @@ public class TSBytes {
     }
 
     void setByteData(byte[] bytes, int byteOffset, int bitsLength) {
-        System.arraycopy(bytes, byteOffset, data, 0, bitsLength / 8 + 1);
+        System.arraycopy(bytes, byteOffset, data, 0, bitsLength / 8 + ((bitsLength % 8 == 0) ? 0 : 1));
         this.bytesOffset = bitsLength / 8;
         this.bitsOffset = bitsLength % 8;
     }

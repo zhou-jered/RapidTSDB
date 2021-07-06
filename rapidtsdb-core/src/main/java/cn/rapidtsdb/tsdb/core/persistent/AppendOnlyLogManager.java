@@ -11,14 +11,7 @@ import com.google.common.primitives.Longs;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.IOUtils;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.RandomAccessFile;
+import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.BlockingQueue;
@@ -140,7 +133,7 @@ public class AppendOnlyLogManager implements Initializer, Closer {
                 if (readByte < AOLog.SERIES_BYTES_LENGTH) {
                     log.error("AOLOG ENTRY ERROR");
                     AOLog[] breakReturnLogs = new AOLog[i];
-                    System.arraycopy(aolFile, 0, breakReturnLogs, 0, i);
+                    System.arraycopy(aoLogs, 0, breakReturnLogs, 0, i);
                     aoLogs = breakReturnLogs;
                     break;
                 }
@@ -242,7 +235,7 @@ public class AppendOnlyLogManager implements Initializer, Closer {
                 }
                 if (aoLog != null) {
                     byteBuffer.clear();
-                    byteBuffer.put(aoLog.getSeri());
+                    byteBuffer.put(aoLog.series());
                     byteBuffer.flip();
                     try {
                         writeChannel.write(byteBuffer);

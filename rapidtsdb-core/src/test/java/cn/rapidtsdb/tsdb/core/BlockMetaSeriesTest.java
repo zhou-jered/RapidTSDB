@@ -1,15 +1,19 @@
 package cn.rapidtsdb.tsdb.core;
 
+import cn.rapidtsdb.tsdb.core.io.TSBlockDeserializer;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.io.IOUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.security.MessageDigest;
 import java.util.Arrays;
-
 @Log4j2
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class BlockMetaSeriesTest {
@@ -47,5 +51,24 @@ public class BlockMetaSeriesTest {
         TSBlockMeta newMeta = TSBlockMeta.fromSeries(this.series);
         System.out.println(newMeta);
         Assert.assertTrue(blockMeta.equals(newMeta));
+    }
+
+    @Test
+    public void test4() {
+        String f = "/tmp/data/tsdb/3/T3:0.data";
+        File file = new File(f);
+        if(file.exists()==false) {
+            return;
+        }
+        try {
+            byte[] bs = IOUtils.toByteArray(new FileInputStream(file));
+            TSBlockDeserializer deserializer = new TSBlockDeserializer();
+            TSBlockDeserializer.TSBlockAndMeta blockAndMeta = deserializer.deserializeFromBytes(bs);
+            System.out.println(blockAndMeta.getMeta());
+            System.out.println(blockAndMeta.getData().getDataPoints());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
     }
 }
