@@ -3,6 +3,7 @@ package cn.rapidtsdb.tsdb.core.persistent;
 import cn.rapidtsdb.tsdb.config.TSDBConfig;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
 import cn.rapidtsdb.tsdb.store.StoreHandler;
+import cn.rapidtsdb.tsdb.store.StoreHandlerFactory;
 import cn.rapidtsdb.tsdb.utils.TimeUtils;
 import com.esotericsoftware.kryo.kryo5.Kryo;
 import com.esotericsoftware.kryo.kryo5.io.Input;
@@ -61,6 +62,7 @@ public class MetricsKeyManager implements Initializer {
         if (!status.compareAndSet(STATUS_UNINIT, STATUS_INITIALIZING)) {
             return;
         }
+        storeHandler = StoreHandlerFactory.getStoreHandler();
         kryo.register(TrieNode.class);
         kryo.register(ArrayList.class);
         if (tsdbConfig.getAdvancedConfig().getMetricsIdxCacheSize() != null && tsdbConfig.getAdvancedConfig().getMetricsIdxCacheSize() > 0) {
@@ -143,30 +145,33 @@ public class MetricsKeyManager implements Initializer {
     }
 
     private void recoverFromFile() {
-        try {
-            InputStream inputStream = storeHandler.openFileInputStream(metricsKeyIdxFile);
-            if (inputStream != null) {
-                String idxString = IOUtils.toString(inputStream, StandardCharsets.UTF_8);
-                if (StringUtils.isNotBlank(idxString)) {
-                    Integer idx = Integer.parseInt(idxString);
-                    metricKeyIdx.set(idx);
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        if (storeHandler.fileExisted(metricsKeyIdxFile)) {
+            try (InputStream inputStream = storeHandler.openFileInputStream(metricsKeyIdxFile);) {
 
-        try {
-            InputStream inputStream = storeHandler.openFileInputStream(metricsKeyFile);
-            if (inputStream != null) {
-                Input input = new Input(inputStream);
-                trieNodeRoot = kryo.readObject(input, TrieNode.class);
-                log.info("recover Metrics");
-            } else {
-                log.debug("Metrics Key Persistence file not Existed.");
+                if (inputStream != null) {
+                    String idxString = IOUtils.toString(inputStream, StandardCharsets.UTF_8);
+                    if (StringUtils.isNotBlank(idxString)) {
+                        Integer idx = Integer.parseInt(idxString);
+                        metricKeyIdx.set(idx);
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
             }
-        } catch (IOException e) {
-            e.printStackTrace();
+        }
+        if (storeHandler.fileExisted(metricsKeyFile)) {
+            try (InputStream inputStream = storeHandler.openFileInputStream(metricsKeyFile);){
+
+                if (inputStream != null) {
+                    Input input = new Input(inputStream);
+                    trieNodeRoot = kryo.readObject(input, TrieNode.class);
+                    log.info("recover Metrics");
+                } else {
+                    log.debug("Metrics Key Persistence file not Existed.");
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
 
         if (metricKeyIdx.get() < 1 || !tsdbConfig.getAdvancedConfig().isReadMkIdx()) {

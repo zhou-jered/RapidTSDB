@@ -8,4 +8,6 @@ public abstract class TSDBDataOperationTask extends TsdbRunnableTask {
     public TSDBDataOperationTask(TSDBTaskCallback callback) {
         this.callback = callback;
     }
+
+
 }

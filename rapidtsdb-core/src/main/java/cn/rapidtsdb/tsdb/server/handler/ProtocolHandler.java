@@ -9,11 +9,15 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import lombok.extern.log4j.Log4j2;
 
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+
 @Log4j2
 public class ProtocolHandler extends ChannelInboundHandlerAdapter {
 
     final int RPC_MAGIC_NUMBER = AppInfo.MAGIC_NUMBER;
     ByteBuf magicNumberBuf = null;
+    ScheduledFuture pendingConsoleScheduleFuture = null;
 
     public ProtocolHandler() {
 
@@ -29,7 +33,7 @@ public class ProtocolHandler extends ChannelInboundHandlerAdapter {
         if (magicNumberBuf.readableBytes() >= 4) {
             int tryMagicNumber = magicNumberBuf.readInt();
             if (tryMagicNumber == RPC_MAGIC_NUMBER) {
-                
+                pendingConsoleScheduleFuture.cancel(true);
                 checkoutBinaryProtocol(ctx);
             } else {
                 checkoutConsoleProtocol(ctx);
@@ -37,13 +41,15 @@ public class ProtocolHandler extends ChannelInboundHandlerAdapter {
                 ctx.fireChannelRead(magicNumberBuf);
             }
             ctx.fireChannelRead(msg);
-            ctx.pipeline().remove(this);
         }
     }
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         this.magicNumberBuf = ctx.alloc().buffer(4);
+        pendingConsoleScheduleFuture = ctx.executor().schedule(() -> {
+            checkoutConsoleProtocol(ctx);
+        }, 1, TimeUnit.SECONDS);
     }
 
     @Override
@@ -53,11 +59,15 @@ public class ProtocolHandler extends ChannelInboundHandlerAdapter {
     }
 
     private void checkoutConsoleProtocol(ChannelHandlerContext ctx) {
+        log.info("checkout {} to console protocol", ctx.channel().remoteAddress());
         ctx.pipeline().addLast(new LineBasedFrameDecoder(2048));
         ctx.pipeline().addLast(new ConsoleHandler());
+        ctx.pipeline().remove(this);
     }
 
     private void checkoutBinaryProtocol(ChannelHandlerContext ctx) {
+        log.info("checkout {} to binary protocol", ctx.channel().remoteAddress());
         ctx.pipeline().addLast(new RpcConnectionInitHandler());
+        ctx.pipeline().remove(this);
     }
 }

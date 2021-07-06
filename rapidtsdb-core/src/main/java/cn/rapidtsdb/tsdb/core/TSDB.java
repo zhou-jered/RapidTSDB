@@ -8,7 +8,7 @@ import cn.rapidtsdb.tsdb.core.persistent.TSDBCheckPointManager;
 import cn.rapidtsdb.tsdb.executors.ManagedThreadPool;
 import cn.rapidtsdb.tsdb.lifecycle.Closer;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
-import cn.rapidtsdb.tsdb.model.TSQueryModel.TSQuery;
+import cn.rapidtsdb.tsdb.model.proto.TSQueryModel.ProtoTSQuery;
 import cn.rapidtsdb.tsdb.obj.WriteMetricResult;
 import cn.rapidtsdb.tsdb.server.TSDBBridge;
 import cn.rapidtsdb.tsdb.tasks.TwoHoursTriggerTask;
@@ -60,6 +60,7 @@ public class TSDB implements Initializer, Closer {
     @Override
     public void init() {
         appendOnlyLogManager.init();
+        metricsKeyManager.init();
         initMemDb();
         initScheduleTimeTask();
     }
@@ -101,7 +102,7 @@ public class TSDB implements Initializer, Closer {
         return WriteMetricResult.FAILED_TIME_EXPIRED;
     }
 
-    public List<TSDataPoint> queryTimeSeriesData(TSQuery query) {
+    public List<TSDataPoint> queryTimeSeriesData(ProtoTSQuery query) {
         return null;
     }
 
