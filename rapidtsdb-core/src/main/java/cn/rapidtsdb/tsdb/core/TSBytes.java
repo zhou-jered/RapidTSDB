@@ -35,6 +35,7 @@ public class TSBytes {
      * @param newDataBitsSize
      */
     void appendBitesDataInternal(byte newData, int newDataBitsSize) {
+        newData &= RIGHT_MASK[newDataBitsSize];
         int writeIdx = bytesOffset;
         int remainBits = 8 - bitsOffset;
         int afterWriteRemainBits = remainBits - newDataBitsSize;

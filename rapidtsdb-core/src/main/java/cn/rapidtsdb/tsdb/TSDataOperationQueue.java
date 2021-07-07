@@ -62,7 +62,7 @@ public class TSDataOperationQueue {
                     TSDBDataOperationTask task = taskQ.take();
                     task.run();
                 } catch (InterruptedException e) {
-                    e.printStackTrace();
+//                    e.printStackTrace();
                 }
             }
         }

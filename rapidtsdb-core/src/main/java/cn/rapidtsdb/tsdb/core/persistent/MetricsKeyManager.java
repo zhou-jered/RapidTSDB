@@ -1,6 +1,7 @@
 package cn.rapidtsdb.tsdb.core.persistent;
 
 import cn.rapidtsdb.tsdb.config.TSDBConfig;
+import cn.rapidtsdb.tsdb.lifecycle.Closer;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
 import cn.rapidtsdb.tsdb.store.StoreHandler;
 import cn.rapidtsdb.tsdb.store.StoreHandlerFactory;
@@ -11,18 +12,16 @@ import com.esotericsoftware.kryo.kryo5.io.Output;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 
 import java.io.*;
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
 @Log4j2
-public class MetricsKeyManager implements Initializer {
+public class MetricsKeyManager implements Initializer, Closer {
 
     private final int STATUS_UNINIT = 1;
     private final int STATUS_INITIALIZING = 2;
@@ -119,12 +118,26 @@ public class MetricsKeyManager implements Initializer {
             char currentChar = metricsChars[i];
             currentNode = currentNode.getChildNode(currentChar);
         }
-        if (currentNode.getVal() == 0) {
+        if (isNewInsertedNode(currentNode)) {
             currentNode.setValue(metricKeyIdx.incrementAndGet());
             persistenceMetrics();
+            try {
+                OutputStream outputStream = storeHandler.openFileAppendStream(metricsKeyListFile);
+                OutputStreamWriter writer = new OutputStreamWriter(outputStream);
+                writer.write(metricsChars);
+                writer.write("\n");
+                writer.close();
+            } catch (IOException e) {
+                log.error("write metrics list file exception", e);
+            }
+
         }
         currentNode.setValue(metricKeyIdx.addAndGet(1));
         return currentNode.getVal();
+    }
+
+    private boolean isNewInsertedNode(TrieNode node) {
+        return node.getVal() == 0;
     }
 
     private void persistenceMetrics() {
@@ -142,6 +155,21 @@ public class MetricsKeyManager implements Initializer {
         } catch (IOException e) {
             e.printStackTrace();
         }
+
+        try {
+            OutputStream outputStream = storeHandler.openFileOutputStream(metricsKeyIdxFile);
+            DataOutputStream dos = new DataOutputStream(outputStream);
+            dos.writeInt(metricKeyIdx.get());
+            dos.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    @Override
+    public void close() {
+        doPersist();
     }
 
     private void recoverFromFile() {
@@ -149,18 +177,16 @@ public class MetricsKeyManager implements Initializer {
             try (InputStream inputStream = storeHandler.openFileInputStream(metricsKeyIdxFile);) {
 
                 if (inputStream != null) {
-                    String idxString = IOUtils.toString(inputStream, StandardCharsets.UTF_8);
-                    if (StringUtils.isNotBlank(idxString)) {
-                        Integer idx = Integer.parseInt(idxString);
-                        metricKeyIdx.set(idx);
-                    }
+                    DataInputStream dis = new DataInputStream(inputStream);
+                    Integer idx = dis.readInt();
+                    metricKeyIdx.set(idx);
                 }
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }
         if (storeHandler.fileExisted(metricsKeyFile)) {
-            try (InputStream inputStream = storeHandler.openFileInputStream(metricsKeyFile);){
+            try (InputStream inputStream = storeHandler.openFileInputStream(metricsKeyFile);) {
 
                 if (inputStream != null) {
                     Input input = new Input(inputStream);

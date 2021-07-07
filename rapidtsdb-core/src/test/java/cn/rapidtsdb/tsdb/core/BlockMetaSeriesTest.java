@@ -53,22 +53,5 @@ public class BlockMetaSeriesTest {
         Assert.assertTrue(blockMeta.equals(newMeta));
     }
 
-    @Test
-    public void test4() {
-        String f = "/tmp/data/tsdb/3/T3:0.data";
-        File file = new File(f);
-        if(file.exists()==false) {
-            return;
-        }
-        try {
-            byte[] bs = IOUtils.toByteArray(new FileInputStream(file));
-            TSBlockDeserializer deserializer = new TSBlockDeserializer();
-            TSBlockDeserializer.TSBlockAndMeta blockAndMeta = deserializer.deserializeFromBytes(bs);
-            System.out.println(blockAndMeta.getMeta());
-            System.out.println(blockAndMeta.getData().getDataPoints());
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
 
-    }
 }

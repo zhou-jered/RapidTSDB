@@ -73,6 +73,7 @@ public class TSDB implements Initializer, Closer {
         globalExecutor.close();
         blockManager.close();
         appendOnlyLogManager.close();
+        metricsKeyManager.close();
         log.info("TSDB Close completed");
     }
 

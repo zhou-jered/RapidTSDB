@@ -213,6 +213,8 @@ public class TSBlock {
         if (decodedTimestamp.size() != decodedValues.size()) {
             String dumpFilename = Dumper.getInstance().dumpLog2Tmp(time.getData(), values.getData(), decodedTimestamp, decodedValues);
             log.error("[dump file: {}]. Fatal, Not aligned time and values, " + decodedTimestamp.size() + ":" + decodedValues.size(), dumpFilename);
+            log.error("decode time:{}", decodedTimestamp);
+            log.error("decode values:{}", decodedValues);
             throw new RuntimeException("Fatal, Not aligned time and values, " + decodedTimestamp.size() + ":" + decodedValues.size());
         }
         ArrayList<TSDataPoint> dps = new ArrayList<>(blockLengthSeconds);
