@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class AOLog {
     @Getter
-    private int metricsIdx;
+    private int metricsId;
     @Getter
     private long timestamp;
     @Getter
@@ -18,7 +18,7 @@ public class AOLog {
     public static final int SERIES_BYTES_LENGTH = 20;
 
     public AOLog(int idx, long timestamp, double val) {
-        this.metricsIdx = idx;
+        this.metricsId = idx;
         this.timestamp = timestamp;
         this.val = val;
     }
@@ -26,7 +26,7 @@ public class AOLog {
     public byte[] series() {
         if (seri == null) {
             seri = new byte[SERIES_BYTES_LENGTH];
-            byte[] temp = Ints.toByteArray(metricsIdx);
+            byte[] temp = Ints.toByteArray(metricsId);
             System.arraycopy(temp, 0, seri, 0, 4);
             temp = Longs.toByteArray(timestamp);
             System.arraycopy(temp, 0, seri, 4, 8);
@@ -45,7 +45,7 @@ public class AOLog {
      */
     static AOLog fromSeries(byte[] series) {
         AOLog alog = new AOLog();
-        alog.metricsIdx = Ints.fromByteArray(series);
+        alog.metricsId = Ints.fromByteArray(series);
         alog.timestamp = Longs.fromBytes(series[4], series[5], series[6], series[7],
                 series[8], series[9], series[10], series[11]);
         alog.val = Double.longBitsToDouble(Longs.fromBytes(

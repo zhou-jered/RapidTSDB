@@ -5,9 +5,9 @@ import cn.rapidtsdb.tsdb.TSDBTaskCallback;
 import cn.rapidtsdb.tsdb.TSDataOperationQueue;
 import cn.rapidtsdb.tsdb.TsdbRunnableTask;
 import cn.rapidtsdb.tsdb.core.TSDB;
+import cn.rapidtsdb.tsdb.core.TSDataPoint;
 import cn.rapidtsdb.tsdb.core.persistent.MetricsKeyManager;
 import cn.rapidtsdb.tsdb.obj.WriteMetricResult;
-import cn.rapidtsdb.tsdb.obj.model.Datapoint;
 import cn.rapidtsdb.tsdb.server.TSDBBridge;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
@@ -94,7 +94,7 @@ public class ConsoleHandler extends SimpleChannelInboundHandler<ByteBuf> {
         long timestamp = Long.parseLong(params[1]);
         double val = Double.parseDouble(params[2]);
         TSDBDataOperationTask task = new PutTask(new CommonCommandCallback(ctx),
-                metric, new Datapoint(timestamp, val));
+                metric, new TSDataPoint(timestamp, val));
         operationQueue.submitTask(task);
     }
 
@@ -136,10 +136,10 @@ public class ConsoleHandler extends SimpleChannelInboundHandler<ByteBuf> {
 
     static class PutTask extends TSDBDataOperationTask {
         private String metric;
-        private Datapoint dp;
+        private TSDataPoint dp;
         private int mid;
 
-        public PutTask(TSDBTaskCallback callback, String metric, Datapoint dp) {
+        public PutTask(TSDBTaskCallback callback, String metric, TSDataPoint dp) {
             super(callback);
             this.metric = metric;
             this.dp = dp;
@@ -166,7 +166,7 @@ public class ConsoleHandler extends SimpleChannelInboundHandler<ByteBuf> {
             TSDB database = TSDBBridge.getDatabase();
             WriteMetricResult writeMetricResult = null;
             try {
-                writeMetricResult = database.writeMetric(metric, dp.getVal(), dp.getTimestamp());
+                writeMetricResult = database.writeMetric(metric, dp.getValue(), dp.getTimestamp());
             } catch (Exception e) {
                 if (callback != null) {
                     callback.onException(this, dp, e);

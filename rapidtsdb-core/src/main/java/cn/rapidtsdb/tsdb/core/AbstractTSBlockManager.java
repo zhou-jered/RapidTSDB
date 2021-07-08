@@ -1,10 +1,12 @@
 package cn.rapidtsdb.tsdb.core;
 
 import cn.rapidtsdb.tsdb.TSDBTaskCallback;
+import cn.rapidtsdb.tsdb.core.io.TSBlockDeserializer.TSBlockAndMeta;
 import cn.rapidtsdb.tsdb.core.persistent.TSDBCheckPointManager;
 import cn.rapidtsdb.tsdb.lifecycle.Closer;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
 import cn.rapidtsdb.tsdb.utils.TimeUtils;
+import lombok.extern.log4j.Log4j2;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -16,6 +18,7 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * Define the Manager Rules of TSBlocks.
  */
+@Log4j2
 public abstract class AbstractTSBlockManager implements Initializer, Closer {
 
     //todo leave or stay here
@@ -39,6 +42,25 @@ public abstract class AbstractTSBlockManager implements Initializer, Closer {
 
     public void markDirtyBlock(TSBlock block) {
         dirtyBlocksRef.get().add(block);
+    }
+
+    public TSBlock mergeStoredBlockWithMemoryBlock(TSBlockAndMeta storedBlock, TSBlockSnapshot memoryBlock) {
+        TSBlock preBlock = storedBlock.getData();
+        TSBlock newBlock = memoryBlock.getTsBlock();
+        if (preBlock.getBaseTime() != newBlock.getBaseTime()) {
+            log.error("Can not merge Block with different Basetime, trying to merge {} with {}",
+                    preBlock.getBaseTime(), newBlock.getBaseTime());
+            throw new RuntimeException(String.format("Can not merge Block with different Basetime, trying to merge %s with %s",
+                    preBlock.getBaseTime(), newBlock.getBaseTime()));
+        }
+        List<TSDataPoint> dps = newBlock.getDataPoints();
+        if (dps != null) {
+            for (TSDataPoint dp : dps) {
+                preBlock.appendDataPoint(dp.getTimestamp(), dp.getValue());
+            }
+        }
+        preBlock.rewriteBytesData();
+        return preBlock;
     }
 
     public static TSBlockMeta createTSBlockMeta(TSBlockSnapshot snapshot, int metricId) {

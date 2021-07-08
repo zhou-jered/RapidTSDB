@@ -62,7 +62,7 @@ public class TSDB implements Initializer, Closer {
         appendOnlyLogManager.init();
         metricsKeyManager.init();
         blockManager.init();
-        initMemDb();
+        recoveryDBData();
         initScheduleTimeTask();
     }
 
@@ -70,10 +70,11 @@ public class TSDB implements Initializer, Closer {
     @Override
     public void close() {
         log.info("Closing TSDB");
-        globalExecutor.close();
-        blockManager.close();
         appendOnlyLogManager.close();
         metricsKeyManager.close();
+        blockManager.close();
+        checkPointManager.savePoint(appendOnlyLogManager.getLogIndex());
+        globalExecutor.close();
         log.info("TSDB Close completed");
     }
 
@@ -116,18 +117,29 @@ public class TSDB implements Initializer, Closer {
         });
     }
 
-    private void initMemDb() {
+    private void recoveryDBData() {
+        tryRecoveyMemoryData();
+        checkAOLog();
+
+    }
+
+    private void checkAOLog() {
         long aolIdx = appendOnlyLogManager.getLogIndex();
         long cpIdx = checkPointManager.getSavedPoint();
+
         if (cpIdx < aolIdx) {
             AOLog[] logs = appendOnlyLogManager.recoverLog(checkPointManager.getSavedPoint());
             for (AOLog log : logs) {
-                int mid = log.getMetricsIdx();
+                int mid = log.getMetricsId();
                 long time = log.getTimestamp();
                 double val = log.getVal();
                 writeMetricInternal(mid, time, val);
             }
         }
+    }
+
+    private void tryRecoveyMemoryData() {
+
     }
 
     private void initScheduleTimeTask() {

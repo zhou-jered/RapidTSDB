@@ -1,5 +1,6 @@
 package cn.rapidtsdb.tsdb;
 
+import cn.rapidtsdb.tsdb.app.AppInfo;
 import cn.rapidtsdb.tsdb.app.Banner;
 import cn.rapidtsdb.tsdb.config.TSDBConfig;
 import cn.rapidtsdb.tsdb.core.TSDB;
@@ -31,7 +32,6 @@ public class RapidTSDBApplication implements Initializer, Runner {
         printBanner();
         RapidTSDBApplication application = new RapidTSDBApplication();
         application.init();
-        application.run();
         log.info("RapidTSDB Application Start!!!");
     }
 
@@ -79,6 +79,7 @@ public class RapidTSDBApplication implements Initializer, Runner {
     private void registShutdownHook() {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             log.info("TSDB Shutting Down");
+            AppInfo.setApplicationState(AppInfo.ApplicationState.SHUTDOWN);
             tsdb.close();
             log.info("TSDB ShutDown Finished, Bye.");
         }));

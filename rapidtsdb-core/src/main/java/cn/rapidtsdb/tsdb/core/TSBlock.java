@@ -225,6 +225,22 @@ public class TSBlock {
         return dps;
     }
 
+    public void rewriteBytesData() {
+        try {
+            writeLock.lock();
+            time = new TSBytes(Math.max(2 * blockLengthSeconds, 800));
+            values = new TSBytes(21600);
+            List<TSDataPoint> dps = getDataPoints();
+            if (dps != null) {
+                for (TSDataPoint dp : dps) {
+                    appendDataPoint(dp.getTimestamp(), dp.getValue());
+                }
+            }
+        } finally {
+            writeLock.unlock();
+        }
+    }
+
 
     private void handleDuplicateDatapoint(ArrayList<TSDataPoint> dps) {
 

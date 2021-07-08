@@ -1,15 +1,15 @@
 package cn.rapidtsdb.tsdb.core.persistent;
 
 import cn.rapidtsdb.tsdb.TsdbRunnableTask;
+import cn.rapidtsdb.tsdb.app.AppInfo;
 import cn.rapidtsdb.tsdb.executors.ManagedThreadPool;
 import cn.rapidtsdb.tsdb.lifecycle.Closer;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
 import cn.rapidtsdb.tsdb.metrics.DBMetrics;
 import cn.rapidtsdb.tsdb.store.StoreHandler;
 import cn.rapidtsdb.tsdb.store.StoreHandlerFactory;
-import com.google.common.primitives.Longs;
+import cn.rapidtsdb.tsdb.utils.TimeUtils;
 import lombok.extern.log4j.Log4j2;
-import org.apache.commons.io.IOUtils;
 
 import java.io.*;
 import java.nio.ByteBuffer;
@@ -36,12 +36,9 @@ public class AppendOnlyLogManager implements Initializer, Closer {
     private Thread writeThread;
     private BlockingQueue<AOLog> bufferQ = new LinkedBlockingQueue<>();
 
-    private static AppendOnlyLogManager instance = null;
+    private static AppendOnlyLogManager instance = new AppendOnlyLogManager();
 
     public static AppendOnlyLogManager getInstance() {
-        if (instance == null) {
-            instance = new AppendOnlyLogManager();
-        }
         return instance;
     }
 
@@ -66,8 +63,8 @@ public class AppendOnlyLogManager implements Initializer, Closer {
         return logIdx.get();
     }
 
-    public void appendLog(int idx, long timestamp, double val) {
-        appendLog(new AOLog(idx, timestamp, val));
+    public void appendLog(int metricId, long timestamp, double val) {
+        appendLog(new AOLog(metricId, timestamp, val));
     }
 
     public AOLog[] recoverLog(long offset) {
@@ -181,9 +178,8 @@ public class AppendOnlyLogManager implements Initializer, Closer {
 
     private boolean persistLogIdx(String filename, long val) {
         try (OutputStream outputStream = storeHandler.openFileOutputStream(filename)) {
-            IOUtils.write(Longs.toByteArray(val), outputStream);
             DataOutputStream dos = new DataOutputStream(outputStream);
-            dos.writeLong(logIdx.get());
+            dos.writeLong(val);
         } catch (IOException e) {
             e.printStackTrace();
             log.error("AOLOG INDEX OUTPUT EX", e);
@@ -230,9 +226,12 @@ public class AppendOnlyLogManager implements Initializer, Closer {
                 try {
                     aoLog = logQueue.poll(1, TimeUnit.SECONDS);
                 } catch (InterruptedException e) {
-                    log.warn(e);
-                    DBMetrics.getInstance().event("Interrupted");
+                    if (AppInfo.getApplicationState() != AppInfo.ApplicationState.SHUTDOWN) {
+                        log.warn(e);
+                        DBMetrics.getInstance().event("Interrupted");
+                    }
                 }
+                reportAOLogQueueMetrics();
                 if (aoLog != null) {
                     byteBuffer.clear();
                     byteBuffer.put(aoLog.series());
@@ -262,6 +261,15 @@ public class AppendOnlyLogManager implements Initializer, Closer {
             } catch (IOException e) {
                 e.printStackTrace();
                 log.error(e);
+            }
+        }
+
+        private long lastReportTime = TimeUtils.currentSeconds();
+
+        private void reportAOLogQueueMetrics() {
+            if (TimeUtils.currentSeconds() - lastReportTime >= 1) {
+                DBMetrics.getInstance().reportMetrics("AOLOG_BUFFER_QUEUE", logQueue.size());
+                lastReportTime = TimeUtils.currentSeconds();
             }
         }
 

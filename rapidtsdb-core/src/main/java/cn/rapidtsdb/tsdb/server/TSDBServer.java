@@ -1,6 +1,7 @@
 package cn.rapidtsdb.tsdb.server;
 
 import cn.rapidtsdb.tsdb.TSDataOperationQueue;
+import cn.rapidtsdb.tsdb.app.AppInfo;
 import cn.rapidtsdb.tsdb.config.TSDBConfig;
 import cn.rapidtsdb.tsdb.lifecycle.Closer;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
@@ -66,6 +67,7 @@ public class TSDBServer implements Initializer, Runner, Closer {
         serverChannelFuture = serverBootstrap.bind(port);
         serverChannelFuture.addListener((ChannelFutureListener) future -> {
                     if (future.isDone() && future.isSuccess()) {
+                        AppInfo.setApplicationState(AppInfo.ApplicationState.RUNNING);
                         log.info("Server listening: {}", port);
                     } else if (future.isCancelled()) {
                         log.error("Server Launch Cancelled");

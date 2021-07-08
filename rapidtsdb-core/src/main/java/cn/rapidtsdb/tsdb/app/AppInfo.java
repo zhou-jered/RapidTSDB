@@ -42,10 +42,26 @@ public class AppInfo {
         pid = jvmName.split("@")[0];
     }
 
+    public static ApplicationState getApplicationState() {
+        return applicationState;
+    }
+
+    public static void setApplicationState(ApplicationState state) {
+        applicationState = state;
+    }
+
     private static void initCmdArgs() {
         allArgs.add(new CmdArgs("c", "conf", String.class)); // configuration file
         allArgs.add(new CmdArgs("d", "dataDir", String.class)); // date dir
         allArgs.add(new CmdArgs("e", "cacheDir", String.class)); //cache dir
+    }
+
+    private static ApplicationState applicationState = ApplicationState.INIT;
+
+    public enum ApplicationState {
+        INIT,
+        RUNNING,
+        SHUTDOWN
     }
 
 }
