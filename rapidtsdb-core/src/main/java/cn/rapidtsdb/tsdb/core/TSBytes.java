@@ -138,6 +138,10 @@ public class TSBytes {
         data = newBytes;
     }
 
+    public void preExpandSpace(int byteSize) {
+        expandDataSize(byteSize);
+    }
+
     public int getTotalBitsLength() {
         return bytesOffset * 8 + bitsOffset;
     }

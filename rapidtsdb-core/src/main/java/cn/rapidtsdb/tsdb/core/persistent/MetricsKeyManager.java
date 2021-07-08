@@ -70,7 +70,7 @@ public class MetricsKeyManager implements Initializer, Closer {
         recoverFromFile();
     }
 
-    public Collection<String> getAllMetrics() {
+    public Set<String> getAllMetrics() {
         if (!storeHandler.fileExisted(metricsKeyListFile)) {
             return new HashSet<>();
         }

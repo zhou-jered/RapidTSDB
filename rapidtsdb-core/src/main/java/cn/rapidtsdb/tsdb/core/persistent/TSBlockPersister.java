@@ -2,7 +2,6 @@ package cn.rapidtsdb.tsdb.core.persistent;
 
 import cn.rapidtsdb.tsdb.TSDBTaskCallback;
 import cn.rapidtsdb.tsdb.TsdbRunnableTask;
-import cn.rapidtsdb.tsdb.config.TSDBConfig;
 import cn.rapidtsdb.tsdb.core.TSBlock;
 import cn.rapidtsdb.tsdb.core.TSBlockMeta;
 import cn.rapidtsdb.tsdb.core.TSBlockSnapshot;
@@ -16,6 +15,7 @@ import cn.rapidtsdb.tsdb.lifecycle.Closer;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
 import cn.rapidtsdb.tsdb.store.StoreHandler;
 import cn.rapidtsdb.tsdb.store.StoreHandlerFactory;
+import cn.rapidtsdb.tsdb.utils.TSBlockUtils;
 import cn.rapidtsdb.tsdb.utils.TimeUtils;
 import lombok.extern.log4j.Log4j2;
 import org.apache.logging.log4j.LogManager;
@@ -43,9 +43,6 @@ import static cn.rapidtsdb.tsdb.core.AbstractTSBlockManager.createTSBlockMeta;
 @Log4j2
 public class TSBlockPersister implements Initializer, Closer {
 
-    private TSDBConfig tsdbConfig = TSDBConfig.getConfigInstance();
-    private AppendOnlyLogManager appendOnlyLogManager = AppendOnlyLogManager.getInstance(); //todo
-    private TSDBCheckPointManager tsdbCheckPointManager = TSDBCheckPointManager.getInstance();//todo
     private ThreadPoolExecutor ioExecutor = ManagedThreadPool.getInstance().ioExecutor();
     private static TSBlockPersister INSTANCE = null;
     private StoreHandler storeHandler;
@@ -95,6 +92,10 @@ public class TSBlockPersister implements Initializer, Closer {
         FileLocation fl = FilenameStrategy.getTodayFileLocation(metricId, blockBaseTime);
         if (!storeHandler.fileExisted(fl.getPathWithFilename())) {
             fl = FilenameStrategy.getDailyFileLocation(metricId, blockBaseTime);
+            //if request data is in today range, check for quick return
+            if (Math.abs(TimeUtils.currentSeconds() - timeSeconds) < TimeUnit.DAYS.toSeconds(1)) {
+                return null;
+            }
         }
         if (!storeHandler.fileExisted(fl.getPathWithFilename())) {
             fl = FilenameStrategy.getMonthlyFileLocation(metricId, blockBaseTime);
@@ -285,6 +286,20 @@ public class TSBlockPersister implements Initializer, Closer {
             final String fullFilename = fileLocation.getPathWithFilename();
             if (storeHandler.fileExisted(fullFilename)) {
                 log.warn("Store {}, file already Existed. Overrided", blockMeta.getSimpleInfo());
+                try {
+                    InputStream existsBlockIP = storeHandler.openFileInputStream(fullFilename);
+                    TSBlockDeserializer blockReader = new TSBlockDeserializer();
+                    TSBlockAndMeta existedBlock = blockReader.deserializeFromStream(existsBlockIP);
+                    TSBlock mergedBlock = TSBlockUtils.mergeStoredBlockWithMemoryBlock(existedBlock, snapshot);
+                    TSBlockSnapshot mergedSnapshot = mergedBlock.snapshot();
+                    blockMeta = createTSBlockMeta(mergedSnapshot, metricId);
+                    taskData = new TSBlockAndMeta(blockMeta, mergedBlock);
+                    log.info("Merge TSBlock", fullFilename);
+                } catch (IOException e) {
+                    log.error("Read " + fullFilename + " EX", e);
+                    log.error("skip block merge");
+                }
+
             }
             try {
                 log.debug("{} start write:{}", metricId, fileLocation);

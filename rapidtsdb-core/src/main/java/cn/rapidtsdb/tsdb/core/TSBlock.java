@@ -52,12 +52,16 @@ public class TSBlock {
     private static final byte VALUE_CONTROL_BITS_IN = 2; // 0b10
     private static final byte VALUE_CONTROL_BITS_NEW = 3; // 0b11
 
+    public static final int DEFAULT_TIME_BYTES_LENGTH = Math.max(2 * 7200, 800);
+    public static final int DEFAULT_VALUE_BYTES_LENGTH = 21600;
+
+
     public TSBlock(long baseTime, int blockLengthSeconds, TimeUtils.TimeUnitAdaptor timeUnitAdapter) {
         this.baseTime = baseTime;
         this.blockLengthSeconds = blockLengthSeconds;
         this.timeUnitAdapter = timeUnitAdapter;
-        time = new TSBytes(Math.max(2 * blockLengthSeconds, 800));
-        values = new TSBytes(21600);
+        time = new TSBytes(DEFAULT_TIME_BYTES_LENGTH);
+        values = new TSBytes(DEFAULT_VALUE_BYTES_LENGTH);
 
     }
 
@@ -431,4 +435,8 @@ public class TSBlock {
         return blockVersion.get();
     }
 
+    public void afterRecovery() {
+        time.preExpandSpace(DEFAULT_TIME_BYTES_LENGTH);
+        values.preExpandSpace(DEFAULT_VALUE_BYTES_LENGTH);
+    }
 }

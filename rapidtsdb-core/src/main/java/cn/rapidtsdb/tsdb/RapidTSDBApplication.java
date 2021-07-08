@@ -66,10 +66,6 @@ public class RapidTSDBApplication implements Initializer, Runner {
         registShutdownHook();
     }
 
-    public synchronized void recovery() {
-
-    }
-
     @Override
     public void run() {
         log.info("Application Run!!!");

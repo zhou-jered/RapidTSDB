@@ -16,7 +16,9 @@ import cn.rapidtsdb.tsdb.utils.TimeUtils;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang.StringUtils;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -126,20 +128,24 @@ public class TSDB implements Initializer, Closer {
     private void checkAOLog() {
         long aolIdx = appendOnlyLogManager.getLogIndex();
         long cpIdx = checkPointManager.getSavedPoint();
-
         if (cpIdx < aolIdx) {
             AOLog[] logs = appendOnlyLogManager.recoverLog(checkPointManager.getSavedPoint());
-            for (AOLog log : logs) {
-                int mid = log.getMetricsId();
-                long time = log.getTimestamp();
-                double val = log.getVal();
-                writeMetricInternal(mid, time, val);
+            if (logs != null) {
+                for (AOLog log : logs) {
+                    int mid = log.getMetricsId();
+                    long time = log.getTimestamp();
+                    double val = log.getVal();
+                    writeMetricInternal(mid, time, val);
+                }
             }
         }
     }
 
     private void tryRecoveyMemoryData() {
-
+        Set<String> allMetrics = metricsKeyManager.getAllMetrics();
+        List<Integer> allMids = new ArrayList<>(allMetrics.size());
+        allMetrics.forEach(m -> allMids.add(metricsKeyManager.getMetricsIndex(m)));
+        blockManager.tryRecoveryMemoryData(allMids);
     }
 
     private void initScheduleTimeTask() {
