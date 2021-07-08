@@ -122,13 +122,15 @@ public class TSDB implements Initializer, Closer {
     private void recoveryDBData() {
         tryRecoveyMemoryData();
         checkAOLog();
-
     }
 
     private void checkAOLog() {
         long aolIdx = appendOnlyLogManager.getLogIndex();
-        long cpIdx = checkPointManager.getSavedPoint();
-        if (cpIdx < aolIdx) {
+        long checkpoint = checkPointManager.getSavedPoint();
+        if (checkpoint == aolIdx) {
+            return;
+        }
+        if (checkpoint < aolIdx) {
             AOLog[] logs = appendOnlyLogManager.recoverLog(checkPointManager.getSavedPoint());
             if (logs != null) {
                 for (AOLog log : logs) {
