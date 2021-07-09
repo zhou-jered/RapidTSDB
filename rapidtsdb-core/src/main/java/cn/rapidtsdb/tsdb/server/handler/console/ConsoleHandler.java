@@ -128,7 +128,7 @@ public class ConsoleHandler extends SimpleChannelInboundHandler<ByteBuf> {
                     String d = dps.get(i).getTimestamp() + ":" + dps.get(i).getValue();
                     ctx.writeAndFlush(d);
                     ctx.writeAndFlush("  ");
-                    if (i % 5 == 0) {
+                    if (i % 5 == 0 && i > 0) {
                         ctx.writeAndFlush("\n");
                     }
                 }

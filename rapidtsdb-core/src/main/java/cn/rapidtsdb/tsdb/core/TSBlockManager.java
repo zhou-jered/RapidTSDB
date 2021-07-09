@@ -77,6 +77,7 @@ public class TSBlockManager extends AbstractTSBlockManager implements Initialize
         Map<Integer, TSBlock> currentBlockCache = currentBlockCacheRef.get();
         TSBlock currentBlock = currentBlockCache.get(metricId);
         if (currentBlock == null) {
+            log.debug("Create new TSBlock of timestamp:{}", timestamp);
             currentBlock = newTSBlock(metricId, timestamp);
             TSBlock existedBlocks = currentBlockCache.putIfAbsent(metricId, currentBlock);
             if (existedBlocks != null) {
@@ -90,11 +91,13 @@ public class TSBlockManager extends AbstractTSBlockManager implements Initialize
 
         if (currentBlock.afterBlock(timestamp)) {
             TSBlock forwardBlock = forwardRoundBlockRef.get().get(metricId);
-            if (forwardBlock != null) {
+            if (forwardBlock != null && forwardBlock.inBlock(timestamp)) {
+                log.info("return forwarding block of timestamp:{}", timestamp);
                 return forwardBlock;
             }
-            forwardBlock = newTSBlock(metricId, timestamp);
-
+            if (forwardBlock == null) {
+                forwardBlock = newTSBlock(metricId, timestamp);
+            }
             if (currentBlock.isNextAjacentBlock(forwardBlock)) {
                 forwardBlock = forwardRoundBlockRef.get().putIfAbsent(metricId, forwardBlock);
                 return forwardBlock;
