@@ -118,7 +118,15 @@ public class TSBlockPersister implements Initializer, Closer {
     }
 
     public ArrayList<TSBlock> getTSBlocks(Integer metricId, long timeSecondsStart, long timeSecondsEnd) {
-        return null;
+        ArrayList<TSBlock> blocks = new ArrayList<>((int) ((timeSecondsEnd - timeSecondsStart) / TimeUnit.HOURS.toSeconds(2) + 1));
+        long baseTime = TimeUtils.getBlockBaseTimeSeconds(timeSecondsStart);
+        for (long t = baseTime; t <= timeSecondsEnd; t += TimeUnit.HOURS.toSeconds(2)) {
+            TSBlock b = getTSBlock(metricId, t);
+            if (b != null) {
+                blocks.add(b);
+            }
+        }
+        return blocks;
     }
 
     public Iterator<TSBlock> getTSBlockIter(Integer metricId, long timeSecondsStart, Long timeSecondsEnd) {

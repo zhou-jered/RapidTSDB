@@ -32,6 +32,7 @@ public class RapidTSDBApplication implements Initializer, Runner {
         printBanner();
         RapidTSDBApplication application = new RapidTSDBApplication();
         application.init();
+        application.run();
         log.info("RapidTSDB Application Start!!!");
     }
 

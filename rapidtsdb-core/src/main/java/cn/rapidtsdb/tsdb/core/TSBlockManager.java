@@ -9,6 +9,7 @@ import cn.rapidtsdb.tsdb.lifecycle.Initializer;
 import cn.rapidtsdb.tsdb.store.StoreHandler;
 import cn.rapidtsdb.tsdb.store.StoreHandlerFactory;
 import cn.rapidtsdb.tsdb.tasks.ClearDirtyBlockTask;
+import cn.rapidtsdb.tsdb.utils.TSBlockUtils;
 import cn.rapidtsdb.tsdb.utils.TimeUtils;
 import lombok.extern.log4j.Log4j2;
 
@@ -133,7 +134,49 @@ public class TSBlockManager extends AbstractTSBlockManager implements Initialize
 
     public List<TSBlock> getBlockWithTimeRange(int metricId, long start, long end) {
         List<TSBlock> tsBlocks = blockPersister.getTSBlocks(metricId, start, end);
+        TSBlock preRoundBlock = preRoundBlockRef.get().get(metricId);
+        TSBlock thisRoundBlock = currentBlockCacheRef.get().get(metricId);
+        TSBlock forwordRoundBlock = forwardRoundBlockRef.get().get(metricId);
+
+        if (preRoundBlock != null && preRoundBlock.isDirty()) {
+            tryMergeInListBlock(preRoundBlock, tsBlocks, start, end);
+        }
+        if (thisRoundBlock != null) {
+            tryMergeInListBlock(thisRoundBlock, tsBlocks, start, end);
+        }
+        if (forwordRoundBlock != null) {
+            tryMergeInListBlock(forwordRoundBlock, tsBlocks, start, end);
+        }
         return tsBlocks;
+    }
+
+    private void tryMergeInListBlock(TSBlock newerBlock, List<TSBlock> oldersBlocks, long startSec, long endSec) {
+        long basetime = newerBlock.getBaseTime();
+        if (basetime >= startSec && basetime <= endSec) {
+            boolean inList = false;
+            for (int i = 0; i < oldersBlocks.size(); i++) {
+                TSBlock block = oldersBlocks.get(i);
+                if (basetime == block.getBaseTime()) {
+                    inList = true;
+                    TSBlock mergedBlock = TSBlockUtils.orderedMassiveMerge(block, newerBlock);
+                    oldersBlocks.set(i, mergedBlock);
+                }
+            }
+            if (!inList) {
+                boolean inserted = false;
+                for (int i = oldersBlocks.size() - 1; i > 0; i--) {
+                    if (basetime < oldersBlocks.get(i).getBaseTime() &&
+                            basetime > oldersBlocks.get(i - 1).getBaseTime()) {
+                        oldersBlocks.add(i, newerBlock);
+                        inserted = true;
+                        break;
+                    }
+                }
+                if (!inserted) {
+                    oldersBlocks.add(newerBlock);
+                }
+            }
+        }
     }
 
     public Iterator<TSBlock> getBlockStreamByTimeRange(int metricId, long start, long end) {

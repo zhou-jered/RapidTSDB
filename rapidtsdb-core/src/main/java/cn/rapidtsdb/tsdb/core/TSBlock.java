@@ -7,6 +7,7 @@ import com.google.common.primitives.Longs;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -54,6 +55,7 @@ public class TSBlock {
 
     public static final int DEFAULT_TIME_BYTES_LENGTH = Math.max(2 * 7200, 800);
     public static final int DEFAULT_VALUE_BYTES_LENGTH = 21600;
+    private WeakReference<List<TSDataPoint>> cachedDataPoints = new WeakReference<>(null);
 
 
     public TSBlock(long baseTime, int blockLengthSeconds, TimeUtils.TimeUnitAdaptor timeUnitAdapter) {
@@ -94,6 +96,7 @@ public class TSBlock {
         appendTime(timestamp);
         appendValue(val);
         incrDataVersion();
+        cachedDataPoints.clear();
         writeLock.unlock();
     }
 
@@ -212,6 +215,10 @@ public class TSBlock {
     }
 
     public List<TSDataPoint> getDataPoints() {
+        List<TSDataPoint> dps = cachedDataPoints.get();
+        if (dps != null) {
+            return dps;
+        }
         List<Long> decodedTimestamp = decodeTimestamp();
         List<Double> decodedValues = decodeValues();
         if (decodedTimestamp.size() != decodedValues.size()) {
@@ -221,11 +228,12 @@ public class TSBlock {
             log.error("decode values:{}", decodedValues);
             throw new RuntimeException("Fatal, Not aligned time and values, " + decodedTimestamp.size() + ":" + decodedValues.size());
         }
-        ArrayList<TSDataPoint> dps = new ArrayList<>(blockLengthSeconds);
+        dps = new ArrayList<>(blockLengthSeconds);
         for (int i = 0; i < decodedTimestamp.size(); i++) {
             dps.add(new TSDataPoint(decodedTimestamp.get(i), decodedValues.get(i)));
         }
-        handleDuplicateDatapoint(dps);
+        handleDuplicateDatapoint((ArrayList<TSDataPoint>) dps);
+        cachedDataPoints = new WeakReference<>(dps);
         return dps;
     }
 

@@ -4,6 +4,7 @@ import cn.rapidtsdb.tsdb.TSDBDataOperationTask;
 import cn.rapidtsdb.tsdb.TSDBTaskCallback;
 import cn.rapidtsdb.tsdb.TSDataOperationQueue;
 import cn.rapidtsdb.tsdb.TsdbRunnableTask;
+import cn.rapidtsdb.tsdb.core.SimpleDataQuery;
 import cn.rapidtsdb.tsdb.core.TSDB;
 import cn.rapidtsdb.tsdb.core.TSDataPoint;
 import cn.rapidtsdb.tsdb.core.persistent.MetricsKeyManager;
@@ -14,6 +15,8 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import lombok.extern.log4j.Log4j2;
+
+import java.util.List;
 
 @Log4j2
 public class ConsoleHandler extends SimpleChannelInboundHandler<ByteBuf> {
@@ -44,6 +47,7 @@ public class ConsoleHandler extends SimpleChannelInboundHandler<ByteBuf> {
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         writeResponse(ctx, "Exception:" + cause.getMessage());
+        log.error("Exception", cause);
         newLine(ctx);
     }
 
@@ -103,10 +107,36 @@ public class ConsoleHandler extends SimpleChannelInboundHandler<ByteBuf> {
     }
 
     private void get(ChannelHandlerContext ctx, String... params) {
-        ByteBuf nb
-                = ctx.alloc().buffer(10);
-        nb.writeBytes("success".getBytes());
-        ctx.writeAndFlush(nb);
+        TSDB database = TSDBBridge.getDatabase();
+        if (params == null || params.length < 3) {
+            ctx.writeAndFlush("Params Number Error\n");
+            ctx.writeAndFlush("GET ${metric} ${startTimeSeconds} ${endTimeSeconds}");
+        }
+        String metric = params[0];
+        try {
+            Long startTime = Long.parseLong(params[1]);
+            Long endTime = Long.parseLong(params[2]);
+            if (startTime > endTime) {
+                ctx.writeAndFlush("[]");
+                return;
+            }
+            List<TSDataPoint> dps = database.queryTimeSeriesData(new SimpleDataQuery(metric, startTime, endTime));
+            if (dps == null || dps.size() == 0) {
+                ctx.writeAndFlush("[]");
+            } else {
+                for (int i = 0; i < dps.size(); i++) {
+                    String d = dps.get(i).getTimestamp() + ":" + dps.get(i).getValue();
+                    ctx.writeAndFlush(d);
+                    ctx.writeAndFlush("  ");
+                    if (i % 5 == 0) {
+                        ctx.writeAndFlush("\n");
+                    }
+                }
+            }
+        } catch (NumberFormatException e) {
+            ctx.writeAndFlush(e.getMessage());
+            ctx.writeAndFlush("\n");
+        }
         newLine(ctx);
     }
 

@@ -8,10 +8,10 @@ import cn.rapidtsdb.tsdb.core.persistent.TSDBCheckPointManager;
 import cn.rapidtsdb.tsdb.executors.ManagedThreadPool;
 import cn.rapidtsdb.tsdb.lifecycle.Closer;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
-import cn.rapidtsdb.tsdb.model.proto.TSQueryModel.ProtoTSQuery;
 import cn.rapidtsdb.tsdb.obj.WriteMetricResult;
 import cn.rapidtsdb.tsdb.server.TSDBBridge;
 import cn.rapidtsdb.tsdb.tasks.TwoHoursTriggerTask;
+import cn.rapidtsdb.tsdb.utils.TSDataUtils;
 import cn.rapidtsdb.tsdb.utils.TimeUtils;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang.StringUtils;
@@ -107,8 +107,17 @@ public class TSDB implements Initializer, Closer {
         return WriteMetricResult.FAILED_TIME_EXPIRED;
     }
 
-    public List<TSDataPoint> queryTimeSeriesData(ProtoTSQuery query) {
-        return null;
+    public List<TSDataPoint> queryTimeSeriesData(SimpleDataQuery query) {
+        int mid = metricsKeyManager.getMetricsIndex(query.getMetric());
+        List<TSBlock> blocks = blockManager.getBlockWithTimeRange(mid, query.getStartTime(), query.getEndTime());
+        List<TSDataPoint> dps = new ArrayList<>();
+        for (TSBlock b : blocks) {
+            dps.addAll(b.getDataPoints());
+        }
+        int left = TSDataUtils.binarySearchByTimestamp(dps, query.getStartTime(), true);
+        int right = TSDataUtils.binarySearchByTimestamp(dps, query.getEndTime(), false);
+        List<TSDataPoint> queriedResult = dps.subList(left, right);
+        return queriedResult;
     }
 
     public void triggerBlockPersist() {

@@ -1,11 +1,12 @@
 package cn.rapidtsdb.tsdb.core.persistent;
 
+import cn.rapidtsdb.tsdb.TsdbRunnableTask;
 import cn.rapidtsdb.tsdb.config.TSDBConfig;
+import cn.rapidtsdb.tsdb.executors.ManagedThreadPool;
 import cn.rapidtsdb.tsdb.lifecycle.Closer;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
 import cn.rapidtsdb.tsdb.store.StoreHandler;
 import cn.rapidtsdb.tsdb.store.StoreHandlerFactory;
-import cn.rapidtsdb.tsdb.utils.TimeUtils;
 import com.esotericsoftware.kryo.kryo5.Kryo;
 import com.esotericsoftware.kryo.kryo5.io.Input;
 import com.esotericsoftware.kryo.kryo5.io.Output;
@@ -18,6 +19,8 @@ import java.io.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 
 @Log4j2
@@ -41,15 +44,15 @@ public class MetricsKeyManager implements Initializer, Closer {
     private String metricsKeyListFile = "mk.list";
     private String METRICS_LEGAL_CHARS = "plokmijnuhbygvtfcrdxeszwaqPLOKMIJNUHBYGVTFCRDXESZWAQ0987654321@#$-_.+=";
     private TrieNode trieNodeRoot = new TrieNode('0');
-    private Kryo kryo = new Kryo();
-    private long lastPersistenceTime;
+    private transient Kryo kryo = new Kryo();
+    private Lock metricsWriteLock = new ReentrantLock(false);
 
     private Map<String, Integer> idxCache = new ConcurrentHashMap<>(1024 * 10);
 
     private static MetricsKeyManager instance = new MetricsKeyManager();
 
     private MetricsKeyManager() {
-        tsdbConfig = TSDBConfig.getConfigInstance();
+
     }
 
     public static MetricsKeyManager getInstance() {
@@ -61,6 +64,7 @@ public class MetricsKeyManager implements Initializer, Closer {
         if (!status.compareAndSet(STATUS_UNINIT, STATUS_INITIALIZING)) {
             return;
         }
+        tsdbConfig = TSDBConfig.getConfigInstance();
         storeHandler = StoreHandlerFactory.getStoreHandler();
         kryo.register(TrieNode.class);
         kryo.register(ArrayList.class);
@@ -120,19 +124,8 @@ public class MetricsKeyManager implements Initializer, Closer {
         }
         if (isNewInsertedNode(currentNode)) {
             currentNode.setValue(metricKeyIdx.incrementAndGet());
-            persistenceMetrics();
-            try {
-                OutputStream outputStream = storeHandler.openFileAppendStream(metricsKeyListFile);
-                OutputStreamWriter writer = new OutputStreamWriter(outputStream);
-                writer.write(metricsChars);
-                writer.write("\n");
-                writer.close();
-            } catch (IOException e) {
-                log.error("write metrics list file exception", e);
-            }
-
+            persistenceMetrics(metricsChars);
         }
-        currentNode.setValue(metricKeyIdx.addAndGet(1));
         return currentNode.getVal();
     }
 
@@ -140,11 +133,20 @@ public class MetricsKeyManager implements Initializer, Closer {
         return node.getVal() == 0;
     }
 
-    private void persistenceMetrics() {
-        if (TimeUtils.currentMills() - lastPersistenceTime > 60 * 1000) {
+    private void persistenceMetrics(char[] newMetricChars) {
+        Runnable delegate = () -> {
             doPersist();
-            lastPersistenceTime = TimeUtils.currentMills();
-        }
+            try (OutputStream outputStream = storeHandler.openFileAppendStream(metricsKeyListFile);) {
+                OutputStreamWriter writer = new OutputStreamWriter(outputStream);
+                writer.write(newMetricChars);
+                writer.write("\n");
+                writer.close();
+            } catch (IOException e) {
+                log.error("write metrics list file exception", e);
+            }
+        };
+        PersistNewMetricsTask task = new PersistNewMetricsTask(metricsWriteLock, delegate);
+        ManagedThreadPool.getInstance().ioExecutor().submit(task);
     }
 
     private void doPersist() {
@@ -248,5 +250,43 @@ public class MetricsKeyManager implements Initializer, Closer {
         }
     }
 
+    private static class PersistNewMetricsTask extends TsdbRunnableTask {
+
+        private Lock metricWriteLock;
+        private Runnable delegate;
+
+        public PersistNewMetricsTask(Lock metricWriteLock, Runnable delegate) {
+            this.metricWriteLock = metricWriteLock;
+            this.delegate = delegate;
+        }
+
+        @Override
+        public int getRetryLimit() {
+            return 0;
+        }
+
+        @Override
+        public String getTaskName() {
+            return "PersistNewMetricsTask";
+        }
+
+        @Override
+        public void run() {
+            try {
+                metricWriteLock.lockInterruptibly();
+                delegate.run();
+            } catch (Exception e) {
+                if (e instanceof InterruptedException) {
+                    log.info("persist metrics info Interrupted, trying do again");
+                    //give the second chance to run it
+                    delegate.run();
+                } else {
+                    log.error("", e);
+                }
+            } finally {
+                metricWriteLock.unlock();
+            }
+        }
+    }
 
 }

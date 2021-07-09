@@ -21,5 +21,16 @@ public class TSBlockFactory {
         return tsBlock;
     }
 
-    
+    /**
+     * return an empty block which copy the
+     * configuration from configuredBlock
+     *
+     * @param configuredBlock
+     * @return
+     */
+    public static TSBlock newEmptyBlock(TSBlock configuredBlock) {
+        TSBlock block = new TSBlock(configuredBlock.getBaseTime(), BLOCK_SIZE_SECONDS, configuredBlock.getTimeUnitAdapter());
+        return block;
+    }
+
 }
