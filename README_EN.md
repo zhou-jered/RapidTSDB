@@ -21,16 +21,21 @@ For any DESIGN information about the module, see the paper.
 # Module
 
 ### AOL Manager
-Append Only Log 管理器，在写入数据的同时写一份Log，Append Only，每64KB 刷新一次到磁盘。同时作为失败恢复的Log。
-所以理论上，你最多只会丢失64KB的数据，参考了论文里的大小设置。
-每一个 Log Entry 会有一个自增的Long型 ID。每次写入操作产生一个AOLog。
+Append Only Log Manager，while writing a point of time series data, An entry of record log will also be written in AOLog file buffer
+, flush to persist stoage each 64KB。When application restart, recovery data is based on these log.
+Each entry of log had a long type id, used to record as the offset of the log.
+As the paper suggested, Maximun buffer size is 64KB, it is also means that in the worst case, a maximun data
+of 64KB could be lost. But don't worry about this, in most case, you won't lost any data.  
 
 ### CheckPoint Manger
-每两小时刷新一次内存数据到磁盘，同时将最新的 AOLog ID 的作为checkpoint存储下来
+When the memory time series data flush to persist storage, record the aolog offset/index as the checkpoint.
+when application restart, we know that how much data are already been stored safely, and how much data are in
+the fly and in the log.
 
 ### Metric key Manager
-分配Metric Name 到 int ID 的映射和查询管理器。
+Using to manage the mapping relation between the metric text and the metric ID.
 
 ### StoreHandler
-持久化存储的接口协议，通过不同的实现，可以将数据存储在任何你希望的地方，文件，Hadoop，分布式文件系统，
-Hbase，S3。。。从而实现了存储和计算分离。
+The interface of the persistent storage, you can implement it to store the data whereever you want,
+such as Hadoop, HDFS, HBASE, S3, etc.
+Storage and Computation are separated in design.
