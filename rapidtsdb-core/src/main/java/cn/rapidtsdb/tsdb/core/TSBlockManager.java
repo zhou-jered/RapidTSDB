@@ -6,14 +6,18 @@ import cn.rapidtsdb.tsdb.core.persistent.TSBlockPersister;
 import cn.rapidtsdb.tsdb.executors.ManagedThreadPool;
 import cn.rapidtsdb.tsdb.lifecycle.Closer;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
-import cn.rapidtsdb.tsdb.store.StoreHandler;
+import cn.rapidtsdb.tsdb.plugins.StoreHandlerPlugin;
 import cn.rapidtsdb.tsdb.store.StoreHandlerFactory;
 import cn.rapidtsdb.tsdb.tasks.ClearDirtyBlockTask;
 import cn.rapidtsdb.tsdb.utils.TSBlockUtils;
 import cn.rapidtsdb.tsdb.utils.TimeUtils;
 import lombok.extern.log4j.Log4j2;
 
-import java.util.*;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicReference;
@@ -34,7 +38,7 @@ public class TSBlockManager extends AbstractTSBlockManager implements Initialize
 
     private TSDBConfig tsdbConfig;
 
-    private StoreHandler storeHandler;
+    private StoreHandlerPlugin storeHandler;
 
     private TSBlockPersister blockPersister;
 
@@ -168,8 +172,7 @@ public class TSBlockManager extends AbstractTSBlockManager implements Initialize
             if (!inList) {
                 boolean inserted = false;
                 for (int i = oldersBlocks.size() - 1; i > 0; i--) {
-                    if (basetime < oldersBlocks.get(i).getBaseTime() &&
-                            basetime > oldersBlocks.get(i - 1).getBaseTime()) {
+                    if (basetime < oldersBlocks.get(i).getBaseTime() && basetime > oldersBlocks.get(i - 1).getBaseTime()) {
                         oldersBlocks.add(i, newerBlock);
                         inserted = true;
                         break;

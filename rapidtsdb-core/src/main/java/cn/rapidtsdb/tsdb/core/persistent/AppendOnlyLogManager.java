@@ -6,12 +6,19 @@ import cn.rapidtsdb.tsdb.executors.ManagedThreadPool;
 import cn.rapidtsdb.tsdb.lifecycle.Closer;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
 import cn.rapidtsdb.tsdb.metrics.DBMetrics;
-import cn.rapidtsdb.tsdb.store.StoreHandler;
+import cn.rapidtsdb.tsdb.plugins.StoreHandlerPlugin;
 import cn.rapidtsdb.tsdb.store.StoreHandlerFactory;
 import cn.rapidtsdb.tsdb.utils.TimeUtils;
 import lombok.extern.log4j.Log4j2;
 
-import java.io.*;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.BlockingQueue;
@@ -27,7 +34,7 @@ public class AppendOnlyLogManager implements Initializer, Closer {
     private final String LOG_START_IDX_FILE = "aol.start.idx"; // the logical log offset of the file start
     private final String LOG_END_IDX_FILE = "aol.end.idx"; // the logical log length
     private volatile boolean initialized = false;
-    private StoreHandler storeHandler;
+    private StoreHandlerPlugin storeHandler;
     private final int MAX_WRITE_LENGTH = 1024 * 1024 * 1024 / AOLog.SERIES_BYTES_LENGTH;
 
     private RandomAccessFile seekableAolFile = null;

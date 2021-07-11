@@ -4,9 +4,9 @@ English Version: [English Version](/README_EN.md)
 实现了论文 [Gorilla: A Fast, Scalable, In-Memory Time Series DataBase](http://www.vldb.org/pvldb/vol8/p1816-teller.pdf)
 
 # 特点
-- 内存存储数据，写内存成功即返回
-- 非常高效的数据压缩
-- 失败恢复机制
+- 内存存储数据，读写非常高效快速。
+- 惊人的高压缩率的数据压缩，相比传统数据库，可节省20倍以上存储空间。
+- 稳定的，失败恢复机制
 - 灵活的自定义持久化存储
 - openTSDB http 接口兼容
 - 高效的 rpc 通信协议

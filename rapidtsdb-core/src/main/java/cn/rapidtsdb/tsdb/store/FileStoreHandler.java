@@ -1,6 +1,7 @@
 package cn.rapidtsdb.tsdb.store;
 
 import cn.rapidtsdb.tsdb.config.TSDBConfig;
+import cn.rapidtsdb.tsdb.plugins.StoreHandlerPlugin;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang.StringUtils;
 
@@ -13,7 +14,7 @@ import java.io.OutputStream;
 
 
 @Log4j2
-public class FileStoreHandler implements StoreHandler {
+public class FileStoreHandler implements StoreHandlerPlugin {
 
     TSDBConfig tsdbConfig;
     private String baseDir;

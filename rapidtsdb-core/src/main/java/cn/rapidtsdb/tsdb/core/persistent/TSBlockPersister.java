@@ -13,7 +13,7 @@ import cn.rapidtsdb.tsdb.core.persistent.file.FileLocation;
 import cn.rapidtsdb.tsdb.executors.ManagedThreadPool;
 import cn.rapidtsdb.tsdb.lifecycle.Closer;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
-import cn.rapidtsdb.tsdb.store.StoreHandler;
+import cn.rapidtsdb.tsdb.plugins.StoreHandlerPlugin;
 import cn.rapidtsdb.tsdb.store.StoreHandlerFactory;
 import cn.rapidtsdb.tsdb.utils.TSBlockUtils;
 import cn.rapidtsdb.tsdb.utils.TimeUtils;
@@ -45,7 +45,7 @@ public class TSBlockPersister implements Initializer, Closer {
 
     private ThreadPoolExecutor ioExecutor = ManagedThreadPool.getInstance().ioExecutor();
     private static TSBlockPersister INSTANCE = null;
-    private StoreHandler storeHandler;
+    private StoreHandlerPlugin storeHandler;
     private TSBlockDeserializer blockReader = new TSBlockDeserializer();
 
     private TSBlockPersister() {
@@ -266,7 +266,7 @@ public class TSBlockPersister implements Initializer, Closer {
         private int metricId;
         private FileLocation fileLocation;
         private TSBlockSnapshot snapshot;
-        private StoreHandler storeHandler;
+        private StoreHandlerPlugin storeHandler;
         private TSDBTaskCallback<TSBlockAndMeta, Void> completeCallback;
         private static final TSBlockSerializer blockWriter = new TSBlockSerializer();
 
@@ -276,7 +276,7 @@ public class TSBlockPersister implements Initializer, Closer {
             return String.format("SimpleTSBlockStoreTask:%s:%s", metricId, snapshot.getTsBlock().getBaseTime());
         }
 
-        public SimpleTSBlockStoreTask(int metricId, TSBlockSnapshot snapshot, StoreHandler storeHandler, TSDBTaskCallback completeCallback) {
+        public SimpleTSBlockStoreTask(int metricId, TSBlockSnapshot snapshot, StoreHandlerPlugin storeHandler, TSDBTaskCallback completeCallback) {
             this.metricId = metricId;
             this.fileLocation = FilenameStrategy.getTodayFileLocation(metricId, snapshot.getTsBlock().getBaseTime());
             this.snapshot = snapshot;

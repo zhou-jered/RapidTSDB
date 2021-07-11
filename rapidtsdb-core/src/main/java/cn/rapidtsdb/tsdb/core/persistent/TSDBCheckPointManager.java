@@ -1,16 +1,20 @@
 package cn.rapidtsdb.tsdb.core.persistent;
 
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
-import cn.rapidtsdb.tsdb.store.StoreHandler;
+import cn.rapidtsdb.tsdb.plugins.StoreHandlerPlugin;
 import cn.rapidtsdb.tsdb.store.StoreHandlerFactory;
 import lombok.extern.log4j.Log4j2;
 
-import java.io.*;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 
 @Log4j2
 public class TSDBCheckPointManager implements Initializer {
 
-    private final StoreHandler storeHandler = StoreHandlerFactory.getStoreHandler();
+    private final StoreHandlerPlugin storeHandler = StoreHandlerFactory.getStoreHandler();
     private final String checkPointFilename = "ckFile.checkpoint";
     private static TSDBCheckPointManager INSTANCE;
 

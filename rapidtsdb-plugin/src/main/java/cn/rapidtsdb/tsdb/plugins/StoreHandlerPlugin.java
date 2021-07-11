@@ -1,4 +1,4 @@
-package cn.rapidtsdb.tsdb.store;
+package cn.rapidtsdb.tsdb.plugins;
 
 import java.io.File;
 import java.io.IOException;
@@ -8,7 +8,7 @@ import java.io.OutputStream;
 /**
  * handle file io, note you need handle io lock by yourself
  */
-public interface StoreHandler {
+public interface StoreHandlerPlugin {
 
     boolean fileExisted(String filePath);
 

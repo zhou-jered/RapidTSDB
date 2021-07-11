@@ -4,7 +4,7 @@ import cn.rapidtsdb.tsdb.RapidTSDBApplication;
 import cn.rapidtsdb.tsdb.core.io.TSBlockDeserializer;
 import cn.rapidtsdb.tsdb.core.persistent.TSBlockPersister;
 import cn.rapidtsdb.tsdb.core.persistent.file.FileLocation;
-import cn.rapidtsdb.tsdb.store.StoreHandler;
+import cn.rapidtsdb.tsdb.plugins.StoreHandlerPlugin;
 import cn.rapidtsdb.tsdb.store.StoreHandlerFactory;
 import cn.rapidtsdb.tsdb.utils.TimeUtils;
 import org.junit.Assert;
@@ -48,7 +48,7 @@ public class PersisterTest {
         memoryBlock.put(1, tsBlock);
         persister.persistTSBlockSync(memoryBlock);
 
-        StoreHandler storeHandler = StoreHandlerFactory.getStoreHandler();
+        StoreHandlerPlugin storeHandler = StoreHandlerFactory.getStoreHandler();
 
 
         FileLocation storeFileLocation = TSBlockPersister.FilenameStrategy.getTodayFileLocation(1, basetime);
