@@ -4,8 +4,10 @@ import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @NoArgsConstructor
+@ToString
 public class AOLog {
     @Getter
     private int metricsId;

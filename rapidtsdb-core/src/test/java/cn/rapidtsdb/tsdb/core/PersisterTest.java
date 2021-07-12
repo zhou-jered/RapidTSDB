@@ -1,6 +1,5 @@
 package cn.rapidtsdb.tsdb.core;
 
-import cn.rapidtsdb.tsdb.RapidTSDBApplication;
 import cn.rapidtsdb.tsdb.core.io.TSBlockDeserializer;
 import cn.rapidtsdb.tsdb.core.persistent.TSBlockPersister;
 import cn.rapidtsdb.tsdb.core.persistent.file.FileLocation;
@@ -26,7 +25,7 @@ public class PersisterTest {
     @Before
     public void setUp() throws Exception {
         testingTime = System.currentTimeMillis();
-        RapidTSDBApplication.main(new String[0]);
+
     }
 
     @Test

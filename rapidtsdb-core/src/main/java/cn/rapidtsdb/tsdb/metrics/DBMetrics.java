@@ -1,6 +1,6 @@
 package cn.rapidtsdb.tsdb.metrics;
 
-import cn.rapidtsdb.tsdb.server.TSDBBridge;
+import cn.rapidtsdb.tsdb.TSDBBridge;
 import lombok.extern.log4j.Log4j2;
 
 @Log4j2

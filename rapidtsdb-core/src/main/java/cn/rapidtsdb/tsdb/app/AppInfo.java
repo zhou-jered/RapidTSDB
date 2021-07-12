@@ -61,6 +61,7 @@ public class AppInfo {
     public enum ApplicationState {
         INIT,
         RUNNING,
+        TESTING,
         SHUTDOWN
     }
 

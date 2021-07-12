@@ -1,5 +1,6 @@
 package cn.rapidtsdb.tsdb.core;
 
+import cn.rapidtsdb.tsdb.TSDBBridge;
 import cn.rapidtsdb.tsdb.config.TSDBConfig;
 import cn.rapidtsdb.tsdb.core.persistent.AOLog;
 import cn.rapidtsdb.tsdb.core.persistent.AppendOnlyLogManager;
@@ -9,7 +10,6 @@ import cn.rapidtsdb.tsdb.executors.ManagedThreadPool;
 import cn.rapidtsdb.tsdb.lifecycle.Closer;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
 import cn.rapidtsdb.tsdb.obj.WriteMetricResult;
-import cn.rapidtsdb.tsdb.server.TSDBBridge;
 import cn.rapidtsdb.tsdb.tasks.TwoHoursTriggerTask;
 import cn.rapidtsdb.tsdb.utils.TSDataUtils;
 import cn.rapidtsdb.tsdb.utils.TimeUtils;
@@ -34,6 +34,10 @@ public class TSDB implements Initializer, Closer {
     private TSDBCheckPointManager checkPointManager;
     private ManagedThreadPool globalExecutor = ManagedThreadPool.getInstance();
 
+    public static final int DB_STATE_INIT = 0;
+    public static final int DB_STATE_RUNNING = 1;
+    public static final int DB_STATE_CLOSED = 2;
+    private int dbState = DB_STATE_INIT;
 
     TSDBConfig config;
 
@@ -66,12 +70,14 @@ public class TSDB implements Initializer, Closer {
         blockManager.init();
         recoveryDBData();
         initScheduleTimeTask();
+        dbState = DB_STATE_RUNNING;
     }
 
 
     @Override
     public void close() {
         log.info("Closing TSDB");
+        dbState = DB_STATE_CLOSED;
         appendOnlyLogManager.close();
         metricsKeyManager.close();
         blockManager.close();
@@ -88,6 +94,9 @@ public class TSDB implements Initializer, Closer {
     public WriteMetricResult writeMetric(String metric, double val, long timestamp) {
         if (StringUtils.isBlank(metric)) {
             return WriteMetricResult.FAILED_METRIC_EMPTY;
+        }
+        if (dbState != DB_STATE_RUNNING) {
+            return WriteMetricResult.DB_STATE_NOT_RUNNING;
         }
         Integer mIdx = metricsKeyManager.getMetricsIndex(metric);
         WriteMetricResult internalWResult = writeMetricInternal(mIdx, timestamp, val);

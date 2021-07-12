@@ -1,5 +1,6 @@
 package cn.rapidtsdb.tsdb;
 
+import cn.rapidtsdb.tsdb.app.AppInfo;
 import cn.rapidtsdb.tsdb.config.TSDBConfig;
 
 import java.io.IOException;
@@ -10,7 +11,7 @@ import java.util.Properties;
 
 public class TSDBConfigTester {
     public static void init() {
-
+        AppInfo.setApplicationState(AppInfo.ApplicationState.TESTING);
         new Thread(() -> {
             InputStream inputStream = TSDBConfigTester.class.getResourceAsStream("/application.properties");
             Properties properties = new Properties();

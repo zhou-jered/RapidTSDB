@@ -11,14 +11,7 @@ import cn.rapidtsdb.tsdb.store.StoreHandlerFactory;
 import cn.rapidtsdb.tsdb.utils.TimeUtils;
 import lombok.extern.log4j.Log4j2;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.RandomAccessFile;
+import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.BlockingQueue;
@@ -35,11 +28,12 @@ public class AppendOnlyLogManager implements Initializer, Closer {
     private final String LOG_END_IDX_FILE = "aol.end.idx"; // the logical log length
     private volatile boolean initialized = false;
     private StoreHandlerPlugin storeHandler;
-    private final int MAX_WRITE_LENGTH = 1024 * 1024 * 1024 / AOLog.SERIES_BYTES_LENGTH;
+    private int MAX_WRITE_LENGTH = 1024 * 1024 * 1024 / AOLog.SERIES_BYTES_LENGTH;
 
     private RandomAccessFile seekableAolFile = null;
     private FileChannel writeChannel;
     private int writeLength = 0;
+    private WriteLogTask writeLogTask;
     private Thread writeThread;
     private BlockingQueue<AOLog> bufferQ = new LinkedBlockingQueue<>();
 
@@ -56,11 +50,11 @@ public class AppendOnlyLogManager implements Initializer, Closer {
         }
         initialized = true;
         storeHandler = StoreHandlerFactory.getStoreHandler();
-        writeThread = ManagedThreadPool.getInstance().newThread(new WriteLogTask(bufferQ));
+        writeLogTask = new WriteLogTask(bufferQ);
+        writeThread = ManagedThreadPool.getInstance().newThread(writeLogTask);
         writeThread.start();
 
     }
-
 
     public void appendLog(AOLog alog) {
         bufferQ.offer(alog);
@@ -78,7 +72,10 @@ public class AppendOnlyLogManager implements Initializer, Closer {
         final long checkpoint = offset;
         long startIdx = getLogFileIdx(LOG_START_IDX_FILE);
         long endIdx = getLogFileIdx(LOG_END_IDX_FILE);
-        int logForwardWriteLength = (int) (endIdx - startIdx + 1); // the logical startIdx and endIdx will never distance too long to match int type
+        
+
+        int logForwardWriteLength = (int) (endIdx - startIdx); // the logical startIdx and endIdx will never distance too long to match int type
+        log.debug("Recovered startIdx:{}, endIdx:{}", startIdx, endIdx);
         assert startIdx <= endIdx;
         if (offset > endIdx) {
             log.error("unsatisfied checkpoint offset:{}, maxLogIdx:{}, Sorry you had lost some data.", offset, endIdx);
@@ -93,6 +90,7 @@ public class AppendOnlyLogManager implements Initializer, Closer {
             if (fileByteSize == MAX_WRITE_LENGTH * AOLog.SERIES_BYTES_LENGTH) {
                 if (MAX_WRITE_LENGTH - preReadLength < logForwardWriteLength) {
                     log.error("Sorry for rolling range overwrite. Something wrong happened");
+                    return null;
                 } else {
                     preRollingLogs = readAoLogFileContent((MAX_WRITE_LENGTH - preReadLength) * AOLog.SERIES_BYTES_LENGTH, preReadLength);
                 }
@@ -115,6 +113,9 @@ public class AppendOnlyLogManager implements Initializer, Closer {
     }
 
     private AOLog[] readAoLogFileContent(int fileOffsetByte, final int readLogSize) {
+        if (readLogSize == 0) {
+            return null;
+        }
         if (!storeHandler.fileExisted(AOL_FILE)) {
             log.error("AOLOG file not exists. data lost");
             return null;
@@ -197,7 +198,16 @@ public class AppendOnlyLogManager implements Initializer, Closer {
 
     @Override
     public void close() {
+        close(3);
+    }
+
+    public void close(int waitSeconds) {
         try {
+            try {
+                writeLogTask.waitQWriteComplete(waitSeconds);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
             writeChannel.close();
             persistLogIdx(LOG_END_IDX_FILE, logIdx.get());
         } catch (IOException e) {
@@ -221,7 +231,7 @@ public class AppendOnlyLogManager implements Initializer, Closer {
                 long logicalEndIdx = getLogFileIdx(LOG_END_IDX_FILE);
                 logIdx.set(logicalEndIdx);
                 long startIdx = getLogFileIdx(LOG_START_IDX_FILE);
-                writeLength = (int) (logicalEndIdx - startIdx + 1);
+                writeLength = (int) (logicalEndIdx - startIdx);
             } catch (FileNotFoundException e) {
                 e.printStackTrace();
                 log.error(e);
@@ -245,6 +255,7 @@ public class AppendOnlyLogManager implements Initializer, Closer {
                     byteBuffer.flip();
                     try {
                         writeChannel.write(byteBuffer);
+                        log.debug("write aolog");
                         logIdx.incrementAndGet();
                         writeLength++;
                         if (writeLength % MAX_WRITE_LENGTH == 0) {
@@ -259,12 +270,22 @@ public class AppendOnlyLogManager implements Initializer, Closer {
             }
         }
 
+        public void waitQWriteComplete(int timeoutSeconds) throws InterruptedException {
+            int totalWaitMs = 0;
+            while (logQueue.size() > 0 && totalWaitMs < timeoutSeconds * 1000) {
+                Thread.sleep(200);
+                totalWaitMs += 200;
+            }
+        }
+
         private void rollingAolFIle() {
             try {
                 seekableAolFile.seek(0);
                 final long fileStartIdx = logIdx.get();
+                log.debug("Rolling  fileStartIdx:{}, writeLen:{}", fileStartIdx, writeLength);
                 persistLogIdx(LOG_START_IDX_FILE, fileStartIdx);
                 writeLength = 0;
+
             } catch (IOException e) {
                 e.printStackTrace();
                 log.error(e);
@@ -292,4 +313,11 @@ public class AppendOnlyLogManager implements Initializer, Closer {
     }
 
 
+    public void setMAX_WRITE_LENGTH(int MAX_WRITE_LENGTH) {
+        if (AppInfo.getApplicationState() == AppInfo.ApplicationState.TESTING) {
+            this.MAX_WRITE_LENGTH = MAX_WRITE_LENGTH;
+        } else {
+            throw new RuntimeException("Can not set MAX WRITE LENGTH");
+        }
+    }
 }
