@@ -9,6 +9,11 @@
     <version>1.0-SNAPSHOT</version>
 
     <name>rapidtsdb-cluster</name>
+    <parent>
+        <artifactId>RapidTSDB</artifactId>
+        <groupId>cn.rapidtsdb.tsdb</groupId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
 
 
     <properties>
