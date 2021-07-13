@@ -70,22 +70,21 @@ public class AppendOnlyLogManager implements Initializer, Closer {
 
     public AOLog[] recoverLog(long offset) {
         final long checkpoint = offset;
-        long startIdx = getLogFileIdx(LOG_START_IDX_FILE);
-        long endIdx = getLogFileIdx(LOG_END_IDX_FILE);
-        
+        long fileStartLogIdx = getLogFileIdx(LOG_START_IDX_FILE);
+        long fileEndLogicalIdx = getLogFileIdx(LOG_END_IDX_FILE);
+        log.debug("Recovered startIdx:{}, endIdx:{}", fileStartLogIdx, fileEndLogicalIdx);
+        assert fileStartLogIdx <= fileEndLogicalIdx;
 
-        int logForwardWriteLength = (int) (endIdx - startIdx); // the logical startIdx and endIdx will never distance too long to match int type
-        log.debug("Recovered startIdx:{}, endIdx:{}", startIdx, endIdx);
-        assert startIdx <= endIdx;
-        if (offset > endIdx) {
-            log.error("unsatisfied checkpoint offset:{}, maxLogIdx:{}, Sorry you had lost some data.", offset, endIdx);
+        int logForwardWriteLength = (int) (fileEndLogicalIdx - fileStartLogIdx); // the logical startIdx and endIdx will never distance too long to match int type
+        if (offset > fileEndLogicalIdx) {
+            log.error("unsatisfied checkpoint offset:{}, maxLogIdx:{}, Sorry you had lost some data.", offset, fileEndLogicalIdx);
             return null;
         }
 
         AOLog[] preRollingLogs = null;
         AOLog[] forwardLogs = null;
-        if (checkpoint < startIdx) {
-            int preReadLength = (int) (startIdx - checkpoint); // should be safe to cast to int
+        if (checkpoint < fileStartLogIdx) {
+            int preReadLength = (int) (fileStartLogIdx - checkpoint); // should be safe to cast to int
             long fileByteSize = storeHandler.getFileSize(AOL_FILE);
             if (fileByteSize == MAX_WRITE_LENGTH * AOLog.SERIES_BYTES_LENGTH) {
                 if (MAX_WRITE_LENGTH - preReadLength < logForwardWriteLength) {
@@ -99,17 +98,18 @@ public class AppendOnlyLogManager implements Initializer, Closer {
             }
             forwardLogs = readAoLogFileContent(0, logForwardWriteLength);
         } else {
-            forwardLogs = readAoLogFileContent((int) ((checkpoint - startIdx) * AOLog.SERIES_BYTES_LENGTH), (int) (endIdx - checkpoint));
+            forwardLogs = readAoLogFileContent((int) ((checkpoint - fileStartLogIdx) * AOLog.SERIES_BYTES_LENGTH), (int) (fileEndLogicalIdx - checkpoint));
         }
         if (preRollingLogs == null) {
             return forwardLogs;
-        } else if (forwardLogs != null) {
+        } else if (forwardLogs == null) {
+            return preRollingLogs;
+        } else {
             AOLog[] retLogs = new AOLog[preRollingLogs.length + forwardLogs.length];
             System.arraycopy(preRollingLogs, 0, retLogs, 0, preRollingLogs.length);
             System.arraycopy(forwardLogs, 0, retLogs, preRollingLogs.length, forwardLogs.length);
             return retLogs;
         }
-        return null;
     }
 
     private AOLog[] readAoLogFileContent(int fileOffsetByte, final int readLogSize) {
@@ -133,7 +133,8 @@ public class AppendOnlyLogManager implements Initializer, Closer {
             AOLog[] aoLogs = new AOLog[readLogSize];
             int i = 0;
             byte[] logSeries = new byte[AOLog.SERIES_BYTES_LENGTH];
-            while (true) {
+            while (i < readLogSize) {
+                byteBuffer.clear();
                 int readByte = fileChannel.read(byteBuffer);
                 if (readByte < AOLog.SERIES_BYTES_LENGTH) {
                     log.error("AOLOG ENTRY ERROR");

@@ -16,7 +16,6 @@ import java.util.Arrays;
 public class AppendOnlyLogManagerTest {
 
 
-
     @Before
     public void setUp() throws Exception {
 
@@ -35,7 +34,7 @@ public class AppendOnlyLogManagerTest {
 
 
     @Test
-    public void testLifeCycle() throws InterruptedException {
+    public void testRolling() throws InterruptedException {
         AppendOnlyLogManager appendOnlyLogManager = new AppendOnlyLogManager();
         appendOnlyLogManager.init();
 
@@ -57,8 +56,10 @@ public class AppendOnlyLogManagerTest {
         long logIdx = appendOnlyLogManager.getLogIndex();
         Assert.assertEquals(writeLeng, logIdx);
         AOLog[] logs = appendOnlyLogManager.recoverLog(3);
+        Assert.assertNotNull(logs);
+        Assert.assertEquals(testLength, logs.length);
         if (logs != null) {
-            System.out.println(logs.length);
+
             System.out.println(Arrays.toString(logs));
         }
 
