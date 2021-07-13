@@ -16,7 +16,7 @@ public class PluginManager {
         loadPlugins();
     }
 
-    public static synchronized void loadPlugins() {
+    private static synchronized void loadPlugins() {
         pluginRegistry.clear();
         for (Class clz : plugins) {
             ServiceLoader serviceLoader = ServiceLoader.load(ConnectionAuthPlugin.class);

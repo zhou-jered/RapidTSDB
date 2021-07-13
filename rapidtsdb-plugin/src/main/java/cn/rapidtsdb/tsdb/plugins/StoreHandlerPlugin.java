@@ -6,9 +6,18 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 /**
+ * abstracting the persistence storage into file notation.
+ *
  * handle file io, note you need handle io lock by yourself
  */
 public interface StoreHandlerPlugin {
+
+    /**
+     * return the handler scheme
+     * such as file, hbase, hadoop, hdfs
+     * @return
+     */
+    String getScheme();
 
     boolean fileExisted(String filePath);
 

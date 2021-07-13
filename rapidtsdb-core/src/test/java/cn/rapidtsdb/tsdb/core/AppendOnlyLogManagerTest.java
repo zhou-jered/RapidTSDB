@@ -59,7 +59,6 @@ public class AppendOnlyLogManagerTest {
         Assert.assertNotNull(logs);
         Assert.assertEquals(testLength, logs.length);
         if (logs != null) {
-
             System.out.println(Arrays.toString(logs));
         }
 
