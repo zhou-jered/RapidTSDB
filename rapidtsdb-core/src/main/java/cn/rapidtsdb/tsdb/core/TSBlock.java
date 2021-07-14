@@ -330,7 +330,8 @@ public class TSBlock {
                 dod = recoverSign(t, 12);
                 readBitsIdx += 4 + 12;
             } else {
-                dod = readBits2Long(data, readBitsIdx + 4, 32);
+                long t = readBits2Long(data, readBitsIdx + 4, 32);
+                dod = recoverSign(t, 32);
                 readBitsIdx += 4 + 32;
             }
             v = preVal + preDelta + dod;

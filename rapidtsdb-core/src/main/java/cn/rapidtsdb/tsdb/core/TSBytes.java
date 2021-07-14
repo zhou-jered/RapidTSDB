@@ -42,7 +42,7 @@ public class TSBytes {
         if (afterWriteRemainBits >= 0) {
             data[writeIdx] |= (newData << (afterWriteRemainBits));
         } else {
-            data[writeIdx] |= (newData >>> (-afterWriteRemainBits));
+            data[writeIdx] |= (newData >> (-afterWriteRemainBits)) & RIGHT_MASK[remainBits];
             data[writeIdx + 1] |= (newData << (remainBits + (8 - newDataBitsSize)));
         }
         incBitsOffset(newDataBitsSize);

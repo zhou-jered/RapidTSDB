@@ -13,15 +13,12 @@ import cn.rapidtsdb.tsdb.utils.TSBlockUtils;
 import cn.rapidtsdb.tsdb.utils.TimeUtils;
 import lombok.extern.log4j.Log4j2;
 
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static cn.rapidtsdb.tsdb.core.TSBlockFactory.BLOCK_SIZE_SECONDS;
 import static cn.rapidtsdb.tsdb.core.TSBlockFactory.newTSBlock;
 
 /**
@@ -157,9 +154,9 @@ public class TSBlockManager extends AbstractTSBlockManager implements Initialize
         return tsBlocks;
     }
 
-    private void tryMergeInListBlock(TSBlock newerBlock, List<TSBlock> oldersBlocks, long startSec, long endSec) {
+    private void tryMergeInListBlock(TSBlock newerBlock, List<TSBlock> oldersBlocks, long start, long end) {
         long basetime = newerBlock.getBaseTime();
-        if (basetime >= startSec && basetime <= endSec) {
+        if (!(basetime > end || (basetime + BLOCK_SIZE_SECONDS * 1000 < start))) {
             boolean inList = false;
             for (int i = 0; i < oldersBlocks.size(); i++) {
                 TSBlock block = oldersBlocks.get(i);
