@@ -1,7 +1,6 @@
 package cn.rapidtsdb.tsdb.core;
 
 import cn.rapidtsdb.tsdb.exception.BlockDataMissMatchException;
-import cn.rapidtsdb.tsdb.utils.TimeUtils;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Longs;
 import lombok.Getter;
@@ -24,7 +23,7 @@ public class TSBlock {
      * this values won't must writen to the series data
      */
     @Getter
-    private long baseTime;
+    private long baseTime; // in seconds unit
     @Getter
     private int blockLengthSeconds;
 
@@ -41,9 +40,6 @@ public class TSBlock {
     private Double preWrittenValue;
     private DoubleXor.DoubleXorResult preWrittenValueXorResult;
 
-    @Getter
-    private TimeUtils.TimeUnitAdaptor timeUnitAdapter;
-    private static final TimeUtils.TimeUnitAdaptor secondAdapter = TimeUtils.TimeUnitAdaptorFactory.getTimeAdaptor("s");
 
     private Lock writeLock = new ReentrantLock();
     /**
@@ -58,22 +54,21 @@ public class TSBlock {
     private WeakReference<List<TSDataPoint>> cachedDataPoints = new WeakReference<>(null);
 
 
-    public TSBlock(long baseTime, int blockLengthSeconds, TimeUtils.TimeUnitAdaptor timeUnitAdapter) {
+    public TSBlock(long baseTime, int blockLengthSeconds) {
         this.baseTime = baseTime;
         this.blockLengthSeconds = blockLengthSeconds;
-        this.timeUnitAdapter = timeUnitAdapter;
         time = new TSBytes(DEFAULT_TIME_BYTES_LENGTH);
         values = new TSBytes(DEFAULT_VALUE_BYTES_LENGTH);
 
     }
 
     public boolean inBlock(long timestamp) {
-        long diffSeconds = secondAdapter.adapt(timestamp) - secondAdapter.adapt(baseTime);
+        long diffSeconds = timestamp / 1000 - baseTime;
         return diffSeconds >= 0 && diffSeconds < blockLengthSeconds;
     }
 
     public boolean afterBlock(long timestamp) {
-        long diffSeconds = secondAdapter.adapt(timestamp) - secondAdapter.adapt(baseTime);
+        long diffSeconds = timestamp / 1000 - baseTime;
         return diffSeconds >= blockLengthSeconds;
     }
 
@@ -150,7 +145,7 @@ public class TSBlock {
     }
 
     private void appendTime(long timestamp) {
-        long t = timeUnitAdapter.adapt(timestamp);
+        long t = timestamp;
         if (preTime != null) {
             int thisDelta = (int) (t - preTime);
             int dod = thisDelta - preTimeDelta;

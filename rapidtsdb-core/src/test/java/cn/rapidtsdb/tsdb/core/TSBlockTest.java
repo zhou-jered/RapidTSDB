@@ -20,7 +20,7 @@ public class TSBlockTest {
         int dpsNum = 120 * 60;
         long baseTime = TimeUtils.currentTimestamp();
         baseTime -= baseTime % (120 * 60);
-        TSBlock tsBlock = new TSBlock(baseTime, 120 * 60, TimeUtils.TimeUnitAdaptorFactory.getTimeAdaptor("s"));
+        TSBlock tsBlock = new TSBlock(baseTime, 120 * 60);
 
         List<Double> values = Lists.newArrayList();
         for (int i = 0; i < dpsNum; i++) {
@@ -42,7 +42,7 @@ public class TSBlockTest {
         System.out.println("No compressed mem: " + dpsNum * (16) / 1024);
     }
 
-    TSBlock tsBlock = new TSBlock(1, 7200, TimeUtils.TimeUnitAdaptorFactory.getTimeAdaptor("S"));
+    TSBlock tsBlock = new TSBlock(1, 7200);
     private Method handleMethod;
 
     @Before
@@ -144,9 +144,9 @@ public class TSBlockTest {
         }
 
         try {
-            System.out.println("before size:"+dps.size());
+            System.out.println("before size:" + dps.size());
             handleMethod.invoke(tsBlock, dps);
-            System.out.println("after size:"+dps.size());
+            System.out.println("after size:" + dps.size());
             assertDps(dps, current);
         } catch (Exception e) {
             e.printStackTrace();

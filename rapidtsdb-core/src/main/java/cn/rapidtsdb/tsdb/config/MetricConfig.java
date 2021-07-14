@@ -1,6 +1,5 @@
 package cn.rapidtsdb.tsdb.config;
 
-import cn.rapidtsdb.tsdb.utils.TimeUtils;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -12,10 +11,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @AllArgsConstructor
 @NoArgsConstructor
 public class MetricConfig {
-    /**
-     * @see TimeUtils.TimeUnitAdaptorFactory
-     * record data in seconds currency or millseconds currency
-     */
+
     private String timeScale = "ms";
     private String timeUnit = timeScale;
     private String storeScheme = "file";

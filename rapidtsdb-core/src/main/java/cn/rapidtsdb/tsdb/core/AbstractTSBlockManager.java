@@ -4,8 +4,6 @@ import cn.rapidtsdb.tsdb.TSDBTaskCallback;
 import cn.rapidtsdb.tsdb.core.persistent.TSDBCheckPointManager;
 import cn.rapidtsdb.tsdb.lifecycle.Closer;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
-import cn.rapidtsdb.tsdb.utils.TimeUtils;
-import lombok.extern.log4j.Log4j2;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -22,7 +20,6 @@ public abstract class AbstractTSBlockManager implements Initializer, Closer {
     //todo leave or stay here
     protected TSDBCheckPointManager checkPointManager;
 
-    protected static final TimeUtils.TimeUnitAdaptor TIME_UNIT_ADAPTOR_SECONDS = TimeUtils.ADAPTER_SECONDS;
 
     protected AtomicReference<Set<TSBlock>> dirtyBlocksRef = new AtomicReference<>();
 
@@ -47,7 +44,7 @@ public abstract class AbstractTSBlockManager implements Initializer, Closer {
 
         TSBlockMeta blockMeta = new TSBlockMeta();
         blockMeta.setMetricId(metricId);
-        blockMeta.setBaseTime(TIME_UNIT_ADAPTOR_SECONDS.adapt(snapshot.getTsBlock().getBaseTime()));
+        blockMeta.setBaseTime(snapshot.getTsBlock().getBaseTime());
         blockMeta.setDpsSize(snapshot.getDpsSize());
         blockMeta.setTimeBitsLen(snapshot.getTimeBitsLength());
         blockMeta.setValuesBitsLen(snapshot.getValuesBitsLength());
@@ -87,7 +84,6 @@ public abstract class AbstractTSBlockManager implements Initializer, Closer {
         return blockMeta;
 
     }
-
 
 
     public abstract void tryRecoveryMemoryData(List<Integer> metricsIdList);

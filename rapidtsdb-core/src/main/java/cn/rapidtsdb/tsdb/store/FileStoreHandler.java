@@ -19,6 +19,11 @@ public class FileStoreHandler implements StoreHandlerPlugin {
     TSDBConfig tsdbConfig;
     private String baseDir;
 
+    @Override
+    public String getScheme() {
+        return "file";
+    }
+
     public FileStoreHandler(TSDBConfig tsdbConfig) {
         this.tsdbConfig = tsdbConfig;
         String configDataDir = tsdbConfig.getDataPath();
