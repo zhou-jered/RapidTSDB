@@ -32,7 +32,7 @@ public class PersisterTest {
     public void test0_BlockPersist() {
 
         long basetime = testingTime;
-        basetime = TimeUtils.getBlockBaseTimeSeconds(basetime / 1000);
+        basetime = TimeUtils.getBlockBaseTime(basetime );
         TSBlock tsBlock = TSBlockFactory.newTSBlock(1, basetime);
         for (int i = 0; i < 1000; i++) {
             double val = ((int) (Math.random() * 1000)) * 1.0 / 100;
@@ -74,7 +74,7 @@ public class PersisterTest {
     public void test3_testMeta() {
         TSBlockDeserializer blockReader = new TSBlockDeserializer();
         try {
-            String tp = String.valueOf(TimeUtils.getBlockBaseTimeSeconds(testingTime / 1000));
+            String tp = String.valueOf(TimeUtils.getBlockBaseTime(testingTime / 1000));
 
             TSBlockDeserializer.TSBlockAndMeta blockAndMeta = blockReader.deserializeFromStream(new FileInputStream("/tmp/data/tsdb/1/T1:" + tp + ".data"));
             System.out.println(blockAndMeta.getMeta());

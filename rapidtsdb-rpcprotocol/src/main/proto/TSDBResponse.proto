@@ -1,6 +1,6 @@
 syntax = "proto3";
 package cn.rapidtsdb.tsdb.model.proto;
-import "TSData.proto";
+import "TSDataMessage.proto";
 
 message ProtoConnectionReponse {
     int32 code = 1;

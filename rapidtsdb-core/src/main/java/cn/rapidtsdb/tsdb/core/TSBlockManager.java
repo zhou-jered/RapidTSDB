@@ -18,7 +18,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static cn.rapidtsdb.tsdb.core.TSBlockFactory.BLOCK_SIZE_SECONDS;
+import static cn.rapidtsdb.tsdb.core.TSBlockFactory.BLOCK_SIZE_MILLSECONDS;
 import static cn.rapidtsdb.tsdb.core.TSBlockFactory.newTSBlock;
 
 /**
@@ -156,7 +156,7 @@ public class TSBlockManager extends AbstractTSBlockManager implements Initialize
 
     private void tryMergeInListBlock(TSBlock newerBlock, List<TSBlock> oldersBlocks, long start, long end) {
         long basetime = newerBlock.getBaseTime();
-        if (!(basetime > end || (basetime + BLOCK_SIZE_SECONDS * 1000 < start))) {
+        if (!(basetime > end || (basetime + BLOCK_SIZE_MILLSECONDS < start))) {
             boolean inList = false;
             for (int i = 0; i < oldersBlocks.size(); i++) {
                 TSBlock block = oldersBlocks.get(i);
@@ -195,7 +195,7 @@ public class TSBlockManager extends AbstractTSBlockManager implements Initialize
     public void tryRecoveryMemoryData(List<Integer> metricsIdList) {
         log.info("Start");
         long currentSeconds = TimeUtils.currentSeconds();
-        long basetime = TimeUtils.getBlockBaseTimeSeconds(currentSeconds);
+        long basetime = TimeUtils.getBlockBaseTime(currentSeconds);
         for (Integer mid : metricsIdList) {
             TSBlock tsBlock = blockPersister.getTSBlock(mid, basetime);
             if (tsBlock != null) {

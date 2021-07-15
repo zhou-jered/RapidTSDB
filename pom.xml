@@ -19,6 +19,7 @@
         <module>rapidtsdb-client</module>
         <module>rapidtsdb-cluster</module>
         <module>rapidtsdb-plugin</module>
+        <module>rapidtsdb-rpcprotocol</module>
     </modules>
 
 

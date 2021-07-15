@@ -35,8 +35,8 @@ public class TimeUtils {
         timerThread.start();
     }
 
-    public static long getBlockBaseTimeSeconds(long timeSeconds) {
-        return timeSeconds - timeSeconds % TimeUnit.HOURS.toSeconds(2);
+    public static long getBlockBaseTime(long timeSeconds) {
+        return timeSeconds - timeSeconds % TimeUnit.HOURS.toMillis(2);
     }
 
     /**
@@ -77,7 +77,7 @@ public class TimeUtils {
     public static String formatMonthly(long timestmp) {
         return monthlyFormatter.get().format(new Date(timestmp));
     }
-    
+
     //formatter
     private static ThreadLocal<SimpleDateFormat> dailyFormatter = ThreadLocal.withInitial(() -> new SimpleDateFormat("yyyy-MM-dd"));
     private static ThreadLocal<SimpleDateFormat> monthlyFormatter = ThreadLocal.withInitial(() -> new SimpleDateFormat("yyyy-MM"));

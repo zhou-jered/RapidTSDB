@@ -1,5 +1,7 @@
 package cn.rapidtsdb.tsdb.config;
 
+import cn.rapidtsdb.tsdb.BlockCompressStrategy;
+import cn.rapidtsdb.tsdb.DefaultBlockCompressStrategy;
 import cn.rapidtsdb.tsdb.utils.ClassUtils;
 import lombok.Data;
 import lombok.Getter;
@@ -172,6 +174,10 @@ public class TSDBConfig {
         } catch (IllegalAccessException eae) {
 
         }
+    }
+
+    public BlockCompressStrategy getBlockCompressStrategy() {
+        return new DefaultBlockCompressStrategy();
     }
 
     private String configItem2FieldName(String item) {

@@ -23,7 +23,7 @@ public class TSBlock {
      * this values won't must writen to the series data
      */
     @Getter
-    private long baseTime; // in seconds unit
+    private long baseTime; // in millseconds unit
     @Getter
     private int blockLengthSeconds;
 
@@ -63,17 +63,17 @@ public class TSBlock {
     }
 
     public boolean inBlock(long timestamp) {
-        long diffSeconds = timestamp / 1000 - baseTime;
+        long diffSeconds = timestamp - baseTime;
         return diffSeconds >= 0 && diffSeconds < blockLengthSeconds;
     }
 
     public boolean afterBlock(long timestamp) {
-        long diffSeconds = timestamp / 1000 - baseTime;
+        long diffSeconds = timestamp - baseTime;
         return diffSeconds >= blockLengthSeconds;
     }
 
     public boolean isNextAjacentBlock(TSBlock tsBlock) {
-        return tsBlock.getBaseTime() - baseTime == TSBlockFactory.BLOCK_SIZE_SECONDS;
+        return tsBlock.getBaseTime() - baseTime == TSBlockFactory.BLOCK_SIZE_MILLSECONDS;
     }
 
 

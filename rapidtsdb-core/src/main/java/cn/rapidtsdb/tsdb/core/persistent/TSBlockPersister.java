@@ -87,13 +87,13 @@ public class TSBlockPersister implements Initializer, Closer {
         }
     }
 
-    public TSBlock getTSBlock(Integer metricId, long timeSeconds) {
-        long blockBaseTime = TimeUtils.getBlockBaseTimeSeconds(timeSeconds);
+    public TSBlock getTSBlock(Integer metricId, long timestamp) {
+        long blockBaseTime = TimeUtils.getBlockBaseTime(timestamp);
         FileLocation fl = FilenameStrategy.getTodayFileLocation(metricId, blockBaseTime);
         if (!storeHandler.fileExisted(fl.getPathWithFilename())) {
             fl = FilenameStrategy.getDailyFileLocation(metricId, blockBaseTime);
             //if request data is in today range, check for quick return
-            if (Math.abs(TimeUtils.currentSeconds() - timeSeconds) < TimeUnit.DAYS.toSeconds(1)) {
+            if (Math.abs(TimeUtils.currentTimestamp() - blockBaseTime) < TimeUnit.DAYS.toMillis(1)) {
                 return null;
             }
         }
@@ -117,10 +117,10 @@ public class TSBlockPersister implements Initializer, Closer {
         return null;
     }
 
-    public ArrayList<TSBlock> getTSBlocks(Integer metricId, long timeSecondsStart, long timeSecondsEnd) {
-        ArrayList<TSBlock> blocks = new ArrayList<>((int) ((timeSecondsEnd - timeSecondsStart) / TimeUnit.HOURS.toSeconds(2) + 1));
-        long baseTime = TimeUtils.getBlockBaseTimeSeconds(timeSecondsStart);
-        for (long t = baseTime; t <= timeSecondsEnd; t += TimeUnit.HOURS.toSeconds(2)) {
+    public ArrayList<TSBlock> getTSBlocks(Integer metricId, long startTimestamp, long endTimestamp) {
+        ArrayList<TSBlock> blocks = new ArrayList<>((int) ((endTimestamp - startTimestamp) / TimeUnit.HOURS.toMillis(2) + 1));
+        long baseTime = TimeUtils.getBlockBaseTime(startTimestamp);
+        for (long t = baseTime; t <= endTimestamp; t += TimeUnit.HOURS.toMillis(2)) {
             TSBlock b = getTSBlock(metricId, t);
             if (b != null) {
                 blocks.add(b);
