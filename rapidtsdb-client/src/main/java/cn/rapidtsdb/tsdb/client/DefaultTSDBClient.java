@@ -4,6 +4,18 @@ import java.util.List;
 import java.util.Map;
 
 public class DefaultTSDBClient implements TSDBClient {
+
+    TSDBClientConfig config;
+
+    public DefaultTSDBClient(TSDBClientConfig config) {
+        this.config = config;
+    }
+
+    @Override
+    public void start(boolean keepAlive, long keepAliveTimeMills) {
+        
+    }
+
     @Override
     public void writeMetric(String metric, long timestamp, double value) {
 

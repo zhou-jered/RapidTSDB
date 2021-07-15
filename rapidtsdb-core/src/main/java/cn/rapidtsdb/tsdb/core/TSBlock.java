@@ -25,7 +25,7 @@ public class TSBlock {
     @Getter
     private long baseTime; // in millseconds unit
     @Getter
-    private int blockLengthSeconds;
+    private int blockLengthMills;
 
     @Getter
     private TSBytes time;
@@ -54,22 +54,22 @@ public class TSBlock {
     private WeakReference<List<TSDataPoint>> cachedDataPoints = new WeakReference<>(null);
 
 
-    public TSBlock(long baseTime, int blockLengthSeconds) {
+    public TSBlock(long baseTime, int blockLengthMills) {
         this.baseTime = baseTime;
-        this.blockLengthSeconds = blockLengthSeconds;
+        this.blockLengthMills = blockLengthMills;
         time = new TSBytes(DEFAULT_TIME_BYTES_LENGTH);
         values = new TSBytes(DEFAULT_VALUE_BYTES_LENGTH);
 
     }
 
     public boolean inBlock(long timestamp) {
-        long diffSeconds = timestamp - baseTime;
-        return diffSeconds >= 0 && diffSeconds < blockLengthSeconds;
+        long diffMills = timestamp - baseTime;
+        return diffMills >= 0 && diffMills < blockLengthMills;
     }
 
     public boolean afterBlock(long timestamp) {
         long diffSeconds = timestamp - baseTime;
-        return diffSeconds >= blockLengthSeconds;
+        return diffSeconds >= blockLengthMills;
     }
 
     public boolean isNextAjacentBlock(TSBlock tsBlock) {
@@ -85,7 +85,7 @@ public class TSBlock {
      */
     public void appendDataPoint(long timestamp, double val) {
         if (!inBlock(timestamp)) {
-            throw new BlockDataMissMatchException(timestamp, baseTime, blockLengthSeconds);
+            throw new BlockDataMissMatchException(timestamp, baseTime, blockLengthMills);
         }
         writeLock.lock();
         appendTime(timestamp);
@@ -223,7 +223,7 @@ public class TSBlock {
             log.error("decode values:{}", decodedValues);
             throw new RuntimeException("Fatal, Not aligned time and values, " + decodedTimestamp.size() + ":" + decodedValues.size());
         }
-        dps = new ArrayList<>(blockLengthSeconds);
+        dps = new ArrayList<>(blockLengthMills);
         for (int i = 0; i < decodedTimestamp.size(); i++) {
             dps.add(new TSDataPoint(decodedTimestamp.get(i), decodedValues.get(i)));
         }
@@ -235,7 +235,7 @@ public class TSBlock {
     public void rewriteBytesData() {
         try {
             writeLock.lock();
-            time = new TSBytes(Math.max(2 * blockLengthSeconds, 800));
+            time = new TSBytes(Math.max(2 * blockLengthMills, 800));
             values = new TSBytes(21600);
             List<TSDataPoint> dps = getDataPoints();
             if (dps != null) {

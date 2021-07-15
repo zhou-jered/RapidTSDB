@@ -13,5 +13,6 @@ public class DefaultBlockCompressStrategy implements BlockCompressStrategy {
 
     @Override
     public int compressYearlyBlockAfterDays() {
+        return 120;
     }
 }

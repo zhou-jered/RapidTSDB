@@ -5,6 +5,9 @@ import java.util.Map;
 
 public interface TSDBClient {
 
+
+    void start(boolean keepAlive, long keepAliveTimeMills);
+
     void writeMetric(String metric, long timestamp, double value);
 
     void writeMetric(String metric, Datapoint dp);

@@ -10,6 +10,7 @@ import cn.rapidtsdb.tsdb.executors.ManagedThreadPool;
 import cn.rapidtsdb.tsdb.lifecycle.Closer;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
 import cn.rapidtsdb.tsdb.obj.WriteMetricResult;
+import cn.rapidtsdb.tsdb.tasks.BlockCompressTask;
 import cn.rapidtsdb.tsdb.tasks.TwoHoursTriggerTask;
 import cn.rapidtsdb.tsdb.utils.TSDataUtils;
 import cn.rapidtsdb.tsdb.utils.TimeUtils;
@@ -173,8 +174,15 @@ public class TSDB implements Initializer, Closer {
         long currentSeconds = TimeUtils.currentTimestamp();
         long triggerInitDelay = TimeUnit.HOURS.toSeconds(2) - currentSeconds % TimeUnit.HOURS.toSeconds(2);
         TwoHoursTriggerTask twoHoursTriggerTask = new TwoHoursTriggerTask(this);
-        globalExecutor.scheduledExecutor().scheduleAtFixedRate(twoHoursTriggerTask, triggerInitDelay, 2, TimeUnit.HOURS);
+        globalExecutor.scheduledExecutor().scheduleAtFixedRate(twoHoursTriggerTask, triggerInitDelay, TimeUnit.HOURS.toSeconds(2), TimeUnit.SECONDS);
         log.info("initScheduleTimeTask with initDelay:{}", triggerInitDelay);
+
+        scheduleCompressTask();
+    }
+
+    private void scheduleCompressTask() {
+        BlockCompressTask blockCompressTask = new BlockCompressTask();
+        globalExecutor.scheduledExecutor().scheduleAtFixedRate(blockCompressTask, 12, 12, TimeUnit.HOURS);
     }
 
 
