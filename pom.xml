@@ -20,6 +20,7 @@
         <module>rapidtsdb-cluster</module>
         <module>rapidtsdb-plugin</module>
         <module>rapidtsdb-rpcprotocol</module>
+        <module>rapidtsdb-store-hbase</module>
     </modules>
 
 

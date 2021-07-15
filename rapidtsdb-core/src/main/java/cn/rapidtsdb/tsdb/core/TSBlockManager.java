@@ -124,6 +124,7 @@ public class TSBlockManager extends AbstractTSBlockManager implements Initialize
 
     @Override
     public void triggerRoundCheck(TSDBTaskCallback completedCallback) {
+        log.debug("Block Round check");
         preRoundBlockRef.set(currentBlockCacheRef.get());
         blockPersister.persistTSBlockAsync(currentBlockCacheRef.get(), completedCallback);
         currentBlockCacheRef.set(forwardRoundBlockRef.get());
