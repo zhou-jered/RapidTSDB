@@ -1,6 +1,8 @@
 package cn.rapidtsdb.tsdb.core;
 
 import cn.rapidtsdb.tsdb.TSDBBridge;
+import cn.rapidtsdb.tsdb.calculate.CalculatorFactory;
+import cn.rapidtsdb.tsdb.calculate.DownSampler;
 import cn.rapidtsdb.tsdb.config.TSDBConfig;
 import cn.rapidtsdb.tsdb.core.persistent.AOLog;
 import cn.rapidtsdb.tsdb.core.persistent.AppendOnlyLogManager;
@@ -130,6 +132,12 @@ public class TSDB implements Initializer, Closer {
         return queriedResult;
     }
 
+    public List<TSDataPoint> queryTimeSeriesData(SimpleDataQuery query, String downsampler) {
+        DownSampler downSampler = CalculatorFactory.getDownSample(downsampler);
+        List<TSDataPoint> dps = queryTimeSeriesData(query);
+        return downSampler.downSample(dps);
+    }
+
     public void triggerBlockPersist() {
         final long aolLogIdx = appendOnlyLogManager.getLogIndex();
         blockManager.triggerRoundCheck((data) -> {
@@ -171,7 +179,7 @@ public class TSDB implements Initializer, Closer {
 
     private void initScheduleTimeTask() {
         log.info("schedule 2 hour trigger task");
-        long currentSeconds = TimeUtils.currentTimestamp();
+        long currentSeconds = TimeUtils.currentSeconds();
         long triggerInitDelay = TimeUnit.HOURS.toSeconds(2) - currentSeconds % TimeUnit.HOURS.toSeconds(2);
         TwoHoursTriggerTask twoHoursTriggerTask = new TwoHoursTriggerTask(this);
         globalExecutor.scheduledExecutor().scheduleAtFixedRate(twoHoursTriggerTask, triggerInitDelay, TimeUnit.HOURS.toSeconds(2), TimeUnit.SECONDS);

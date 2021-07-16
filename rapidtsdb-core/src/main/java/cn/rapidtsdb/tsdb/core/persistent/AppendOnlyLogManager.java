@@ -256,7 +256,7 @@ public class AppendOnlyLogManager implements Initializer, Closer {
                     byteBuffer.flip();
                     try {
                         writeChannel.write(byteBuffer);
-                        log.debug("write aolog");
+
                         logIdx.incrementAndGet();
                         writeLength++;
                         if (writeLength % MAX_WRITE_LENGTH == 0) {

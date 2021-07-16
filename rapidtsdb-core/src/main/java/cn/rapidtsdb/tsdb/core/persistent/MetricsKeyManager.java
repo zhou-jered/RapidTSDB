@@ -15,20 +15,8 @@ import lombok.NoArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang.StringUtils;
 
-import java.io.BufferedReader;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.io.*;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
@@ -54,8 +42,10 @@ public class MetricsKeyManager implements Initializer, Closer {
     private String metricsKeyFile = "mk.data";
     private String metricsKeyIdxFile = "mk.idx";
     private String metricsKeyListFile = "mk.list";
-    private String METRICS_LEGAL_CHARS = "plokmijnuhbygvtfcrdxeszwaqPLOKMIJNUHBYGVTFCRDXESZWAQ0987654321@#$-_.+=";
+    private String METRICS_LEGAL_CHARS = "plokmijnuhbygvtfcrdxeszwaqPLOKMIJNUHBYGVTFCRDXESZWAQ0987654321@#$-_.+=:;,";
+    private String METRICS_INTERNAL_LEGAL_CHARS = "^/";
     private TrieNode trieNodeRoot = new TrieNode('0');
+    private boolean[] legalCharMap = new boolean[256];
     private transient Kryo kryo = new Kryo();
     private Lock metricsWriteLock = new ReentrantLock(false);
 
@@ -75,6 +65,15 @@ public class MetricsKeyManager implements Initializer, Closer {
     public void init() {
         if (!status.compareAndSet(STATUS_UNINIT, STATUS_INITIALIZING)) {
             return;
+        }
+        for (int i = 0; i < legalCharMap.length; i++) {
+            legalCharMap[i] = true;
+        }
+        for (int i = 0; i < METRICS_LEGAL_CHARS.length(); i++) {
+            legalCharMap[METRICS_LEGAL_CHARS.charAt(i)] = true;
+        }
+        for (int i = 0; i < METRICS_INTERNAL_LEGAL_CHARS.length(); i++) {
+            legalCharMap[METRICS_INTERNAL_LEGAL_CHARS.charAt(i)] = true;
         }
         tsdbConfig = TSDBConfig.getConfigInstance();
         storeHandler = StoreHandlerFactory.getStoreHandler();
@@ -119,8 +118,8 @@ public class MetricsKeyManager implements Initializer, Closer {
         }
         char[] chars = metric.toCharArray();
         for (char c : chars) {
-            if (METRICS_LEGAL_CHARS.indexOf(c) < 0) {
-                throw new RuntimeException("Illegal Metrics char: " + c + " in metrics:" + metric);
+            if (((int) c) > 256 || !legalCharMap[c]) {
+                throw new RuntimeException("Illegal Metrics char: " + c + " code:" + ((int) c) + " in metrics:" + metric);
             }
         }
         idx = getMetricsIndexInternal(chars);

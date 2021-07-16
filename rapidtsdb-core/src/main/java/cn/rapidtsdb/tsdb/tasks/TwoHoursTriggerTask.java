@@ -5,7 +5,7 @@ import cn.rapidtsdb.tsdb.core.TSDB;
 import lombok.extern.log4j.Log4j2;
 
 @Log4j2
-public class TwoHoursTriggerTask extends TsdbRunnableTask implements  Runnable {
+public class TwoHoursTriggerTask extends TsdbRunnableTask implements Runnable {
 
     TSDB tsdb;
 
@@ -15,6 +15,7 @@ public class TwoHoursTriggerTask extends TsdbRunnableTask implements  Runnable {
 
     @Override
     public void run() {
+        log.debug("TwoHoursTriggerTask run");
         tsdb.triggerBlockPersist();
     }
 

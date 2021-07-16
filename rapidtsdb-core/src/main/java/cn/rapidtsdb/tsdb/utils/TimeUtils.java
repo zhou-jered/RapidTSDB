@@ -78,8 +78,38 @@ public class TimeUtils {
         return monthlyFormatter.get().format(new Date(timestmp));
     }
 
+    /**
+     * parse config like 10s 1m 10m 2h 1d into mills unit
+     *
+     * @param config
+     * @return
+     */
+    public static int parseMillsConfig(String config) {
+        if (config == null) {
+            return 0;
+        }
+        config = config.trim();
+        char s = config.charAt(config.length() - 1);
+        if (Character.isDigit(s)) {
+            return Integer.parseInt(config);
+        }
+        switch (Character.toLowerCase(s)) {
+            case 's':
+                return (int) TimeUnit.SECONDS.toMillis(1);
+            case 'm':
+                return (int) TimeUnit.MINUTES.toMillis(1);
+            case 'h':
+                return (int) TimeUnit.HOURS.toMillis(1);
+            case 'd':
+                return (int) TimeUnit.DAYS.toMillis(1);
+            default:
+                throw new RuntimeException("Unknown timeunti '" + s + "' Supported Unit are [s,m,h,d], See Docs for more infomation");
+        }
+    }
+
     //formatter
     private static ThreadLocal<SimpleDateFormat> dailyFormatter = ThreadLocal.withInitial(() -> new SimpleDateFormat("yyyy-MM-dd"));
     private static ThreadLocal<SimpleDateFormat> monthlyFormatter = ThreadLocal.withInitial(() -> new SimpleDateFormat("yyyy-MM"));
+
 
 }

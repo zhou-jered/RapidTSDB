@@ -129,9 +129,9 @@ public class TSBlockManager extends AbstractTSBlockManager implements Initialize
         blockPersister.persistTSBlockAsync(currentBlockCacheRef.get(), completedCallback);
         currentBlockCacheRef.set(forwardRoundBlockRef.get());
         forwardRoundBlockRef.set(newTSMap());
-        blockPersister.persistTSBlockAsync(preRoundBlockRef.get(), completedCallback);
         Set<TSBlock> dirtyBlock = dirtyBlocksRef.get();
         if (dirtyBlock.size() > 0) {
+            log.debug("clear dirty block:{}", dirtyBlock.size());
             dirtyBlocksRef.set(new HashSet<>());
             ioExecutor.submit(new ClearDirtyBlockTask(dirtyBlock, blockPersister));
         }

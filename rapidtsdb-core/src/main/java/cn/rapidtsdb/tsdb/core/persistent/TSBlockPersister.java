@@ -293,7 +293,7 @@ public class TSBlockPersister implements Initializer, Closer {
             }
             final String fullFilename = fileLocation.getPathWithFilename();
             if (storeHandler.fileExisted(fullFilename)) {
-                log.warn("Store {}, file already Existed. Overrided", blockMeta.getSimpleInfo());
+                log.warn("Store {}, file already Existed. Merge It!", blockMeta.getSimpleInfo());
                 try {
                     InputStream existsBlockIP = storeHandler.openFileInputStream(fullFilename);
                     TSBlockDeserializer blockReader = new TSBlockDeserializer();

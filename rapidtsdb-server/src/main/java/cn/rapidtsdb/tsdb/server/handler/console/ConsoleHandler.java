@@ -116,7 +116,12 @@ public class ConsoleHandler extends SimpleChannelInboundHandler<ByteBuf> {
                 ctx.writeAndFlush("[]");
                 return;
             }
-            List<TSDataPoint> dps = database.queryTimeSeriesData(new SimpleDataQuery(metric, startTime, endTime));
+            List<TSDataPoint> dps = null;
+            if (params.length > 3) {
+                dps = database.queryTimeSeriesData(new SimpleDataQuery(metric, startTime, endTime), params[3]);
+            } else {
+                dps = database.queryTimeSeriesData(new SimpleDataQuery(metric, startTime, endTime));
+            }
             if (dps == null || dps.size() == 0) {
                 ctx.writeAndFlush("[]");
             } else {
