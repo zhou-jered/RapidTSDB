@@ -1,4 +1,9 @@
 # Server 的运行模式
+
+## 协议动态切换
+在以下条件满足的时候，切换到 Human readable 的 console模式
+连接创建后
+
 Server监听端口，有连接接入的时候，默认进入Console Command 模式。
 当客户端发送 MagicNumber时候进入到Rpc协议模式。
 Console Command模式接手人类可读的 text command 作为执行命令。

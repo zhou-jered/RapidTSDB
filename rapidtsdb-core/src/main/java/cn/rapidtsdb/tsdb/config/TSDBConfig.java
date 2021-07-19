@@ -10,7 +10,11 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang.BooleanUtils;
 
 import java.lang.reflect.Field;
-import java.util.*;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Log4j2
@@ -28,11 +32,6 @@ public class TSDBConfig {
     @Getter
     private String dataPath;
 
-    /**
-     * the global store cache path
-     */
-    @Getter
-    private String cachePath;
     /**
      * 存储接口的实现类
      */
