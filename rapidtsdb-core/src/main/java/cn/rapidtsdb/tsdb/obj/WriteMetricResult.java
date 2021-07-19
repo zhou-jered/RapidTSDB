@@ -26,6 +26,7 @@ public class WriteMetricResult {
      */
     public static final int CODE_TIME_EXPIRED = 10;
     public static final int CODE_METRIC_EMPTY = 11;
+    public static final int CODE_TIME_NOT_SUPPORT = 12;
     public static final int CODE_SPACE_FULL = 122;
     public static final int CODE_PART_FAILED = 125;
     public static final int CODE_DB_STATE_NOT_RUNNING = 130;
@@ -35,6 +36,7 @@ public class WriteMetricResult {
     public static final WriteMetricResult DB_STATE_NOT_RUNNING = new WriteMetricResult(CODE_DB_STATE_NOT_RUNNING, "Db_STATE_NOT_ROUNND");
     public static final WriteMetricResult FAILED_METRIC_EMPTY = new WriteMetricResult(CODE_METRIC_EMPTY, "metric empty");
     public static final WriteMetricResult FAILED_TIME_EXPIRED = new WriteMetricResult(CODE_TIME_EXPIRED, "metric expired");
+    public static final WriteMetricResult FAILED_TIME_FAILED = new WriteMetricResult(CODE_TIME_NOT_SUPPORT, "metric time expired or too much ahead of current time");
 
 
 }

@@ -11,6 +11,7 @@ import org.apache.commons.lang.BooleanUtils;
 
 import java.lang.reflect.Field;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Log4j2
@@ -72,10 +73,13 @@ public class TSDBConfig {
     Integer failedTaskQueueSize = 4096;
 
     @Getter
-    Integer maxAllowedDelaySeconds = 0;
+    Integer maxAllowedDelaySeconds = Math.toIntExact(TimeUnit.DAYS.toSeconds(1));
 
     @Getter
     Boolean allowOverwrite = false;
+
+    @Getter
+    int maxMemoryDirtyBlocks = 64;
 
     @Getter
     private AdvancedConfig advancedConfig = new AdvancedConfig();

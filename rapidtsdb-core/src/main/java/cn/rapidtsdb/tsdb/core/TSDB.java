@@ -44,11 +44,7 @@ public class TSDB implements Initializer, Closer {
 
     TSDBConfig config;
 
-    private static final int TIME_HEADER64 = 1 << 9; // -63 ~ 64
-    private static final int TIME_HEADER256 = (1 << 12) | (1 << 11);  // -255 ~ 256
-    private static final int TIME_HEADER2048 = (1 << 16) | (1 << 15) | (1 << 14); //-2047 ~ 2048
-    private static final int TIME_HEADER_FULL_BITS = 0b1111; // full bits
-
+    TooOldWriteQueue tooOldWriteQueue = new TooOldWriteQueue();
 
     public TSDB() {
         this.config = TSDBConfig.getConfigInstance();
@@ -115,8 +111,10 @@ public class TSDB implements Initializer, Closer {
         if (tsBlock != null) {
             tsBlock.appendDataPoint(timestamp, val);
             return WriteMetricResult.SUCCESS;
+        } else if (TimeUtils.currentSeconds() - timestamp / 1000 < config.getMaxAllowedDelaySeconds()) {
+            tooOldWriteQueue.write(mid, timestamp, val);
         }
-        return WriteMetricResult.FAILED_TIME_EXPIRED;
+        return WriteMetricResult.FAILED_TIME_FAILED;
     }
 
     public List<TSDataPoint> queryTimeSeriesData(SimpleDataQuery query) {

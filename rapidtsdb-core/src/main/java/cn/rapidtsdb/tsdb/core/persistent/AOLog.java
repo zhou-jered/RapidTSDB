@@ -8,7 +8,7 @@ import lombok.ToString;
 
 @NoArgsConstructor
 @ToString
-public class AOLog {
+public class  AOLog {
     @Getter
     private int metricsId;
     @Getter
