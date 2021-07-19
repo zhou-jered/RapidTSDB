@@ -1,6 +1,6 @@
 package cn.rapidtsdb.tsdb.core.persistent;
 
-import cn.rapidtsdb.tsdb.TsdbRunnableTask;
+import cn.rapidtsdb.tsdb.TSDBRunnableTask;
 import cn.rapidtsdb.tsdb.config.TSDBConfig;
 import cn.rapidtsdb.tsdb.executors.ManagedThreadPool;
 import cn.rapidtsdb.tsdb.lifecycle.Closer;
@@ -261,7 +261,7 @@ public class MetricsKeyManager implements Initializer, Closer {
         }
     }
 
-    private static class PersistNewMetricsTask extends TsdbRunnableTask {
+    private static class PersistNewMetricsTask extends TSDBRunnableTask {
 
         private Lock metricWriteLock;
         private Runnable delegate;

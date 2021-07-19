@@ -6,14 +6,15 @@ import cn.rapidtsdb.tsdb.core.persistent.TSBlockPersister;
 import cn.rapidtsdb.tsdb.executors.ManagedThreadPool;
 import cn.rapidtsdb.tsdb.lifecycle.Closer;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
-import cn.rapidtsdb.tsdb.plugins.StoreHandlerPlugin;
-import cn.rapidtsdb.tsdb.store.StoreHandlerFactory;
 import cn.rapidtsdb.tsdb.tasks.ClearDirtyBlockTask;
 import cn.rapidtsdb.tsdb.utils.TSBlockUtils;
 import cn.rapidtsdb.tsdb.utils.TimeUtils;
 import lombok.extern.log4j.Log4j2;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicReference;
@@ -33,29 +34,16 @@ import static cn.rapidtsdb.tsdb.core.TSBlockFactory.newTSBlock;
 public class TSBlockManager extends AbstractTSBlockManager implements Initializer, Closer {
 
 
-    private TSDBConfig tsdbConfig;
-
-    private StoreHandlerPlugin storeHandler;
-
-    private TSBlockPersister blockPersister;
-
     private AtomicReference<Map<Integer, TSBlock>> currentBlockCacheRef = new AtomicReference<>();
     private AtomicReference<Map<Integer, TSBlock>> preRoundBlockRef = new AtomicReference<>();
     private AtomicReference<Map<Integer, TSBlock>> forwardRoundBlockRef = new AtomicReference<>();
-
-
-    /**
-     * ???
-     * 我也忘了这是啥？
-     */
-    private Map<Integer, int[]> metricLocationSeparator = new ConcurrentHashMap<>(10240);
+    private TSBlockPersister blockPersister;
 
     ManagedThreadPool globalExecutor = ManagedThreadPool.getInstance();
     ThreadPoolExecutor ioExecutor = globalExecutor.ioExecutor();
 
     TSBlockManager(TSDBConfig tsdbConfig) {
         this.tsdbConfig = tsdbConfig;
-        storeHandler = StoreHandlerFactory.getStoreHandler();
         blockPersister = TSBlockPersister.getINSTANCE();
     }
 
@@ -66,7 +54,7 @@ public class TSBlockManager extends AbstractTSBlockManager implements Initialize
 
     @Override
     public void init() {
-        dirtyBlocksRef.set(new HashSet<>());
+        dirtyBlocksRef.set(new HashMap<>());
         preRoundBlockRef.set(newTSMap());
         currentBlockCacheRef.set(newTSMap());
         forwardRoundBlockRef.set(newTSMap());
@@ -107,16 +95,10 @@ public class TSBlockManager extends AbstractTSBlockManager implements Initialize
                 return null;
             }
         } else {
-            if (tsdbConfig.getAllowOverwrite()) {
-                //Warning, if Code running here, Too Much Memory could be used.
-                TSBlock preBlock = preRoundBlockRef.get().get(metricId);
-                if (preBlock == null || !preBlock.inBlock(timestamp)) {
-                    preBlock = newTSBlock(metricId, timestamp);
-                }
-                markDirtyBlock(preBlock);
-                return preBlock;
+            TSBlock preBlock = preRoundBlockRef.get().get(metricId);
+            if (preBlock != null && preBlock.inBlock(timestamp)) {
+                markPreRoundBlockDirty(metricId, preBlock);
             }
-
         }
         return null;
     }
@@ -129,11 +111,18 @@ public class TSBlockManager extends AbstractTSBlockManager implements Initialize
         blockPersister.persistTSBlockAsync(currentBlockCacheRef.get(), completedCallback);
         currentBlockCacheRef.set(forwardRoundBlockRef.get());
         forwardRoundBlockRef.set(newTSMap());
-        Set<TSBlock> dirtyBlock = dirtyBlocksRef.get();
-        if (dirtyBlock.size() > 0) {
-            log.debug("clear dirty block:{}", dirtyBlock.size());
-            dirtyBlocksRef.set(new HashSet<>());
-            ioExecutor.submit(new ClearDirtyBlockTask(dirtyBlock, blockPersister));
+        clearDirtyBlock();
+    }
+
+    @Override
+    protected void clearDirtyBlock() {
+        synchronized (dirtyBlocksRef) {
+            Map<Integer, TSBlock> dirtyBlock = dirtyBlocksRef.get();
+            if (dirtyBlock.size() > 0) {
+                log.debug("clear dirty block:{}", dirtyBlock.size());
+                dirtyBlocksRef.set(new HashMap<>());
+                ioExecutor.submit(new ClearDirtyBlockTask(dirtyBlock, blockPersister));
+            }
         }
     }
 

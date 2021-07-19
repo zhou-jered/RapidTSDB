@@ -6,6 +6,7 @@ import cn.rapidtsdb.tsdb.lifecycle.Initializer;
 import cn.rapidtsdb.tsdb.plugins.StoreHandlerPlugin;
 import cn.rapidtsdb.tsdb.store.StoreHandlerFactory;
 import com.esotericsoftware.kryo.kryo5.Kryo;
+import com.google.common.collect.BiMap;
 
 import java.util.List;
 import java.util.Map;
@@ -83,4 +84,19 @@ public class MetricsTagManager implements Initializer, Closer {
 
     }
 
+
+    static class Node {
+        char val;
+        List<Node> children;
+        Node parent;
+
+        public Node() {
+        }
+
+        public Node(Node parent, char val) {
+            this.parent = parent;
+            this.val = val;
+        }
+
+    }
 }

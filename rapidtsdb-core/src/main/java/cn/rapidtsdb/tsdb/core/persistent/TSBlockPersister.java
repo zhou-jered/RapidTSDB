@@ -1,7 +1,7 @@
 package cn.rapidtsdb.tsdb.core.persistent;
 
 import cn.rapidtsdb.tsdb.TSDBTaskCallback;
-import cn.rapidtsdb.tsdb.TsdbRunnableTask;
+import cn.rapidtsdb.tsdb.TSDBRunnableTask;
 import cn.rapidtsdb.tsdb.core.TSBlock;
 import cn.rapidtsdb.tsdb.core.TSBlockMeta;
 import cn.rapidtsdb.tsdb.core.TSBlockSnapshot;
@@ -167,7 +167,7 @@ public class TSBlockPersister implements Initializer, Closer {
 
 
         @Override
-        public void onFailed(TsdbRunnableTask task, Object data) {
+        public void onFailed(TSDBRunnableTask task, Object data) {
             if (task.getRetryCount() < task.getRetryLimit()) {
                 task.markRetry();
                 ManagedThreadPool.getInstance().submitFailedTask(task);
@@ -177,7 +177,7 @@ public class TSBlockPersister implements Initializer, Closer {
         }
 
         @Override
-        public void onException(TsdbRunnableTask task, Object data, Throwable exception) {
+        public void onException(TSDBRunnableTask task, Object data, Throwable exception) {
             if (task.getRetryCount() < task.getRetryLimit()) {
                 task.markRetry();
                 ManagedThreadPool.getInstance().submitFailedTask(task);
@@ -261,7 +261,7 @@ public class TSBlockPersister implements Initializer, Closer {
      * todo move this implementation to under layer,
      * block manager do not need to know about the persist implementation
      */
-    static class SimpleTSBlockStoreTask extends TsdbRunnableTask {
+    static class SimpleTSBlockStoreTask extends TSDBRunnableTask {
         private final static Logger log = LogManager.getLogger("SimpleTSBlockStoreTask");
         private int metricId;
         private FileLocation fileLocation;

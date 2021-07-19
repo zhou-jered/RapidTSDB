@@ -1,16 +1,12 @@
 package cn.rapidtsdb.tsdb.plugins;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.ServiceLoader;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class PluginManager {
 
     private static Class[] plugins = new Class[]{ConnectionAuthPlugin.class, StoreHandlerPlugin.class};
-    private static Map<String, List> pluginRegistry = new HashMap();
+    private static Map<String, List> pluginRegistry = new ConcurrentHashMap<>();
 
     static {
         loadPlugins();

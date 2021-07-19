@@ -1,7 +1,7 @@
 package cn.rapidtsdb.tsdb.core;
 
 import cn.rapidtsdb.tsdb.TSDBTaskCallback;
-import cn.rapidtsdb.tsdb.core.persistent.TSDBCheckPointManager;
+import cn.rapidtsdb.tsdb.config.TSDBConfig;
 import cn.rapidtsdb.tsdb.lifecycle.Closer;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
 
@@ -9,19 +9,16 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Define the Manager Rules of TSBlocks.
  */
 public abstract class AbstractTSBlockManager implements Initializer, Closer {
+    protected TSDBConfig tsdbConfig;
 
-    //todo leave or stay here
-    protected TSDBCheckPointManager checkPointManager;
-
-
-    protected AtomicReference<Set<TSBlock>> dirtyBlocksRef = new AtomicReference<>();
+    protected AtomicReference<Map<Integer, TSBlock>> dirtyBlocksRef = new AtomicReference<>();
 
     public abstract TSBlock getCurrentWriteBlock(int metricId, long timestamp);
 
@@ -35,10 +32,16 @@ public abstract class AbstractTSBlockManager implements Initializer, Closer {
     public abstract Iterator<TSBlock> getBlockStreamByTimeRange(int metricId, long start, long end);
 
 
-    public void markDirtyBlock(TSBlock block) {
-        dirtyBlocksRef.get().add(block);
+    public void markPreRoundBlockDirty(int metricId, TSBlock block) {
+        synchronized (dirtyBlocksRef) {
+            dirtyBlocksRef.get().put(metricId, block);
+            if (dirtyBlocksRef.get().size() > tsdbConfig.getMaxMemoryDirtyBlocks()) {
+                clearDirtyBlock();
+            }
+        }
     }
 
+    protected abstract void clearDirtyBlock();
 
     public static TSBlockMeta createTSBlockMeta(TSBlockSnapshot snapshot, int metricId) {
 
