@@ -230,7 +230,7 @@ public class ConsoleHandler extends SimpleChannelInboundHandler<ByteBuf> {
         }
 
         @Override
-        public void onFailed(TsdbRunnableTask task, Object data) {
+        public void onFailed(TSDBRunnableTask task, Object data) {
             if (data instanceof WriteMetricResult) {
                 WriteMetricResult wmr = (WriteMetricResult) data;
                 ByteBuf byteBuf = ctx.alloc().buffer(1024);
@@ -244,7 +244,7 @@ public class ConsoleHandler extends SimpleChannelInboundHandler<ByteBuf> {
         }
 
         @Override
-        public void onException(TsdbRunnableTask task, Object data, Throwable exception) {
+        public void onException(TSDBRunnableTask task, Object data, Throwable exception) {
             if (data instanceof WriteMetricResult) {
                 WriteMetricResult wmr = (WriteMetricResult) data;
                 if (wmr.getMsg() != null) {

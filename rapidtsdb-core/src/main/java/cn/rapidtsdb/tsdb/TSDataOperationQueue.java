@@ -37,7 +37,7 @@ public class TSDataOperationQueue {
         taskExecutorBinder.get(binderKey).offer(task);
     }
 
-    private static class TSDataExecRunnable extends TsdbRunnableTask {
+    private static class TSDataExecRunnable extends TSDBRunnableTask {
         @Override
         public int getRetryLimit() {
             return 0;

@@ -1,6 +1,6 @@
 package cn.rapidtsdb.tsdb;
 
-public abstract class TSDBDataOperationTask extends TsdbRunnableTask {
+public abstract class TSDBDataOperationTask extends TSDBRunnableTask {
     protected TSDBTaskCallback callback;
 
     public abstract int getMetricId();
