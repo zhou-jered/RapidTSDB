@@ -42,8 +42,7 @@ public class MetricsKeyManager implements Initializer, Closer {
     private String metricsKeyFile = "mk.data";
     private String metricsKeyIdxFile = "mk.idx";
     private String metricsKeyListFile = "mk.list";
-    private String METRICS_LEGAL_CHARS = "plokmijnuhbygvtfcrdxeszwaqPLOKMIJNUHBYGVTFCRDXESZWAQ0987654321@#$-_.+=:;,";
-    private String METRICS_INTERNAL_LEGAL_CHARS = "^/";
+    private String METRICS_LEGAL_CHARS = "plokmijnuhbygvtfcrdxeszwaqPLOKMIJNUHBYGVTFCRDXESZWAQ0987654321@#$-_.+=:;,^/";
     private TrieNode trieNodeRoot = new TrieNode('0');
     private boolean[] legalCharMap = new boolean[256];
     private transient Kryo kryo = new Kryo();
@@ -71,9 +70,6 @@ public class MetricsKeyManager implements Initializer, Closer {
         }
         for (int i = 0; i < METRICS_LEGAL_CHARS.length(); i++) {
             legalCharMap[METRICS_LEGAL_CHARS.charAt(i)] = true;
-        }
-        for (int i = 0; i < METRICS_INTERNAL_LEGAL_CHARS.length(); i++) {
-            legalCharMap[METRICS_INTERNAL_LEGAL_CHARS.charAt(i)] = true;
         }
         tsdbConfig = TSDBConfig.getConfigInstance();
         storeHandler = StoreHandlerFactory.getStoreHandler();

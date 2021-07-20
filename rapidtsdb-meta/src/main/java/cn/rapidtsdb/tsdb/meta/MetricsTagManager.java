@@ -1,23 +1,28 @@
 package cn.rapidtsdb.tsdb.meta;
 
-import cn.rapidtsdb.tsdb.core.persistent.MetricsKeyManager;
 import cn.rapidtsdb.tsdb.lifecycle.Closer;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
 import cn.rapidtsdb.tsdb.plugins.StoreHandlerPlugin;
 import cn.rapidtsdb.tsdb.store.StoreHandlerFactory;
+import cn.rapidtsdb.tsdb.utils.CollectionUtils;
 import com.esotericsoftware.kryo.kryo5.Kryo;
-import com.google.common.collect.BiMap;
+import lombok.Getter;
 
 import java.util.List;
 import java.util.Map;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 public class MetricsTagManager implements Initializer, Closer {
-
-    public static MetricsTagManager INSTANCE = new MetricsTagManager();
-    private StoreHandlerPlugin storeHandler = StoreHandlerFactory.getStoreHandler();
+    @Getter
+    private static MetricsTagManager INSTANCE = new MetricsTagManager();
     private static final String tagFilename = "mt.data";
+    private static final String tagKVSeparatorChar = "^";
+    private static final String tagSeparatorChar = "/";
+    private StoreHandlerPlugin storeHandler = null;
     private Kryo kryo = new Kryo();
-    private MetricsKeyManager metricsKeyManager;
+    private LRUCache<Integer, String> id2TagCache = new LRUCache<>();
+    private LRUCache<Integer, String> id2KeyCache = new LRUCache<>();
 
     @Override
     public void close() {
@@ -27,16 +32,27 @@ public class MetricsTagManager implements Initializer, Closer {
 
     @Override
     public void init() {
+        storeHandler = StoreHandlerFactory.getStoreHandler();
         recoveryData();
     }
 
 
     public String getInternalMetricName(String metric, Map<String, String> tags) {
-        return null;
+        String suffix = null;
+        if (CollectionUtils.isNotEmpty(tags)) {
+            SortedSet<String> keySet = new TreeSet(tags.keySet());
+            for (String k : keySet) {
+                int kUid = getTagKeyIndex(k);
+                int vUid = getTagValueIndex(tags.get(k));
+                suffix = tagSeparatorChar + kUid + tagKVSeparatorChar + vUid;
+            }
+        }
+        return metric + suffix;
     }
 
     public BizMetric getBizMetricFromInternalMetric(String internalMetric) {
         return null;
+
     }
 
 
@@ -97,6 +113,6 @@ public class MetricsTagManager implements Initializer, Closer {
             this.parent = parent;
             this.val = val;
         }
-
     }
+
 }

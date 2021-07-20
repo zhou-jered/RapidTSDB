@@ -11,11 +11,16 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class LRUCache<K, V> {
 
-    private int maxSize = 10240;
+    public static final int DEFAULT_MAX_SIZE = 10240;
+    private final int maxSize;
     private Map<K, WrappedValue<V>> cache = new ConcurrentHashMap<>();
     private HeapNode[] heap;
     private int heapIdx = 0;
     private ReadWriteLock rwLock = new ReentrantReadWriteLock();
+
+    public LRUCache() {
+        this(DEFAULT_MAX_SIZE);
+    }
 
     public LRUCache(int maxSize) {
         this.maxSize = maxSize;
@@ -74,6 +79,17 @@ public class LRUCache<K, V> {
         return cache.size();
     }
 
+    public void invalidAll() {
+        try {
+            rwLock.writeLock().lockInterruptibly();
+            cache.clear();
+            heapIdx = 0;
+        } catch (InterruptedException e) {
+        } finally {
+            rwLock.writeLock().unlock();
+        }
+    }
+
     private void touchNode(int nodeIdx) {
         try {
             rwLock.writeLock().lock(); // reenter
@@ -101,14 +117,9 @@ public class LRUCache<K, V> {
     private synchronized WrappedValue<V> insertHeap(V val) {
         long accessTime = TimeUtils.currentMills();
         HeapNode newNode = new HeapNode(val, accessTime);
-        int newNodeIdx = 0;
-
         try {
             rwLock.writeLock().lock();
-            if (heapIdx < maxSize) {
-                heap[heapIdx] = newNode;
-                heapIdx++;
-            } else {
+            if (heapIdx >= maxSize) {
                 HeapNode tobeRemoved = heap[0];
                 cache.remove(tobeRemoved.key);
                 int replacedIdx = 0;
@@ -124,18 +135,58 @@ public class LRUCache<K, V> {
                     }
                     heap[replacedIdx / 2] = heap[replacedIdx];
                 }
-                newNodeIdx = replacedIdx / 2;
-                heap[newNodeIdx] = newNode;
             }
-            return new WrappedValue<>(val, newNodeIdx);
+            int nodeIdx = heapIdx;
+            heap[nodeIdx] = newNode;
+            heapIdx++;
+            return new WrappedValue<>(val, nodeIdx);
         } finally {
             rwLock.writeLock().unlock();
         }
     }
 
     private void removeHeapNode(int nodeIdx) {
-        HeapNode lastNode = heap[heapIdx - 1];
+        assert nodeIdx < heapIdx && nodeIdx >= 0;
+        try {
+            rwLock.writeLock().lockInterruptibly();
+            heap[nodeIdx] = heap[heapIdx - 1];
+            int currentNodeIdx = nodeIdx;
+            if (currentNodeIdx * 2 < heapIdx) {
+                while (currentNodeIdx < heapIdx) {
+                    int leftIdx = currentNodeIdx * 2;
+                    int rightIdx = currentNodeIdx * 2 + 1;
+                    if (leftIdx >= heapIdx) {
+                        break;
+                    } else if (rightIdx >= heapIdx) {
+                        //only left child
+                        currentNodeIdx = leftIdx;
+                        if (heap[currentNodeIdx].accessTime > heap[leftIdx].accessTime) {
+                            swapHeapNode(currentNodeIdx, leftIdx);
+                        }
+                    } else {
+                        //both child
+                        int candidateIdx = heap[leftIdx].accessTime <= heap[rightIdx].accessTime ? leftIdx : rightIdx;
+                        if (heap[currentNodeIdx].accessTime > heap[candidateIdx].accessTime) {
+                            swapHeapNode(currentNodeIdx, candidateIdx);
+                            currentNodeIdx = candidateIdx;
+                        }
+                    }
+                }
+            }
+            heapIdx--;
 
+        } catch (InterruptedException e) {
+
+        } finally {
+            rwLock.writeLock().unlock();
+        }
+
+    }
+
+    private void swapHeapNode(int aIdx, int bIdx) {
+        HeapNode tempNode = heap[aIdx];
+        heap[aIdx] = heap[bIdx];
+        heap[bIdx] = tempNode;
     }
 
     @NoArgsConstructor
