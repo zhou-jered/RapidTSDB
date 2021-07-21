@@ -1,4 +1,4 @@
-package cn.rapidtsdb.tsdb.utils;
+package cn.rapidtsdb.tsdb.common;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;

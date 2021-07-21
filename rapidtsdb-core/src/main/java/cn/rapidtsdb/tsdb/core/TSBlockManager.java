@@ -8,7 +8,7 @@ import cn.rapidtsdb.tsdb.lifecycle.Closer;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
 import cn.rapidtsdb.tsdb.tasks.ClearDirtyBlockTask;
 import cn.rapidtsdb.tsdb.utils.TSBlockUtils;
-import cn.rapidtsdb.tsdb.utils.TimeUtils;
+import cn.rapidtsdb.tsdb.common.TimeUtils;
 import lombok.extern.log4j.Log4j2;
 
 import java.util.HashMap;

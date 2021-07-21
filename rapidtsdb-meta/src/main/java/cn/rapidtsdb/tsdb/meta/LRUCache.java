@@ -1,6 +1,6 @@
 package cn.rapidtsdb.tsdb.meta;
 
-import cn.rapidtsdb.tsdb.utils.TimeUtils;
+import cn.rapidtsdb.tsdb.common.TimeUtils;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 

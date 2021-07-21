@@ -3,9 +3,11 @@ package cn.rapidtsdb.tsdb.core;
 import cn.rapidtsdb.tsdb.TSDBConfigTester;
 import cn.rapidtsdb.tsdb.config.TSDBConfig;
 import cn.rapidtsdb.tsdb.core.persistent.MetricsKeyManager;
+import lombok.extern.log4j.Log4j2;
 import org.junit.Before;
 import org.junit.Test;
 
+@Log4j2
 public class MetricsKeyManagerTest {
 
     final String metric = "nihao";
@@ -36,4 +38,5 @@ public class MetricsKeyManagerTest {
         int mid = mkManager.getMetricsIndex(metric);
         System.out.println(metric + " mid: " + mid);
     }
+
 }

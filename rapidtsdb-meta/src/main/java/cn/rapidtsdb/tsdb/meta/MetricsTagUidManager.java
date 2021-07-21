@@ -4,17 +4,22 @@ import cn.rapidtsdb.tsdb.lifecycle.Closer;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
 import cn.rapidtsdb.tsdb.plugins.StoreHandlerPlugin;
 import cn.rapidtsdb.tsdb.store.StoreHandlerFactory;
-import cn.rapidtsdb.tsdb.utils.CollectionUtils;
 import com.esotericsoftware.kryo.kryo5.Kryo;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.SortedSet;
-import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 
-public class MetricsTagManager implements Initializer, Closer {
+public class MetricsTagUidManager implements Initializer, Closer {
+
+
+    private final int STATUS_UNINIT = 1;
+    private final int STATUS_INITIALIZING = 2;
+    private final int STATUS_RUNNING = 3;
+    private AtomicInteger status = new AtomicInteger(STATUS_UNINIT);
 
 
     private final int UID_FILE_RANGE_STEP = 10000;
@@ -24,6 +29,13 @@ public class MetricsTagManager implements Initializer, Closer {
     private LRUCache<Integer, String> id2TagCache = new LRUCache<>();
     private LRUCache<Integer, String> id2KeyCache = new LRUCache<>();
 
+    private transient Node root;
+    private transient AtomicInteger nodeIdx;
+
+    private static final String TRIE_FILE = "meta.tag.tree";
+    private static final String TAG_IDX_FILE = "meta.tag.idx"; //store the max index
+    private static final String TAG_REVERSE_IDX_FILE = "meta.tag.range-";
+
     @Override
     public void close() {
         persistData();
@@ -32,65 +44,22 @@ public class MetricsTagManager implements Initializer, Closer {
 
     @Override
     public void init() {
+        kryo.register(Node.class);
+        kryo.register(List.class);
+        kryo.register(ArrayList.class);
         storeHandler = StoreHandlerFactory.getStoreHandler();
         recoveryData();
     }
 
 
-    public String getInternalMetricName(String metric, Map<String, String> tags) {
-        String suffix = null;
-        if (CollectionUtils.isNotEmpty(tags)) {
-            SortedSet<String> keySet = new TreeSet(tags.keySet());
-            for (String k : keySet) {
-                int kUid = getTagKeyIndex(k);
-                int vUid = getTagValueIndex(tags.get(k));
-
-            }
-        }
-        return metric + suffix;
-    }
-
-    public BizMetric getBizMetricFromInternalMetric(String internalMetric) {
-        return null;
-
-    }
-
-
-    public List<TagKV> getMetricAllTagKV(String parentMetric) {
-        return null;
-    }
-
-    public List<TagKV> getMetricTagValues(String parentMetric, String tagK) {
-        return null;
-    }
-
-    public List<TagKV> getMetricTagsValues(String parentMetric, List<String> tagKeys) {
-        return null;
-    }
-
-    private int getTagKeyIndex(String key) {
+    private int getTagIndex(String key) {
         return -1;
     }
 
-    public String getTagKeyByIndex(int keyIdx) {
+    public String getTagByIndex(int keyIdx) {
         return null;
     }
 
-    private int getTagValueIndex(String tagValue) {
-        return -1;
-    }
-
-    private String getTagValueByIndex(int valueIdx) {
-        return null;
-    }
-
-    private String getMetricSuffixFromTags(Map<String, String> tags) {
-        return null;
-    }
-
-    private Map<String, String> getTagsFromMetricSuffix(String metricSuffix) {
-        return null;
-    }
 
     private void persistData() {
 
@@ -122,6 +91,20 @@ public class MetricsTagManager implements Initializer, Closer {
         public Node(Node parent, char val) {
             this.parent = parent;
             this.val = val;
+        }
+
+        public synchronized Node getChildNode(char c) {
+            for (Node node : children) {
+                if (node.val == c) {
+                    return node;
+                }
+            }
+            Node node = new Node(this, c);
+            if (children == null) {
+                children = new ArrayList<>();
+            }
+            children.add(node);
+            return node;
         }
 
 

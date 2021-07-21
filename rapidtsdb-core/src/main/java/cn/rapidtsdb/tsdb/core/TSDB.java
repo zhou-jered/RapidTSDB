@@ -15,7 +15,7 @@ import cn.rapidtsdb.tsdb.obj.WriteMetricResult;
 import cn.rapidtsdb.tsdb.tasks.BlockCompressTask;
 import cn.rapidtsdb.tsdb.tasks.TwoHoursTriggerTask;
 import cn.rapidtsdb.tsdb.utils.TSDataUtils;
-import cn.rapidtsdb.tsdb.utils.TimeUtils;
+import cn.rapidtsdb.tsdb.common.TimeUtils;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang.StringUtils;
 

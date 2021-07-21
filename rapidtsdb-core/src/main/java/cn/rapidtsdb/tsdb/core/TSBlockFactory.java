@@ -1,6 +1,6 @@
 package cn.rapidtsdb.tsdb.core;
 
-import cn.rapidtsdb.tsdb.utils.TimeUtils;
+import cn.rapidtsdb.tsdb.common.TimeUtils;
 
 import java.util.concurrent.TimeUnit;
 

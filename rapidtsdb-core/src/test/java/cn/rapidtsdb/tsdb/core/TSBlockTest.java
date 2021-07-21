@@ -1,7 +1,7 @@
 package cn.rapidtsdb.tsdb.core;
 
 import cn.rapidtsdb.tsdb.exception.BlockDataMissMatchException;
-import cn.rapidtsdb.tsdb.utils.TimeUtils;
+import cn.rapidtsdb.tsdb.common.TimeUtils;
 import com.google.common.collect.Lists;
 import org.apache.commons.lang.math.RandomUtils;
 import org.junit.Assert;
