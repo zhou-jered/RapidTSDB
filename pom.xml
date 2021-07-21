@@ -9,7 +9,7 @@
     <version>1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>RapidTSDB</name>
-    <url>https://tinytsdb.flowersouth.com</url>
+    <url>https://rapidtsdb.flowersouth.com</url>
 
 
     <modules>
@@ -21,6 +21,7 @@
         <module>rapidtsdb-plugin</module>
         <module>rapidtsdb-rpcprotocol</module>
         <module>rapidtsdb-store-hbase</module>
+        <module>rapidtsdb-common</module>
     </modules>
 
 
@@ -122,36 +123,36 @@
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-api</artifactId>
-
         </dependency>
+
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-core</artifactId>
         </dependency>
+
         <dependency>
             <groupId>commons-lang</groupId>
             <artifactId>commons-lang</artifactId>
-
         </dependency>
+
         <dependency>
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
-
         </dependency>
+
         <dependency>
             <groupId>com.alibaba</groupId>
             <artifactId>fastjson</artifactId>
-
         </dependency>
+
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-
         </dependency>
+
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-
         </dependency>
     </dependencies>
 

@@ -1,6 +1,7 @@
 package cn.rapidtsdb.tsdb.core.persistent;
 
 import cn.rapidtsdb.tsdb.TSDBRunnableTask;
+import cn.rapidtsdb.tsdb.common.LRUCache;
 import cn.rapidtsdb.tsdb.config.TSDBConfig;
 import cn.rapidtsdb.tsdb.executors.ManagedThreadPool;
 import cn.rapidtsdb.tsdb.lifecycle.Closer;
@@ -16,8 +17,10 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang.StringUtils;
 
 import java.io.*;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -48,7 +51,7 @@ public class MetricsKeyManager implements Initializer, Closer {
     private transient Kryo kryo = new Kryo();
     private Lock metricsWriteLock = new ReentrantLock(false);
 
-    private Map<String, Integer> idxCache = new ConcurrentHashMap<>(1024 * 10);
+    private LRUCache<String, Integer> idxCache = new LRUCache(1024 * 10);
 
     private static MetricsKeyManager instance = new MetricsKeyManager();
 
@@ -76,7 +79,7 @@ public class MetricsKeyManager implements Initializer, Closer {
         kryo.register(TrieNode.class);
         kryo.register(ArrayList.class);
         if (tsdbConfig.getAdvancedConfig().getMetricsIdxCacheSize() != null && tsdbConfig.getAdvancedConfig().getMetricsIdxCacheSize() > 0) {
-            idxCache = new ConcurrentHashMap<>(tsdbConfig.getAdvancedConfig().getMetricsIdxCacheSize());
+            idxCache = new LRUCache(tsdbConfig.getAdvancedConfig().getMetricsIdxCacheSize());
         }
         recoverFromFile();
     }

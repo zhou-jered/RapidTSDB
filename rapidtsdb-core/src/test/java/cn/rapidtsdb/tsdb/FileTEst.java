@@ -56,7 +56,6 @@ public class FileTEst {
 
     @Test
     public void testLength() {
-        File file = new File("/Users/yoscript/Projects/TinyTSDB/src/test/java/com/");
-        System.out.println(file.length());
+
     }
 }

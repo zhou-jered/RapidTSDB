@@ -1,5 +1,6 @@
 package cn.rapidtsdb.tsdb.calculate;
 
+
 import cn.rapidtsdb.tsdb.utils.TimeUtils;
 
 public class CalculatorFactory {

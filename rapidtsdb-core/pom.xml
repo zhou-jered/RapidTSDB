@@ -16,7 +16,7 @@
 
     <name>rapidtsdb-core</name>
 
-    <url>https://tinytsdb.flowersouth.com</url>
+    <url>https://rapidtsdb.flowersouth.com</url>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -29,6 +29,11 @@
         <dependency>
             <groupId>cn.rapidtsdb.tsdb</groupId>
             <artifactId>rapidtsdb-plugin</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>cn.rapidtsdb.tsdb</groupId>
+            <artifactId>rapidtsdb-common</artifactId>
             <version>1.0-SNAPSHOT</version>
         </dependency>
         <dependency>
@@ -46,5 +51,5 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
-    
+
 </project>

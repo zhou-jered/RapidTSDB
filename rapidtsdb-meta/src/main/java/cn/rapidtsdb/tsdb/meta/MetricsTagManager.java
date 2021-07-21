@@ -6,19 +6,19 @@ import cn.rapidtsdb.tsdb.plugins.StoreHandlerPlugin;
 import cn.rapidtsdb.tsdb.store.StoreHandlerFactory;
 import cn.rapidtsdb.tsdb.utils.CollectionUtils;
 import com.esotericsoftware.kryo.kryo5.Kryo;
-import lombok.Getter;
 
 import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.Lock;
 
 public class MetricsTagManager implements Initializer, Closer {
-    @Getter
-    private static MetricsTagManager INSTANCE = new MetricsTagManager();
-    private static final String tagFilename = "mt.data";
-    private static final String tagKVSeparatorChar = "^";
-    private static final String tagSeparatorChar = "/";
+
+
+    private final int UID_FILE_RANGE_STEP = 10000;
+    private Map<Integer, Lock> uidRangLockMap = new ConcurrentHashMap<>();
     private StoreHandlerPlugin storeHandler = null;
     private Kryo kryo = new Kryo();
     private LRUCache<Integer, String> id2TagCache = new LRUCache<>();
@@ -44,7 +44,7 @@ public class MetricsTagManager implements Initializer, Closer {
             for (String k : keySet) {
                 int kUid = getTagKeyIndex(k);
                 int vUid = getTagValueIndex(tags.get(k));
-                suffix = tagSeparatorChar + kUid + tagKVSeparatorChar + vUid;
+
             }
         }
         return metric + suffix;
@@ -101,6 +101,16 @@ public class MetricsTagManager implements Initializer, Closer {
     }
 
 
+    private String getUidRangeFilename(int uid) {
+        int floored = getFlooredUid(uid);
+        return "meta-idx-" + floored;
+    }
+
+    private int getFlooredUid(int uid) {
+        int floored = uid - uid % UID_FILE_RANGE_STEP;
+        return floored;
+    }
+
     static class Node {
         char val;
         List<Node> children;
@@ -113,6 +123,9 @@ public class MetricsTagManager implements Initializer, Closer {
             this.parent = parent;
             this.val = val;
         }
+
+
     }
+
 
 }

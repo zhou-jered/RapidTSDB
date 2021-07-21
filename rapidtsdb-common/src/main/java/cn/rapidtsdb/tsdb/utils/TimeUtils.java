@@ -31,7 +31,7 @@ public class TimeUtils {
             }
         });
         timerThread.setDaemon(true);
-        timerThread.setName("tinyTSDB Timer Thread");
+        timerThread.setName("RapidTSDB Timer Thread");
         timerThread.start();
     }
 
