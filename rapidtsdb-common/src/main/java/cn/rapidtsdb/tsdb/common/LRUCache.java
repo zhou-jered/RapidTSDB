@@ -52,8 +52,9 @@ public class LRUCache<K, V> {
             WrappedValue<V> wv = cache.get(k);
             if (wv != null) {
                 touchNode(wv.nodeIdx);
+                return wv.value;
             }
-            return wv.value;
+            return null;
         } catch (InterruptedException e) {
 
         } finally {

@@ -2,12 +2,14 @@ package cn.rapidtsdb.tsdb.core.persistent;
 
 import cn.rapidtsdb.tsdb.TSDBRunnableTask;
 import cn.rapidtsdb.tsdb.common.LRUCache;
+import cn.rapidtsdb.tsdb.common.Pair;
 import cn.rapidtsdb.tsdb.config.TSDBConfig;
 import cn.rapidtsdb.tsdb.executors.ManagedThreadPool;
 import cn.rapidtsdb.tsdb.lifecycle.Closer;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
 import cn.rapidtsdb.tsdb.plugins.StoreHandlerPlugin;
 import cn.rapidtsdb.tsdb.store.StoreHandlerFactory;
+import cn.rapidtsdb.tsdb.utils.CollectionUtils;
 import com.esotericsoftware.kryo.kryo5.Kryo;
 import com.esotericsoftware.kryo.kryo5.io.Input;
 import com.esotericsoftware.kryo.kryo5.io.Output;
@@ -16,11 +18,9 @@ import lombok.NoArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang.StringUtils;
 
+import javax.annotation.Nullable;
 import java.io.*;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -126,20 +126,81 @@ public class MetricsKeyManager implements Initializer, Closer {
         return idx;
     }
 
+    public List<String> scanMetrics(String metricsPrefix) {
+        return scanMetrics(metricsPrefix, null);
+    }
+
+
+    public List<String> scanMetrics(String metricsPrefix, @Nullable List<String> mustIncluded) {
+        if (StringUtils.isEmpty(metricsPrefix)) {
+            return new ArrayList<>();
+        }
+
+        TrieNode curNode = trieNodeRoot;
+        for (char c : metricsPrefix.toCharArray()) {
+            curNode = curNode.getChildNode(c);
+            if (curNode == null) {
+                return new ArrayList<>();
+            }
+        }
+
+        boolean doFilter = CollectionUtils.isNotEmpty(mustIncluded);
+
+        List<String> result = new ArrayList<>();
+        Queue<Pair<String, List<TrieNode>>> innerQ = new LinkedList<>();
+        List<TrieNode> children = curNode.getChildNode();
+        if (CollectionUtils.isNotEmpty(children)) {
+            innerQ.add(new Pair<>("", children));
+        }
+        while (!innerQ.isEmpty()) {
+            Pair<String, List<TrieNode>> current = innerQ.poll();
+            String prefix = current.getLeft();
+            for (TrieNode grandson : current.getRight()) {
+                if (isStringTerminatedNode(grandson)) {
+                    boolean shouldAdd = true;
+                    String candidateResult = current.getLeft() + grandson.getC();
+                    if (doFilter) {
+                        //internal method
+                        //due to the special char, this implementation can work rightly
+                        for (String mustStr : mustIncluded) {
+                            if (candidateResult.indexOf(mustStr) < 0) {
+                                shouldAdd = false;
+                                break;
+                            }
+                        }
+                    }
+                    if (!doFilter || shouldAdd) {
+                        result.add(candidateResult);
+                    }
+                }
+                if (CollectionUtils.isNotEmpty(grandson.getChildNode())) {
+                    Pair<String, List<TrieNode>> newQNode = new Pair<>(prefix + grandson.getC(), grandson.getChildNode());
+                    innerQ.add(newQNode);
+                }
+            }
+        }
+        return result;
+    }
+
+
     private int getMetricsIndexInternal(char[] metricsChars) {
         TrieNode currentNode = trieNodeRoot;
         for (int i = 0; i < metricsChars.length; i++) {
             char currentChar = metricsChars[i];
-            currentNode = currentNode.getChildNode(currentChar);
+            currentNode = currentNode.getOrCreateChildNode(currentChar);
         }
-        if (isNewInsertedNode(currentNode)) {
+        if (isNotStringTerminatedNode(currentNode)) {
             currentNode.setValue(metricKeyIdx.incrementAndGet());
             persistenceMetrics(metricsChars);
         }
         return currentNode.getVal();
     }
 
-    private boolean isNewInsertedNode(TrieNode node) {
+    private boolean isStringTerminatedNode(TrieNode node) {
+        return node.getVal() > 0;
+    }
+
+    private boolean isNotStringTerminatedNode(TrieNode node) {
         return node.getVal() == 0;
     }
 
@@ -236,7 +297,7 @@ public class MetricsKeyManager implements Initializer, Closer {
             this.val = value;
         }
 
-        public synchronized TrieNode getChildNode(char c) {
+        public synchronized TrieNode getOrCreateChildNode(char c) {
             for (TrieNode node : childNode) {
                 if (node.c == c) {
                     return node;
@@ -245,6 +306,15 @@ public class MetricsKeyManager implements Initializer, Closer {
             TrieNode node = new TrieNode(c);
             childNode.add(node);
             return node;
+        }
+
+        public TrieNode getChildNode(char c) {
+            for (TrieNode node : childNode) {
+                if (node.c == c) {
+                    return node;
+                }
+            }
+            return null;
         }
 
         public int getMaxIndexValue() {
