@@ -1,5 +1,6 @@
 # 简介
 English Version: [English Version](/README_EN.md)
+
 一个时序数据库，提供非常快速的时序数据插入和查询，同时提供丰富的数据聚合功能。
 实现了论文 [Gorilla: A Fast, Scalable, In-Memory Time Series DataBase](http://www.vldb.org/pvldb/vol8/p1816-teller.pdf)
 

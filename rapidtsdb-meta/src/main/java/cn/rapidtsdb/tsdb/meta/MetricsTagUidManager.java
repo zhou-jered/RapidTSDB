@@ -1,8 +1,7 @@
 package cn.rapidtsdb.tsdb.meta;
 
-import cn.rapidtsdb.tsdb.TSDBDataOperationTask;
 import cn.rapidtsdb.tsdb.TSDBRunnableTask;
-import cn.rapidtsdb.tsdb.executors.ManagedThreadPool;
+import cn.rapidtsdb.tsdb.common.LRUCache;
 import cn.rapidtsdb.tsdb.lifecycle.Closer;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
 import cn.rapidtsdb.tsdb.plugins.StoreHandlerPlugin;
@@ -13,7 +12,11 @@ import lombok.Data;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang.StringUtils;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -158,9 +161,7 @@ public class MetricsTagUidManager implements Initializer, Closer {
     private void loadNodeReverseIndex(int keyIdx) {
         String filename = getUidRangeFilename(keyIdx);
         if (storeHandler.fileExisted(filename)) {
-            try (BufferedReader reader =
-                         new BufferedReader(new InputStreamReader(
-                                 storeHandler.openFileInputStream(filename)));) {
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(storeHandler.openFileInputStream(filename)));) {
                 String tmpKey;
                 while ((tmpKey = reader.readLine()) != null) {
                     Node tailNode = getTailNodeByKey(tmpKey);

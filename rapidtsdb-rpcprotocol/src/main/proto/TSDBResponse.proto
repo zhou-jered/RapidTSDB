@@ -2,7 +2,7 @@ syntax = "proto3";
 package cn.rapidtsdb.tsdb.model.proto;
 import "TSDataMessage.proto";
 
-message ProtoConnectionReponse {
+message ProtoConnectionResponse {
     int32 code = 1;
     string msg = 2;
 }
