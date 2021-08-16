@@ -6,6 +6,8 @@ import io.netty.handler.codec.ReplayingDecoder;
 
 import java.util.List;
 
+import static cn.rapidtsdb.tsdb.server.handler.rpc.RpcConnectionInitHandler.ConnectionInitState.version_done;
+
 public class RpcConnectionInitHandler extends ReplayingDecoder<RpcConnectionInitHandler.ConnectionInitState> {
     public RpcConnectionInitHandler() {
         checkpoint(ConnectionInitState.init);
@@ -19,7 +21,7 @@ public class RpcConnectionInitHandler extends ReplayingDecoder<RpcConnectionInit
                 if (in.readableBytes() >= 1) {
                     byte rpcVersion = in.readByte();
                     out.add(rpcVersion);
-                    checkpoint();
+                    checkpoint(version_done);
                 }
                 break;
         }

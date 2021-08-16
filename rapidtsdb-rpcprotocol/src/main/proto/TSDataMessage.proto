@@ -5,8 +5,16 @@ package cn.rapidtsdb.tsdb.model.proto;
 message ProtoDatapoint {
     int64 timestamp = 1;
     double val = 2;
+    repeated ProtoTSTag tags = 3;
 }
 
 message ProtoDatapoints {
-    repeated ProtoDatapoint dps =1;
+    repeated ProtoDatapoint dps = 1;
+    repeated ProtoTSTag tags = 2;
+}
+
+
+message ProtoTSTag {
+    string key = 1;
+    string value = 2;
 }

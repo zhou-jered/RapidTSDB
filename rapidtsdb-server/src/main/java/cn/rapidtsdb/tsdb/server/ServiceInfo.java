@@ -1,17 +1,14 @@
-package cn.rapidtsdb.tsdb.meta;
+package cn.rapidtsdb.tsdb.server;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
-import java.util.Map;
-
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString
-public class BizMetric {
-    private String metric;
-    private Map<String, String> tags;
+public class ServiceInfo {
+    String SERVER_VERSION = "0.0.1";
 }
