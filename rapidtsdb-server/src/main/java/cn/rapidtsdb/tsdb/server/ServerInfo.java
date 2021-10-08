@@ -9,6 +9,6 @@ import lombok.ToString;
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString
-public class ServiceInfo {
+public class ServerInfo {
     String SERVER_VERSION = "0.0.1";
 }
