@@ -23,7 +23,7 @@ public class DefaultTSDBClient implements TSDBClient {
     }
 
     @Override
-    public void start(boolean keepAlive, long keepAliveTimeMills) {
+    public void connect(boolean keepAlive, long keepAliveTimeMills) {
         EventLoopGroup worker = new NioEventLoopGroup(config.getClientThreads());
         Bootstrap bootstrap = new Bootstrap().group(worker);
         bootstrap.channel(NioSocketChannel.class)
@@ -40,6 +40,12 @@ public class DefaultTSDBClient implements TSDBClient {
                     }
                 });
         log.info("TSDBClient START");
+    }
+
+
+    @Override
+    public void auth(Map<String, String> authParams) {
+        
     }
 
     @Override

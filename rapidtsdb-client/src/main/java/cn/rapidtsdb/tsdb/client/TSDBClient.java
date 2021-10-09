@@ -6,7 +6,9 @@ import java.util.Map;
 public interface TSDBClient {
 
 
-    void start(boolean keepAlive, long keepAliveTimeMills);
+    void connect(boolean keepAlive, long keepAliveTimeMills);
+
+    void auth(Map<String, String> authParams);
 
     void writeMetric(String metric, long timestamp, double value);
 
