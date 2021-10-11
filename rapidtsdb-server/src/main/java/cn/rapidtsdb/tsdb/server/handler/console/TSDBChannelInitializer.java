@@ -1,4 +1,4 @@
-package cn.rapidtsdb.tsdb.server;
+package cn.rapidtsdb.tsdb.server.handler.console;
 
 import cn.rapidtsdb.tsdb.server.handler.CommonStringWriteHandler;
 import cn.rapidtsdb.tsdb.server.handler.ProtocolHandler;

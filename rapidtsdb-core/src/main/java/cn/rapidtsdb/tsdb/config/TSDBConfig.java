@@ -39,19 +39,7 @@ public class TSDBConfig {
     @Getter
     private String storeHandlerImplClass;
 
-    @Getter
-    private boolean rpcGrpcEnable = false;
-    @Getter
-    private String rpcGrpcIp = "0.0.0.0";
-    @Getter
-    private int rpcGrpcPort = 9090;
 
-    @Getter
-    private boolean rpcHttpEnable = false;
-    @Getter
-    private String rpcHttpIp = "0.0.0.0";
-    @Getter
-    private int rpcHttpPort = 9889;
 
     @Getter
     private Boolean printBanner = true;

@@ -1,81 +1,53 @@
 package cn.rapidtsdb.tsdb.server;
 
-import cn.rapidtsdb.tsdb.TSDataOperationQueue;
-import cn.rapidtsdb.tsdb.app.AppInfo;
-import cn.rapidtsdb.tsdb.config.TSDBConfig;
 import cn.rapidtsdb.tsdb.lifecycle.Closer;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
 import cn.rapidtsdb.tsdb.lifecycle.Runner;
-import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.nio.NioServerSocketChannel;
+import cn.rapidtsdb.tsdb.server.config.ServerConfig;
 import lombok.extern.log4j.Log4j2;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Log4j2
 public class TSDBServer implements Initializer, Runner, Closer {
 
-    NioEventLoopGroup workerGroup = null;
-    NioEventLoopGroup bossGroup = null;
-    ServerBootstrap serverBootstrap;
-    private String ip = "0.0.0.0";
-    private int port;
-    ChannelFuture serverChannelFuture = null;
+    private ServerInfo serverInfo;
+    private List<ProtocolServerInstance> instances;
 
-    public TSDBServer() {
-
+    public TSDBServer(ServerInfo serverInfo) {
+        this.serverInfo = serverInfo;
     }
 
     @Override
     public void close() {
-        if (serverChannelFuture != null) {
-            try {
-                serverChannelFuture.channel().closeFuture().sync();
-            } catch (InterruptedException e) {
-            } finally {
-                bossGroup.shutdownGracefully();
-                workerGroup.shutdownGracefully();
-            }
+        for (ProtocolServerInstance instance : instances) {
+            instance.close();
         }
     }
 
     @Override
     public void init() {
-        TSDBConfig config = TSDBConfig.getConfigInstance();
-        String bindIp = config.getRpcGrpcIp();
-        if (bindIp != null && bindIp.length() > 0) {
-            ip = bindIp;
+        if (instances == null) {
+            instances = new ArrayList<>();
         }
-        port = config.getRpcGrpcPort();
-        serverBootstrap = new ServerBootstrap();
-        //todo configurable
-        bossGroup = new NioEventLoopGroup(5);
-        workerGroup = new NioEventLoopGroup(10);
-        serverBootstrap.group(bossGroup, workerGroup)
-                .channel(NioServerSocketChannel.class)
-                .childHandler(new TSDBChannelInitializer())
-                .option(ChannelOption.SO_BACKLOG, 128)
-                .childOption(ChannelOption.SO_KEEPALIVE, true);
+        for (ServerConfig sc : serverInfo.getConfigs()) {
+            if (sc.isEnable()) {
+                log.info("Launching {} Server at port:{}", sc.getProtocol(), sc.getPort());
+                ProtocolServerInstance psi = new ProtocolServerInstance(sc);
+                instances.add(psi);
+                psi.init();
+            } else {
+                log.debug("Skip disabled protocol server");
+            }
+        }
     }
 
     @Override
     public void run() {
-        TSDataOperationQueue queue = TSDataOperationQueue.getQ();
-        queue.start();
-        serverChannelFuture = serverBootstrap.bind(port);
-        serverChannelFuture.addListener((ChannelFutureListener) future -> {
-                    if (future.isDone() && future.isSuccess()) {
-                        AppInfo.setApplicationState(AppInfo.ApplicationState.RUNNING);
-                        log.info("Server listening: {}", port);
-                    } else if (future.isCancelled()) {
-                        log.error("Server Launch Cancelled");
-                    } else if (!future.isSuccess()) {
-                        log.error("Server Failed,{}", future.cause());
-                    }
-                }
-        );
+        for (ProtocolServerInstance psi : instances) {
+            psi.run();
+        }
     }
 
 

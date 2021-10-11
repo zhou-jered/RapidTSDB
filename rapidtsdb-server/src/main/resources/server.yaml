@@ -1,0 +1,40 @@
+
+
+console:
+  enable: true
+  ip: 127.0.0.1
+  port: 9099
+  io:
+    core: 1
+    max: 1
+bin:
+  enable: true
+  ip: 0.0.0.0
+  port: 9100
+  io:
+    core: 3
+    max: 10
+  tcp:
+    nodelay: true
+    backlog: 1024
+    timeout: 1000
+    keeyalive: true
+    reuseaddr: true
+    rcvbuf: 4096
+    sndbuf: 4096
+http:
+  enable: false
+  ip: 0.0.0.0
+  port: 9110
+  io:
+    core: 3
+    max: 10
+httpopentsdb:
+  enable: false
+  port: 9030
+  ip: 0.0.0.0
+  io:
+    core: 1
+    max: 1
+
+

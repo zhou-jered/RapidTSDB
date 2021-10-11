@@ -6,14 +6,22 @@ import cn.rapidtsdb.tsdb.config.TSDBConfig;
 import cn.rapidtsdb.tsdb.core.TSDB;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
 import cn.rapidtsdb.tsdb.lifecycle.Runner;
+import cn.rapidtsdb.tsdb.server.ServerInfo;
 import cn.rapidtsdb.tsdb.server.TSDBServer;
+import cn.rapidtsdb.tsdb.server.config.ServerConfig;
+import cn.rapidtsdb.tsdb.server.config.ServerProtocol;
 import cn.rapidtsdb.tsdb.utils.CliParser;
 import cn.rapidtsdb.tsdb.utils.ResourceUtils;
+import com.alibaba.fastjson.JSON;
 import com.google.common.collect.Maps;
 import lombok.extern.log4j.Log4j2;
+import org.yaml.snakeyaml.Yaml;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
@@ -26,6 +34,7 @@ public class RapidTSDBApplication implements Initializer, Runner {
 
     private TSDBServer server;
     private TSDB tsdb;
+    private ServerInfo serverInfo;
 
     public static void main(String[] args) {
         initConfig(args);
@@ -40,7 +49,7 @@ public class RapidTSDBApplication implements Initializer, Runner {
     private static void initConfig(String... args) {
 
         Map<String, String> configKV = new ConcurrentHashMap<>(128);
-        Map<String, String> appProperties = getApplicationProerties();
+        Map<String, String> appProperties = getApplicationProperties();
         Map<String, String> sysProperties = getSystemProperties();
         Map<String, String> cmdProperties = CliParser.parseCmdArgs(args);
 
@@ -62,7 +71,8 @@ public class RapidTSDBApplication implements Initializer, Runner {
         log.info("start to init");
         tsdb = new TSDB();
         tsdb.init();
-        server = new TSDBServer();
+        loadServerInfo();
+        server = new TSDBServer(serverInfo);
         server.init();
         registShutdownHook();
     }
@@ -82,7 +92,34 @@ public class RapidTSDBApplication implements Initializer, Runner {
         }));
     }
 
-    private static Map<String, String> getApplicationProerties() {
+    private void loadServerInfo() {
+        serverInfo = new ServerInfo();
+        URL serverConfigUrl = ResourceUtils.getResourceUrl("server.yaml");
+        if (serverConfigUrl != null) {
+            Yaml yaml = new Yaml();
+            try (InputStream inputStream = serverConfigUrl.openStream();) {
+                Map<String, Map> scMap = yaml.load(inputStream);
+                if (scMap != null) {
+                    List<ServerConfig> serverConfigList = new ArrayList<>();
+                    for (String server : scMap.keySet()) {
+                        Map config = scMap.get(server);
+                        ServerConfig sc = JSON.parseObject(JSON.toJSONString(config), ServerConfig.class);
+                        log.debug("load server config:{}", sc);
+                        sc.setProtocol(ServerProtocol.valueOf(server));
+                        serverConfigList.add(sc);
+                    }
+                    serverInfo.setConfigs(serverConfigList);
+                }
+            } catch (Exception e) {
+                log.error("Load Server Config Exception", e);
+            }
+        } else {
+            log.info("Using Default Server Config.");
+            //todo default server config
+        }
+    }
+
+    private static Map<String, String> getApplicationProperties() {
         Map<String, String> appProperties = new ConcurrentHashMap<>(128);
         Properties properties = new Properties();
         try {
@@ -92,6 +129,7 @@ public class RapidTSDBApplication implements Initializer, Runner {
                 properties.forEach((k, v) -> {
                     appProperties.put(k.toString(), v.toString());
                 });
+                System.out.println(appProperties);
             } else {
                 log.warn("Can not get Application Properties URL");
             }
