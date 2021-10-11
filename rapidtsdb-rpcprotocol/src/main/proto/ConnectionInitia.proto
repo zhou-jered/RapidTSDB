@@ -6,6 +6,7 @@ message AuthParams {
     string value = 2;
 }
 
+
 message ProtoAuthMessage {
     int64 authVersion = 1;
     string authType = 2;

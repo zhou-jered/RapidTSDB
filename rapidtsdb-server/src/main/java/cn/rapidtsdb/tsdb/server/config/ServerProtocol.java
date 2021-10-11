@@ -4,5 +4,6 @@ public enum  ServerProtocol {
     bin,
     http,
     console,
-    httpopentsdb
+    httpopentsdb,
+    admin
 }

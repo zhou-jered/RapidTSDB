@@ -1,5 +1,7 @@
 package cn.rapidtsdb.tsdb.client;
 
+import cn.rapidtsdb.tsdb.client.event.TSDBUserEventListener;
+
 import java.util.List;
 import java.util.Map;
 
@@ -34,6 +36,9 @@ public interface TSDBClient {
 
     List<Datapoint> readMetrics(String metric, long startTimestamp, long endTimestamp, Map<String, String> tags, String downsampler, String aggregator);
 
+    void addEventListener(TSDBUserEventListener listener);
+
+    List<TSDBUserEventListener> getEventListener();
 
 }
 

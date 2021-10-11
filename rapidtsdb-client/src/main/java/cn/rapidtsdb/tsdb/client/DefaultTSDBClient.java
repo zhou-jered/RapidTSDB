@@ -1,7 +1,9 @@
 package cn.rapidtsdb.tsdb.client;
 
+import cn.rapidtsdb.tsdb.client.event.TSDBUserEventListener;
 import cn.rapidtsdb.tsdb.client.handler.ClientChannelInitializer;
 import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -14,7 +16,7 @@ import java.util.List;
 import java.util.Map;
 
 @Log4j2
-public class DefaultTSDBClient implements TSDBClient {
+class DefaultTSDBClient implements TSDBClient {
 
     TSDBClientConfig config;
 
@@ -108,6 +110,16 @@ public class DefaultTSDBClient implements TSDBClient {
         return null;
     }
 
+    @Override
+    public void addEventListener(TSDBUserEventListener listener) {
+
+    }
+
+    @Override
+    public List<TSDBUserEventListener> getEventListener() {
+        return null;
+    }
+
     private InetSocketAddress fromBootstarp(String bootsrap) {
         String host = "127.0.0.1";
         int port = 9099;
@@ -120,5 +132,12 @@ public class DefaultTSDBClient implements TSDBClient {
         }
         InetSocketAddress inetSocketAddress = new InetSocketAddress(host, port);
         return inetSocketAddress;
+    }
+
+    private static class ClientSession {
+        Channel channel;
+        void write() {
+
+        }
     }
 }

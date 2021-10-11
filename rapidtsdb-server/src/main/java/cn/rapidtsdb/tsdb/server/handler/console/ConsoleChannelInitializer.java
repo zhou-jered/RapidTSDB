@@ -1,13 +1,14 @@
 package cn.rapidtsdb.tsdb.server.handler.console;
 
-import cn.rapidtsdb.tsdb.server.handler.rpc.ProtocolHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.LineBasedFrameDecoder;
 
-public class TSDBChannelInitializer extends ChannelInitializer<NioSocketChannel> {
+public class ConsoleChannelInitializer extends ChannelInitializer<NioSocketChannel> {
     @Override
     protected void initChannel(NioSocketChannel ch) throws Exception {
-        ch.pipeline().addLast(new ProtocolHandler());
+        ch.pipeline().addLast(new LineBasedFrameDecoder(2048));
+        ch.pipeline().addLast(new ConsoleHandler());
         ch.pipeline().addFirst(new CommonStringWriteHandler());
     }
 }

@@ -7,13 +7,18 @@ import cn.rapidtsdb.tsdb.lifecycle.Initializer;
 import cn.rapidtsdb.tsdb.lifecycle.Runner;
 import cn.rapidtsdb.tsdb.server.config.ServerConfig;
 import cn.rapidtsdb.tsdb.server.config.ServerProtocol;
-import cn.rapidtsdb.tsdb.server.handler.console.TSDBChannelInitializer;
+import cn.rapidtsdb.tsdb.server.handler.admin.AdminChannelInitializer;
+import cn.rapidtsdb.tsdb.server.handler.console.ConsoleChannelInitializer;
+import cn.rapidtsdb.tsdb.server.handler.http.HttpChannelInitializer;
+import cn.rapidtsdb.tsdb.server.handler.rpc.BinChannelInitializer;
 import cn.rapidtsdb.tsdb.server.utils.ServerUtils;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelInitializer;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.channel.socket.nio.NioSocketChannel;
 import lombok.extern.log4j.Log4j2;
 
 @Log4j2
@@ -61,7 +66,7 @@ public class ProtocolServerInstance implements Initializer, Runner, Closer {
         workerGroup = new NioEventLoopGroup(10);
         serverBootstrap.group(bossGroup, workerGroup)
                 .channel(NioServerSocketChannel.class)
-                .childHandler(new TSDBChannelInitializer());
+                .childHandler(getServerInitializer(serverConfig.getProtocol()));
         ServerUtils.configServerTcp(serverConfig.getProtocol().name(),
                 serverBootstrap, serverConfig.getTcp());
 
@@ -83,5 +88,21 @@ public class ProtocolServerInstance implements Initializer, Runner, Closer {
                     }
                 }
         );
+    }
+
+    private ChannelInitializer<NioSocketChannel> getServerInitializer(ServerProtocol protocol) {
+        switch (protocol) {
+            case admin:
+                return new AdminChannelInitializer();
+            case console:
+                return new ConsoleChannelInitializer();
+            case bin:
+                return new BinChannelInitializer();
+            case http:
+            case httpopentsdb:
+                return new HttpChannelInitializer();
+            default:
+                throw new RuntimeException("Should not be here, PROTOCOL ERROR");
+        }
     }
 }
