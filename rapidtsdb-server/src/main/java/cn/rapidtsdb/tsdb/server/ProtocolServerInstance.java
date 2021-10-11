@@ -8,10 +8,10 @@ import cn.rapidtsdb.tsdb.lifecycle.Runner;
 import cn.rapidtsdb.tsdb.server.config.ServerConfig;
 import cn.rapidtsdb.tsdb.server.config.ServerProtocol;
 import cn.rapidtsdb.tsdb.server.handler.console.TSDBChannelInitializer;
+import cn.rapidtsdb.tsdb.server.utils.ServerUtils;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelOption;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import lombok.extern.log4j.Log4j2;
@@ -36,6 +36,7 @@ public class ProtocolServerInstance implements Initializer, Runner, Closer {
 
     @Override
     public void close() {
+        log.info("{} shutdown", serverConfig.getProtocol());
         if (serverChannelFuture != null) {
             try {
                 serverChannelFuture.channel().closeFuture().sync();
@@ -60,9 +61,10 @@ public class ProtocolServerInstance implements Initializer, Runner, Closer {
         workerGroup = new NioEventLoopGroup(10);
         serverBootstrap.group(bossGroup, workerGroup)
                 .channel(NioServerSocketChannel.class)
-                .childHandler(new TSDBChannelInitializer())
-                .option(ChannelOption.SO_BACKLOG, 128)
-                .childOption(ChannelOption.SO_KEEPALIVE, true);
+                .childHandler(new TSDBChannelInitializer());
+        ServerUtils.configServerTcp(serverConfig.getProtocol().name(),
+                serverBootstrap, serverConfig.getTcp());
+
     }
 
     @Override
@@ -73,7 +75,7 @@ public class ProtocolServerInstance implements Initializer, Runner, Closer {
         serverChannelFuture.addListener((ChannelFutureListener) future -> {
                     if (future.isDone() && future.isSuccess()) {
                         AppInfo.setApplicationState(AppInfo.ApplicationState.RUNNING);
-                        log.info("{} Server listening: {}",serverConfig.getProtocol(), port);
+                        log.info("{} Server listening: {}", serverConfig.getProtocol(), port);
                     } else if (future.isCancelled()) {
                         log.error("Server Launch Cancelled");
                     } else if (!future.isSuccess()) {

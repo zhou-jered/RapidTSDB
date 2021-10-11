@@ -1,4 +1,4 @@
-package cn.rapidtsdb.tsdb.server.handler;
+package cn.rapidtsdb.tsdb.server.handler.console;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;

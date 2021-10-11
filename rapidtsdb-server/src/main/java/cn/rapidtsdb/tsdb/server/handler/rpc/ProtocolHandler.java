@@ -1,4 +1,4 @@
-package cn.rapidtsdb.tsdb.server.handler;
+package cn.rapidtsdb.tsdb.server.handler.rpc;
 
 import cn.rapidtsdb.tsdb.app.AppInfo;
 import cn.rapidtsdb.tsdb.server.handler.console.ConsoleHandler;
