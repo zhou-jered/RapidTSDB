@@ -11,7 +11,7 @@ public class ClientTEst {
                 .serverBootstrap("127.0.0.1:80")
                 .build();
         DefaultTSDBClient defaultTSDBClient = new DefaultTSDBClient(config);
-        defaultTSDBClient.connect(true, 1200);
+        defaultTSDBClient.connect(true);
         System.out.println("done");
         try {
             Thread.sleep(100000);

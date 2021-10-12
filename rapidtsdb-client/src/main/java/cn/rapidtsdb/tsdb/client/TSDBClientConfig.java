@@ -24,6 +24,9 @@ public class TSDBClientConfig {
     @Getter
     private int clientThreads = 2;
 
+    @Getter
+    private boolean autoReconnect = true;
+
     private void validateConfig() {
         if (StringUtils.isEmpty(serverBootstrap)) {
             throw new RuntimeException("Config Error, No ServerBootstrap config");

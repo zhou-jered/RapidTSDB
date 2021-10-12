@@ -2,8 +2,12 @@ package cn.rapidtsdb.tsdb.client;
 
 import cn.rapidtsdb.tsdb.client.event.TSDBUserEventListener;
 import cn.rapidtsdb.tsdb.client.handler.ClientChannelInitializer;
+import cn.rapidtsdb.tsdb.model.proto.ConnectionInitia;
+import cn.rapidtsdb.tsdb.model.proto.ConnectionInitia.ProtoAuthResp;
+import cn.rapidtsdb.tsdb.protocol.RpcResponseCode;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -19,21 +23,29 @@ import java.util.Map;
 class DefaultTSDBClient implements TSDBClient {
 
     TSDBClientConfig config;
+    TSDBClientSession clientSession;
+
+    private final static boolean DEFAULT_KEEP_ALIVE = true;
 
     public DefaultTSDBClient(TSDBClientConfig config) {
         this.config = config;
     }
 
-    @Override
-    public void connect(boolean keepAlive, long keepAliveTimeMills) {
+
+    public void connect() {
+        connect(DEFAULT_KEEP_ALIVE);
+    }
+
+
+    public void connect(boolean keepAlive) {
         EventLoopGroup worker = new NioEventLoopGroup(config.getClientThreads());
         Bootstrap bootstrap = new Bootstrap().group(worker);
         bootstrap.channel(NioSocketChannel.class)
-                .handler(new ClientChannelInitializer(config))
+                .handler(new ClientChannelInitializer(clientSession))
                 .option(ChannelOption.SO_KEEPALIVE, keepAlive)
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 3000)
                 .option(ChannelOption.TCP_NODELAY, true);
-        bootstrap.connect(fromBootstarp(config.getServerBootstrap()))
+        ChannelFuture channelFuture = bootstrap.connect(fromBootstarp(config.getServerBootstrap()))
                 .addListener(ch -> {
                     if (ch.isSuccess()) {
                         log.info("connect {} success", config.getServerBootstrap());
@@ -41,13 +53,33 @@ class DefaultTSDBClient implements TSDBClient {
                         log.error("Connect {} failed:{}", config.getServerBootstrap(), ch.cause().getMessage());
                     }
                 });
+        channelFuture.syncUninterruptibly();
+        if (channelFuture.isSuccess()) {
+            Channel channel = channelFuture.channel();
+            clientSession = new TSDBClientSession(channel);
+        } else {
+            Throwable cause = channelFuture.cause();
+            if (cause != null) {
+                throw new RuntimeException(cause);
+            } else {
+                throw new RuntimeException("Connect " + config.getServerBootstrap() + " Failed");
+            }
+        }
+
+
         log.info("TSDBClient START");
     }
 
 
-    @Override
-    public void auth(Map<String, String> authParams) {
-        
+    public void auth() {
+        ConnectionInitia.ProtoAuthMessage authMessage = ConnectionInitia.ProtoAuthMessage.newBuilder()
+                .setAuthType(config.getAuthType())
+                .setToken(String.valueOf(config.getAuthCredentials()))
+                .build();
+        ProtoAuthResp authResp = clientSession.auth(authMessage);
+        if (authResp.getAuthCode() == RpcResponseCode.SUCCESS) {
+            clientSession.
+        }
     }
 
     @Override
@@ -134,10 +166,5 @@ class DefaultTSDBClient implements TSDBClient {
         return inetSocketAddress;
     }
 
-    private static class ClientSession {
-        Channel channel;
-        void write() {
 
-        }
-    }
 }

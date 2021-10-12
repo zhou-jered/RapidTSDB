@@ -15,6 +15,12 @@ message ProtoAuthMessage {
     repeated AuthParams authParams = 5;
 }
 
+message ProtoAuthResp {
+    int64 authCode = 1;
+    string msg = 2;
+    repeated string permissions = 3;
+}
+
 message ProtoConnectConfigMessage {
     int64 protocolVersion = 2;
     bool connectionKeepAlive = 3;
