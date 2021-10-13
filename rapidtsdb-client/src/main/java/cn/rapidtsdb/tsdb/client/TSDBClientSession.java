@@ -21,7 +21,7 @@ public class TSDBClientSession {
 
 
     public ProtoAuthResp auth(ProtoAuthMessage authMessage) {
-
+        return null;
     }
 
     public void close() {

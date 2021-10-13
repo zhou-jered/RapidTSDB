@@ -1,0 +1,8 @@
+syntax = "proto3";
+package cn.rapidtsdb.tsdb.model.proto;
+
+
+message ProtoConnectionConfig {
+    string protocolVersion = 1;
+    string clientInfo = 2;
+}

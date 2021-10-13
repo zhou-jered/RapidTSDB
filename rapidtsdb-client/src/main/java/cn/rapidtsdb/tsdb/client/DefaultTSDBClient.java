@@ -78,7 +78,7 @@ class DefaultTSDBClient implements TSDBClient {
                 .build();
         ProtoAuthResp authResp = clientSession.auth(authMessage);
         if (authResp.getAuthCode() == RpcResponseCode.SUCCESS) {
-            clientSession.
+            
         }
     }
 
