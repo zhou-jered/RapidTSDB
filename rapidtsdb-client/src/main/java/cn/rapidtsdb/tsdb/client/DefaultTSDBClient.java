@@ -2,9 +2,6 @@ package cn.rapidtsdb.tsdb.client;
 
 import cn.rapidtsdb.tsdb.client.event.TSDBUserEventListener;
 import cn.rapidtsdb.tsdb.client.handler.ClientChannelInitializer;
-import cn.rapidtsdb.tsdb.model.proto.ConnectionInitia;
-import cn.rapidtsdb.tsdb.model.proto.ConnectionInitia.ProtoAuthResp;
-import cn.rapidtsdb.tsdb.protocol.RpcResponseCode;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -72,14 +69,7 @@ class DefaultTSDBClient implements TSDBClient {
 
 
     public void auth() {
-        ConnectionInitia.ProtoAuthMessage authMessage = ConnectionInitia.ProtoAuthMessage.newBuilder()
-                .setAuthType(config.getAuthType())
-                .setToken(String.valueOf(config.getAuthCredentials()))
-                .build();
-        ProtoAuthResp authResp = clientSession.auth(authMessage);
-        if (authResp.getAuthCode() == RpcResponseCode.SUCCESS) {
-            
-        }
+
     }
 
     @Override

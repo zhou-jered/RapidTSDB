@@ -1,7 +1,6 @@
 package cn.rapidtsdb.tsdb.client;
 
-import cn.rapidtsdb.tsdb.model.proto.ConnectionInitia.ProtoAuthMessage;
-import cn.rapidtsdb.tsdb.model.proto.ConnectionInitia.ProtoAuthResp;
+import cn.rapidtsdb.tsdb.model.proto.ConnectionAuth;
 import io.netty.channel.Channel;
 
 import java.util.concurrent.atomic.AtomicReference;
@@ -20,7 +19,7 @@ public class TSDBClientSession {
     }
 
 
-    public ProtoAuthResp auth(ProtoAuthMessage authMessage) {
+    public ConnectionAuth.ProtoAuthResp auth(ConnectionAuth.ProtoAuthMessage authMessage) {
         return null;
     }
 
