@@ -9,5 +9,6 @@ public class V1ProcotolInitializer extends ChannelInitializer<NioSocketChannel> 
         ch.pipeline().addLast(new ProtocolDecodeHandler(),
                 new AuthHandler(),
                 new CommandDispatcherHandler());
+
     }
 }

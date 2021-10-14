@@ -21,11 +21,7 @@ public class ServerUtils {
             log.debug("config server {}, linger: {}", server, linger);
             serverBootstrap.childOption(ChannelOption.SO_LINGER, tcpConfig.getLinger());
         }
-        if (tcpConfig.getTimeout() != null) {
-            int timeout = tcpConfig.getTimeout();
-            log.debug("config server {}, timeout: {}", server, timeout);
-            serverBootstrap.childOption(ChannelOption.SO_TIMEOUT, timeout);
-        }
+        
         if (tcpConfig.getRcvBuf() != null) {
             int rcvBuf = tcpConfig.getRcvBuf();
             log.debug("config server {}, rcvBuf: {}", server, rcvBuf);
@@ -40,7 +36,7 @@ public class ServerUtils {
         if (tcpConfig.getNoDelay() != null) {
             boolean noDelay = tcpConfig.getNoDelay();
             log.debug("config server {}, nodelay: {}", server, noDelay);
-            serverBootstrap.option(ChannelOption.TCP_NODELAY, noDelay);
+            serverBootstrap.childOption(ChannelOption.TCP_NODELAY, noDelay);
         }
         if (tcpConfig.getKeepAlive() != null) {
             boolean keepAlive = tcpConfig.getKeepAlive();
