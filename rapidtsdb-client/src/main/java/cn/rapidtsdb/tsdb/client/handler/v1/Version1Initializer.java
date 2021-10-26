@@ -3,7 +3,7 @@ package cn.rapidtsdb.tsdb.client.handler.v1;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 
-public class RpcClientHandler extends ChannelInboundHandlerAdapter {
+public class Version1Initializer extends ChannelInboundHandlerAdapter {
 
 
 

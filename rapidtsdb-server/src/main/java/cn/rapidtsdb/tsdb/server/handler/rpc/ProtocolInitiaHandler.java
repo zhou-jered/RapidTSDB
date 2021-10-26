@@ -27,9 +27,6 @@ public class ProtocolInitiaHandler extends ReplayingDecoder<InitState> {
         InitState state = state();
         switch (state) {
             case magic_number:
-                if (in.readableBytes() < 4) {
-                    return;
-                }
                 int clientMagic = in.readInt();
                 if (clientMagic == RpcConstants.MAGIC_NUMBER) {
                     checkpoint(InitState.version);
@@ -43,17 +40,14 @@ public class ProtocolInitiaHandler extends ReplayingDecoder<InitState> {
                 }
                 break;
             case version:
-                if (in.readableBytes() < 4) {
-                    return;
-                }
                 int clientVersion = in.readInt();
                 if (clientVersion >= AppConfig.getMinimumVersion() && clientVersion <= AppConfig.getCurrentVersion()) {
                     ctx.writeAndFlush("ok");
-                    ctx.writeAndFlush((short) 1);
+                    ctx.writeAndFlush(1);
                     launchVersion(clientVersion, ctx.pipeline());
                 } else {
                     checkpoint(InitState.error);
-                    ctx.writeAndFlush("UnSupprted Version");
+                    ctx.writeAndFlush("UnSupported Version");
                     ctx.close();
                 }
                 break;

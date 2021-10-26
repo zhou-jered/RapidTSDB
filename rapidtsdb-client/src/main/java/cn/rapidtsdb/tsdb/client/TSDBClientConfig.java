@@ -14,7 +14,7 @@ public class TSDBClientConfig {
     @Getter
     private String serverBootstrap;
     @Getter
-    private String protocolVersion = "1";
+    private int protocolVersion = 1;
     @Getter
     private String authType = AUTH_TYPE_NONE;
     @Getter
@@ -31,8 +31,9 @@ public class TSDBClientConfig {
         if (StringUtils.isEmpty(serverBootstrap)) {
             throw new RuntimeException("Config Error, No ServerBootstrap config");
         }
-        if (!protocolVersion.equals("1")) {
-            log.error("Unsupported Protocol version:{}", protocolVersion);
+        if (ClientVersion.versionSupport(protocolVersion)) {
+            log.error("Unsupported Protocol version:{}, supported version are[{},{}]", protocolVersion,
+                    ClientVersion.MIN_VERSION, ClientVersion.MAX_VERSION);
             throw new RuntimeException("protocol version unsupported");
         }
         if (!authType.equals(AUTH_TYPE_NONE) && !authType.equals(AUTH_TYPE_TOKNE)) {
@@ -66,7 +67,7 @@ public class TSDBClientConfig {
             return this;
         }
 
-        public TSDBClientConfigBuilder protocolVersion(String protocolVersion) {
+        public TSDBClientConfigBuilder protocolVersion(int protocolVersion) {
             config.protocolVersion = protocolVersion;
             return this;
         }
@@ -92,7 +93,7 @@ public class TSDBClientConfig {
                     config.serverBootstrap = properties.getProperty("server.bootstrap");
                 }
                 if (properties.containsKey("protocol.version")) {
-                    config.protocolVersion = properties.getProperty("protocol.version");
+                    config.protocolVersion = Integer.parseInt(properties.getProperty("protocol.version"));
                 }
                 if (properties.containsKey("auth.type")) {
                     config.authType = properties.getProperty("auth.type");
