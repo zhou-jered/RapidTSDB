@@ -1,6 +1,10 @@
 package cn.rapidtsdb.tsdb.plugins;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.ServiceLoader;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class PluginManager {
@@ -25,7 +29,16 @@ public class PluginManager {
         }
     }
 
-    public static <T> List<T> getPlugin(Class<T> pluginClazz) {
+    public static <T> T getPlugin(Class<T> pluginClazz) {
+        final String pname = pluginClazz.getCanonicalName();
+        List<T> result = pluginRegistry.get(pname);
+        if (result != null && result.size() > 0) {
+            return result.get(0);
+        }
+        return null;
+    }
+
+    public static <T> List<T> getPlugins(Class<T> pluginClazz) {
         final String pname = pluginClazz.getCanonicalName();
         List<T> result = pluginRegistry.get(pname);
         return result;

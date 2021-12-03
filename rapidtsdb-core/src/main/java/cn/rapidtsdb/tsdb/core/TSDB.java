@@ -3,6 +3,7 @@ package cn.rapidtsdb.tsdb.core;
 import cn.rapidtsdb.tsdb.TSDBBridge;
 import cn.rapidtsdb.tsdb.calculate.CalculatorFactory;
 import cn.rapidtsdb.tsdb.calculate.DownSampler;
+import cn.rapidtsdb.tsdb.common.TimeUtils;
 import cn.rapidtsdb.tsdb.config.TSDBConfig;
 import cn.rapidtsdb.tsdb.core.persistent.AOLog;
 import cn.rapidtsdb.tsdb.core.persistent.AppendOnlyLogManager;
@@ -15,7 +16,6 @@ import cn.rapidtsdb.tsdb.obj.WriteMetricResult;
 import cn.rapidtsdb.tsdb.tasks.BlockCompressTask;
 import cn.rapidtsdb.tsdb.tasks.TwoHoursTriggerTask;
 import cn.rapidtsdb.tsdb.utils.TSDataUtils;
-import cn.rapidtsdb.tsdb.common.TimeUtils;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang.StringUtils;
 

@@ -11,4 +11,7 @@ public class RpcResponseCode {
     public static final byte UNSUPPORTED_DOWN_SAMPLER = 0x31;
     public static final byte UNSUPPORTED_AGGREGATOR = 0x32;
 
+
+    public static final byte AUTH_FAILED = 0x40;
+
 }

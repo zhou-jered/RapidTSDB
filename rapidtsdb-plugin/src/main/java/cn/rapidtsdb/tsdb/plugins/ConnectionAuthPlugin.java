@@ -5,11 +5,11 @@ import java.util.Set;
 
 public interface ConnectionAuthPlugin {
 
-    boolean hasReadPermission(Map<String, String> authParams);
+    boolean hasReadPermission(String authType, int version, Map<String, String> authParams);
 
-    boolean hasWritePermission(Map<String, String> authParams);
+    boolean hasWritePermission(String authType, int version, Map<String, String> authParams);
 
-    boolean hasAdminPermission(Map<String, String> authParams);
+    boolean hasAdminPermission(String authType, int version, Map<String, String> authParams);
 
-    Set<Permissions> getPermissions(Map<String, String> authParams);
+    Set<Permissions> getPermissions(String authType, int version, Map<String, String> authParams);
 }

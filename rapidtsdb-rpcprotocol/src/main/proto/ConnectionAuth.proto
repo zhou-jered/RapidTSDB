@@ -2,21 +2,20 @@ syntax = "proto3";
 package cn.rapidtsdb.tsdb.model.proto;
 
 message ProtoAuthParams {
-    string key = 1;
-    string value = 2;
+  string key = 1;
+  string value = 2;
 }
 
 
 message ProtoAuthMessage {
-    int64 authVersion = 1;
-    string authType = 2;
-    string token = 3;
-    string ext = 4;
-    repeated ProtoAuthParams authParams = 5;
+  int32 authVersion = 1;
+  string authType = 2;
+  string ext = 4;
+  repeated ProtoAuthParams authParams = 5;
 }
 
 message ProtoAuthResp {
-    int64 authCode = 1;
-    string msg = 2;
-    repeated string permissions = 3;
+  int64 authCode = 1;
+  string msg = 2;
+  repeated string permissions = 3;
 }

@@ -1,6 +1,7 @@
 package cn.rapidtsdb.tsdb.core;
 
 import cn.rapidtsdb.tsdb.TSDBTaskCallback;
+import cn.rapidtsdb.tsdb.common.TimeUtils;
 import cn.rapidtsdb.tsdb.config.TSDBConfig;
 import cn.rapidtsdb.tsdb.core.persistent.TSBlockPersister;
 import cn.rapidtsdb.tsdb.executors.ManagedThreadPool;
@@ -8,7 +9,6 @@ import cn.rapidtsdb.tsdb.lifecycle.Closer;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
 import cn.rapidtsdb.tsdb.tasks.ClearDirtyBlockTask;
 import cn.rapidtsdb.tsdb.utils.TSBlockUtils;
-import cn.rapidtsdb.tsdb.common.TimeUtils;
 import lombok.extern.log4j.Log4j2;
 
 import java.util.HashMap;
@@ -183,7 +183,7 @@ public class TSBlockManager extends AbstractTSBlockManager implements Initialize
 
     @Override
     public void tryRecoveryMemoryData(List<Integer> metricsIdList) {
-        log.info("Start");
+        log.info("Start Recovery Data");
         long currentSeconds = TimeUtils.currentSeconds();
         long basetime = TimeUtils.getBlockBaseTime(currentSeconds);
         for (Integer mid : metricsIdList) {

@@ -70,7 +70,7 @@ public class StoreHandlerFactory {
     private static void tryUsingPlugin() {
         final String configSchema = tsdbConfig.getStoreScheme();
         String storeImplClass = tsdbConfig.getStoreHandlerImplClass();
-        List<StoreHandlerPlugin> plugins = PluginManager.getPlugin(StoreHandlerPlugin.class);
+        List<StoreHandlerPlugin> plugins = PluginManager.getPlugins(StoreHandlerPlugin.class);
         StoreHandlerPlugin schemeMatchedPlugin = null;
         if (plugins != null && plugins.size() > 0) {
             for (StoreHandlerPlugin storePlugin : plugins) {
