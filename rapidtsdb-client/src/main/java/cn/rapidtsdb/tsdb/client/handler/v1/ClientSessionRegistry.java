@@ -21,6 +21,11 @@ public class ClientSessionRegistry {
 
     private Map<String, ClientSession> channelMap = new ConcurrentHashMap<>();
 
+
+    public ClientSession getClientSession(Channel channel) {
+        return channelMap.get(getChannelId(channel));
+    }
+
     public ClientSession regist(Channel channel) {
         final String channelId = getChannelId(channel);
         ClientSession clientSession = new ClientSession(channel);

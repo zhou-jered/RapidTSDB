@@ -4,9 +4,15 @@ import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang.StringUtils;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
-import static cn.rapidtsdb.tsdb.client.TSDBClientConfigConstants.*;
+import static cn.rapidtsdb.tsdb.client.TSDBClientConfigConstants.AUTH_TYPE_NONE;
+import static cn.rapidtsdb.tsdb.client.TSDBClientConfigConstants.AUTH_TYPE_TOKNE;
+import static cn.rapidtsdb.tsdb.client.TSDBClientConfigConstants.WRITE_MODE_BATCH;
+import static cn.rapidtsdb.tsdb.client.TSDBClientConfigConstants.WRITE_MODE_PUSH;
 
 @Log4j2
 public class TSDBClientConfig {
@@ -18,7 +24,7 @@ public class TSDBClientConfig {
     @Getter
     private String authType = AUTH_TYPE_NONE;
     @Getter
-    private byte[] authCredentials = null;
+    private Map<String, String> authParams = null;
     @Getter
     private String writeMode = WRITE_MODE_BATCH;
     @Getter
@@ -31,7 +37,7 @@ public class TSDBClientConfig {
         if (StringUtils.isEmpty(serverBootstrap)) {
             throw new RuntimeException("Config Error, No ServerBootstrap config");
         }
-        if (ClientVersion.versionSupport(protocolVersion)) {
+        if (!ClientVersion.versionSupport(protocolVersion)) {
             log.error("Unsupported Protocol version:{}, supported version are[{},{}]", protocolVersion,
                     ClientVersion.MIN_VERSION, ClientVersion.MAX_VERSION);
             throw new RuntimeException("protocol version unsupported");
@@ -62,32 +68,38 @@ public class TSDBClientConfig {
             this.config = new TSDBClientConfig();
         }
 
-        public TSDBClientConfigBuilder serverBootstrap(String serverBootstrap) {
+        public TSDBClientConfigBuilder serverBootstrap(
+                String serverBootstrap) {
             config.serverBootstrap = serverBootstrap;
             return this;
         }
 
-        public TSDBClientConfigBuilder protocolVersion(int protocolVersion) {
+        public TSDBClientConfigBuilder protocolVersion(
+                int protocolVersion) {
             config.protocolVersion = protocolVersion;
             return this;
         }
 
-        public TSDBClientConfigBuilder authType(String authType) {
+        public TSDBClientConfigBuilder authType(
+                String authType) {
             config.authType = authType;
             return this;
         }
 
-        public TSDBClientConfigBuilder authCredentials(byte[] credentials) {
-            config.authCredentials = credentials;
+        public TSDBClientConfigBuilder authParams(
+                Map<String, String> authParams) {
+            config.authParams = authParams;
             return this;
         }
 
-        public TSDBClientConfigBuilder clientThreads(int clientThread) {
+        public TSDBClientConfigBuilder clientThreads(
+                int clientThread) {
             config.clientThreads = clientThread;
             return this;
         }
 
-        public TSDBClientConfigBuilder properties(Properties properties) {
+        public TSDBClientConfigBuilder properties(
+                Properties properties) {
             if (properties != null) {
                 if (properties.containsKey("server.bootstrap")) {
                     config.serverBootstrap = properties.getProperty("server.bootstrap");
@@ -98,12 +110,21 @@ public class TSDBClientConfig {
                 if (properties.containsKey("auth.type")) {
                     config.authType = properties.getProperty("auth.type");
                 }
-                if (properties.containsKey("auth.credentials")) {
-                    config.authCredentials = properties.getProperty("auth.credentials").getBytes();
-                }
                 if (properties.containsKey("client.threads")) {
                     config.clientThreads = Integer.parseInt(properties.getProperty("client.threads"));
                 }
+
+                // handle auth params
+                Set keys = properties.keySet();
+                Map<String, String> authParams = new HashMap<>();
+                keys.forEach(k -> {
+                    String sk = k.toString();
+                    if (sk.startsWith("auth.")) {
+                        authParams.put(sk.substring(5), properties.getProperty(sk));
+                    }
+                });
+                config.authParams = authParams;
+
             } else {
                 log.error("config client using NULL properties, nothing config changed");
             }

@@ -18,10 +18,6 @@ public class PrimitiveObjectWriteHandler extends ChannelOutboundHandlerAdapter {
             byteBuf = ctx.alloc().buffer(2);
             byteBuf.writeShort((Short) msg);
         }
-        if (msg instanceof Short) {
-            byteBuf = ctx.alloc().buffer(2);
-            byteBuf.writeShort((Short) msg);
-        }
         if (msg instanceof Integer) {
             byteBuf = ctx.alloc().buffer(4);
             byteBuf.writeInt((Integer) msg);

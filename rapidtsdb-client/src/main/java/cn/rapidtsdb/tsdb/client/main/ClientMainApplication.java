@@ -15,7 +15,6 @@ public class ClientMainApplication {
         TSDBClientConfig.TSDBClientConfigBuilder configBuilder = new TSDBClientConfig.TSDBClientConfigBuilder();
         TSDBClientConfig config = configBuilder.serverBootstrap("127.0.0.1:9100")
                 .authType("token")
-                .authCredentials("hellotsdb".getBytes())
                 .protocolVersion(1)
                 .build();
         ClientConfigHolder.setConfiguration(config);

@@ -2,6 +2,8 @@ package cn.rapidtsdb.tsdb.client;
 
 import cn.rapidtsdb.tsdb.client.event.TSDBUserEventListener;
 import cn.rapidtsdb.tsdb.client.handler.ClientChannelInitializer;
+import cn.rapidtsdb.tsdb.client.handler.v1.ClientSession;
+import cn.rapidtsdb.tsdb.model.proto.ConnectionAuth;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -20,7 +22,7 @@ import java.util.Map;
 class DefaultTSDBClient implements TSDBClient {
 
     TSDBClientConfig config;
-    TSDBClientSession clientSession;
+    ClientSession clientSession;
 
     private final static boolean DEFAULT_KEEP_ALIVE = true;
 
@@ -37,23 +39,18 @@ class DefaultTSDBClient implements TSDBClient {
     public void connect(boolean keepAlive) {
         EventLoopGroup worker = new NioEventLoopGroup(config.getClientThreads());
         Bootstrap bootstrap = new Bootstrap().group(worker);
-        bootstrap.channel(NioSocketChannel.class)
-                .handler(new ClientChannelInitializer(clientSession))
-                .option(ChannelOption.SO_KEEPALIVE, keepAlive)
-                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 3000)
-                .option(ChannelOption.TCP_NODELAY, true);
-        ChannelFuture channelFuture = bootstrap.connect(fromBootstarp(config.getServerBootstrap()))
-                .addListener(ch -> {
-                    if (ch.isSuccess()) {
-                        log.info("connect {} success", config.getServerBootstrap());
-                    } else {
-                        log.error("Connect {} failed:{}", config.getServerBootstrap(), ch.cause().getMessage());
-                    }
-                });
+        bootstrap.channel(NioSocketChannel.class).handler(new ClientChannelInitializer(clientSession)).option(ChannelOption.SO_KEEPALIVE, keepAlive).option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 3000).option(ChannelOption.TCP_NODELAY, true);
+        ChannelFuture channelFuture = bootstrap.connect(fromBootstarp(config.getServerBootstrap())).addListener(ch -> {
+            if (ch.isSuccess()) {
+                log.info("connect {} success", config.getServerBootstrap());
+            } else {
+                log.error("Connect {} failed:{}", config.getServerBootstrap(), ch.cause().getMessage());
+            }
+        });
         channelFuture.syncUninterruptibly();
         if (channelFuture.isSuccess()) {
             Channel channel = channelFuture.channel();
-            clientSession = new TSDBClientSession(channel);
+            clientSession = new ClientSession(channel);
         } else {
             Throwable cause = channelFuture.cause();
             if (cause != null) {
@@ -68,8 +65,8 @@ class DefaultTSDBClient implements TSDBClient {
     }
 
 
-    public void auth() {
-
+    public void auth(ConnectionAuth.ProtoAuthMessage authMessage) {
+        clientSession.auth(authMessage);
     }
 
     @Override
@@ -125,6 +122,11 @@ class DefaultTSDBClient implements TSDBClient {
     @Override
     public List<Datapoint> readMetrics(String metric, long startTimestamp, long endTimestamp, Map<String, String> tags, String aggregator) {
         return null;
+    }
+
+    @Override
+    public void close() {
+        clientSession.close();
     }
 
     @Override

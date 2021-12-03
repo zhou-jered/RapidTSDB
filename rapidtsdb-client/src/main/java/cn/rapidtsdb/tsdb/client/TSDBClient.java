@@ -31,6 +31,8 @@ public interface TSDBClient {
 
     List<Datapoint> readMetrics(String metric, long startTimestamp, long endTimestamp, Map<String, String> tags, String downsampler, String aggregator);
 
+    void close();
+
     void addEventListener(TSDBUserEventListener listener);
 
     List<TSDBUserEventListener> getEventListener();

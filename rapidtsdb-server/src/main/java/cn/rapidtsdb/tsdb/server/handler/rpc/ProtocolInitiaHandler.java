@@ -23,11 +23,17 @@ public class ProtocolInitiaHandler extends ReplayingDecoder<InitState> {
     }
 
     @Override
+    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        log.debug("new connection:{}", ctx.channel().remoteAddress());
+    }
+
+    @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
         InitState state = state();
         switch (state) {
             case magic_number:
                 int clientMagic = in.readInt();
+                log.debug("read client magic:{}", clientMagic);
                 if (clientMagic == RpcConstants.MAGIC_NUMBER) {
                     checkpoint(InitState.version);
                 } else {
@@ -41,6 +47,7 @@ public class ProtocolInitiaHandler extends ReplayingDecoder<InitState> {
                 break;
             case version:
                 int clientVersion = in.readInt();
+                log.debug("read client version:{}", clientVersion);
                 if (clientVersion >= AppConfig.getMinimumVersion() && clientVersion <= AppConfig.getCurrentVersion()) {
                     ctx.writeAndFlush("ok");
                     ctx.writeAndFlush(1);
