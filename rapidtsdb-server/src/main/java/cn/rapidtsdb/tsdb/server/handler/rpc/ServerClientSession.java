@@ -1,4 +1,4 @@
-package cn.rapidtsdb.tsdb.server.handler.rpc.v1;
+package cn.rapidtsdb.tsdb.server.handler.rpc;
 
 import cn.rapidtsdb.tsdb.plugins.Permissions;
 import io.netty.channel.Channel;
@@ -21,6 +21,9 @@ public class ServerClientSession {
     private int id;
     @Getter
     private long launchTime;
+    @Getter
+    @Setter
+    private int rpcVersion;
     @Getter
     private Channel channel;
     @Getter

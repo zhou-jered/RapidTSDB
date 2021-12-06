@@ -1,4 +1,4 @@
-package cn.rapidtsdb.tsdb.server.handler.rpc.v1;
+package cn.rapidtsdb.tsdb.server.handler.rpc.v1.in;
 
 import cn.rapidtsdb.tsdb.protocol.RpcObjectCode;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -11,8 +11,8 @@ import lombok.extern.log4j.Log4j2;
 
 import java.util.List;
 
-import static cn.rapidtsdb.tsdb.server.handler.rpc.v1.ProtocolDecodeHandler.DecodeState;
-import static cn.rapidtsdb.tsdb.server.handler.rpc.v1.ProtocolDecodeHandler.DecodeState.obj_id;
+import static cn.rapidtsdb.tsdb.server.handler.rpc.v1.in.ProtocolDecodeHandler.DecodeState;
+import static cn.rapidtsdb.tsdb.server.handler.rpc.v1.in.ProtocolDecodeHandler.DecodeState.obj_id;
 
 @Log4j2
 public class ProtocolDecodeHandler extends ReplayingDecoder<DecodeState> {
@@ -28,7 +28,7 @@ public class ProtocolDecodeHandler extends ReplayingDecoder<DecodeState> {
     @Override
     protected void decode(
             ChannelHandlerContext ctx, ByteBuf in,
-            List<Object> out) throws Exception {
+            List<Object> out) {
         DecodeState state = state();
         switch (state) {
             case obj_id:
@@ -40,6 +40,8 @@ public class ProtocolDecodeHandler extends ReplayingDecoder<DecodeState> {
                 break;
             case obj:
                 in.readBytes(objBytes);
+                Message protoObj = getProtoMsg();
+                out.add(protoObj);
         }
     }
 

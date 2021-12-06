@@ -1,4 +1,4 @@
-package cn.rapidtsdb.tsdb.server.handler.rpc.v1;
+package cn.rapidtsdb.tsdb.server.handler.rpc.v1.in;
 
 import cn.rapidtsdb.tsdb.model.proto.ConnectionAuth;
 import cn.rapidtsdb.tsdb.plugins.ConnectionAuthPlugin;
@@ -7,6 +7,7 @@ import cn.rapidtsdb.tsdb.plugins.PluginManager;
 import cn.rapidtsdb.tsdb.protocol.RpcResponseCode;
 import cn.rapidtsdb.tsdb.protocol.constants.AuthTypes;
 import cn.rapidtsdb.tsdb.server.defaults.DefaultAuthPlugins;
+import cn.rapidtsdb.tsdb.server.handler.rpc.ServerSessionRegistry;
 import cn.rapidtsdb.tsdb.utils.CollectionUtils;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -22,12 +23,14 @@ import java.util.stream.Collectors;
 public class AuthHandler extends SimpleChannelInboundHandler<ConnectionAuth.ProtoAuthMessage> {
 
     ConnectionAuthPlugin authPlugin = null;
+    ServerSessionRegistry serverSessionRegistry;
 
     public AuthHandler() {
         this.authPlugin = PluginManager.getPlugin(ConnectionAuthPlugin.class);
         if (authPlugin == null) {
             authPlugin = new DefaultAuthPlugins();
         }
+        serverSessionRegistry = ServerSessionRegistry.getRegistry();
     }
 
     @Override
@@ -35,6 +38,7 @@ public class AuthHandler extends SimpleChannelInboundHandler<ConnectionAuth.Prot
             ChannelHandlerContext channelHandlerContext,
             ConnectionAuth.ProtoAuthMessage protoAuthMessage) throws Exception {
         String authType = protoAuthMessage.getAuthType();
+        log.debug("auth handle:{}", protoAuthMessage.getAuthType() + ":" + protoAuthMessage.getAuthParamsList());
         if (AuthTypes.AUTH_TYPE_TOKEN.equals(authType)) {
             List<ConnectionAuth.ProtoAuthParams> params = protoAuthMessage.getAuthParamsList();
             Map<String, String> authParams = new HashMap<>();
@@ -52,6 +56,7 @@ public class AuthHandler extends SimpleChannelInboundHandler<ConnectionAuth.Prot
                     .addAllPermissions(enumPermissions.stream()
                             .map(v -> v.name()).collect(Collectors.toList())).build();
             channelHandlerContext.writeAndFlush(authResp);
+            serverSessionRegistry.regist(channelHandlerContext.channel(), enumPermissions);
 
         } else {
             ConnectionAuth.ProtoAuthResp protoAuthResp = ConnectionAuth.ProtoAuthResp.newBuilder().setAuthCode(RpcResponseCode.AUTH_FAILED).setMsg("unsupported auth type").build();

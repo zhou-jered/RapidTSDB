@@ -14,7 +14,11 @@ import static cn.rapidtsdb.tsdb.client.utils.ChannelUtils.getChannelId;
 @Log4j2
 public class ClientSessionRegistry {
 
-    public static final ClientSessionRegistry REGISTRY = new ClientSessionRegistry();
+    private static final ClientSessionRegistry REGISTRY = new ClientSessionRegistry();
+
+    public static ClientSessionRegistry getRegistry() {
+        return REGISTRY;
+    }
 
     public ClientSessionRegistry() {
     }

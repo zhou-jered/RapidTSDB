@@ -7,7 +7,8 @@ import lombok.extern.log4j.Log4j2;
 @Log4j2
 public class ConnectionStateHandler extends ChannelInboundHandlerAdapter {
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        super.channelRead(ctx, msg);
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        log.error("channel exception", cause);
+        ctx.close();
     }
 }

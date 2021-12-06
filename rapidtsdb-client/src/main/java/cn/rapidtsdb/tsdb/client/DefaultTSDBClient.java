@@ -39,7 +39,11 @@ class DefaultTSDBClient implements TSDBClient {
     public void connect(boolean keepAlive) {
         EventLoopGroup worker = new NioEventLoopGroup(config.getClientThreads());
         Bootstrap bootstrap = new Bootstrap().group(worker);
-        bootstrap.channel(NioSocketChannel.class).handler(new ClientChannelInitializer(clientSession)).option(ChannelOption.SO_KEEPALIVE, keepAlive).option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 3000).option(ChannelOption.TCP_NODELAY, true);
+        bootstrap.channel(NioSocketChannel.class)
+                .handler(new ClientChannelInitializer())
+                .option(ChannelOption.SO_KEEPALIVE, keepAlive)
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 3000)
+                .option(ChannelOption.TCP_NODELAY, true);
         ChannelFuture channelFuture = bootstrap.connect(fromBootstarp(config.getServerBootstrap())).addListener(ch -> {
             if (ch.isSuccess()) {
                 log.info("connect {} success", config.getServerBootstrap());
@@ -59,8 +63,6 @@ class DefaultTSDBClient implements TSDBClient {
                 throw new RuntimeException("Connect " + config.getServerBootstrap() + " Failed");
             }
         }
-
-
         log.info("TSDBClient START");
     }
 

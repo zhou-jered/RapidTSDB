@@ -1,4 +1,4 @@
-package cn.rapidtsdb.tsdb.server.handler.rpc.v1;
+package cn.rapidtsdb.tsdb.server.handler.rpc;
 
 import cn.rapidtsdb.tsdb.plugins.Permissions;
 import cn.rapidtsdb.tsdb.server.config.ServerConfig;
@@ -15,7 +15,20 @@ public class ServerSessionRegistry {
     private AtomicInteger idGenerator = new AtomicInteger(0);
     private Map<Integer, ServerClientSession> registry = new ConcurrentHashMap<>();
 
-    public ServerSessionRegistry(
+    private static ServerSessionRegistry REGISTRY = null;
+
+    public static void init(ServerConfig config) {
+        if (REGISTRY != null) {
+            throw new RuntimeException("Registry instance already inited");
+        }
+        REGISTRY = new ServerSessionRegistry(config);
+    }
+
+    public static ServerSessionRegistry getRegistry() {
+        return REGISTRY;
+    }
+
+    private ServerSessionRegistry(
             ServerConfig serverConfig) {
         this.serverConfig = serverConfig;
     }

@@ -1,9 +1,10 @@
 package cn.rapidtsdb.tsdb.server.handler.rpc;
 
 import cn.rapidtsdb.tsdb.protocol.RpcConstants;
+import cn.rapidtsdb.tsdb.protocol.RpcResponseCode;
 import cn.rapidtsdb.tsdb.server.config.AppConfig;
 import cn.rapidtsdb.tsdb.server.handler.rpc.common.PrimitiveObjectWriteHandler;
-import cn.rapidtsdb.tsdb.server.handler.rpc.v1.V1ProcotolInitializer;
+import cn.rapidtsdb.tsdb.server.handler.rpc.v1.V1ProtocolInitializer;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
@@ -33,7 +34,7 @@ public class ProtocolInitiaHandler extends ReplayingDecoder<InitState> {
         switch (state) {
             case magic_number:
                 int clientMagic = in.readInt();
-                log.debug("read client magic:{}", clientMagic);
+                log.debug("read client magic:{}", Integer.toHexString(clientMagic));
                 if (clientMagic == RpcConstants.MAGIC_NUMBER) {
                     checkpoint(InitState.version);
                 } else {
@@ -49,7 +50,7 @@ public class ProtocolInitiaHandler extends ReplayingDecoder<InitState> {
                 int clientVersion = in.readInt();
                 log.debug("read client version:{}", clientVersion);
                 if (clientVersion >= AppConfig.getMinimumVersion() && clientVersion <= AppConfig.getCurrentVersion()) {
-                    ctx.writeAndFlush("ok");
+                    ctx.writeAndFlush(RpcResponseCode.SUCCESS);
                     ctx.writeAndFlush(1);
                     launchVersion(clientVersion, ctx.pipeline());
                 } else {
@@ -72,7 +73,7 @@ public class ProtocolInitiaHandler extends ReplayingDecoder<InitState> {
     private void checkoutVersion1(ChannelPipeline pipeline) {
         log.debug("Protocol checkout Version 1");
         pipeline.remove(this);
-        pipeline.addLast(new V1ProcotolInitializer());
+        pipeline.addLast(new V1ProtocolInitializer());
     }
 
     enum InitState {
