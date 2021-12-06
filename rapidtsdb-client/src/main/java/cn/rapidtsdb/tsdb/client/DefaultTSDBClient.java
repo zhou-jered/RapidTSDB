@@ -4,6 +4,7 @@ import cn.rapidtsdb.tsdb.client.event.TSDBUserEventListener;
 import cn.rapidtsdb.tsdb.client.handler.ClientChannelInitializer;
 import cn.rapidtsdb.tsdb.client.handler.v1.ClientSession;
 import cn.rapidtsdb.tsdb.model.proto.ConnectionAuth;
+import cn.rapidtsdb.tsdb.model.proto.TSDataMessage;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -72,43 +73,49 @@ class DefaultTSDBClient implements TSDBClient {
     }
 
     @Override
-    public void writeMetric(String metric, long timestamp, double value) {
+    public WriteMetricResult writeMetric(String metric, long timestamp, double value) {
 
     }
 
     @Override
-    public void writeMetric(String metric, Datapoint dp) {
+    public WriteMetricResult writeMetric(String metric, Datapoint dp) {
 
     }
 
     @Override
-    public void writeMetric(String metric, double value) {
-
+    public WriteMetricResult writeMetric(String metric, double value) {
+        TSDataMessage.ProtoSimpleDatapoint sdp = TSDataMessage.ProtoSimpleDatapoint.newBuilder()
+                .setMetric(metric)
+                .setTimestamp(TSTimer.getCachedTimer().getCurrentMills())
+                .setVal(value)
+                .build();
+        clientSession.send(sdp);
+        return null;
     }
 
     @Override
-    public void writeMetrics(String metric, List<Datapoint> dps) {
-
+    public WriteMetricResult writeMetrics(String metric, List<Datapoint> dps) {
+        return null;
     }
 
     @Override
-    public void writeMetric(String metric, long timestamp, double value, Map<String, String> tags) {
-
+    public WriteMetricResult writeMetric(String metric, long timestamp, double value, Map<String, String> tags) {
+        return null;
     }
 
     @Override
-    public void writeMetric(String metric, Datapoint dp, Map<String, String> tags) {
-
+    public WriteMetricResult writeMetric(String metric, Datapoint dp, Map<String, String> tags) {
+        return null;
     }
 
     @Override
-    public void writeMetric(String metric, double value, Map<String, String> tags) {
-
+    public WriteMetricResult writeMetric(String metric, double value, Map<String, String> tags) {
+        return null;
     }
 
     @Override
-    public void writeMetrics(String metric, List<Datapoint> dps, Map<String, String> tags) {
-
+    public WriteMetricResult writeMetrics(String metric, List<Datapoint> dps, Map<String, String> tags) {
+        return null;
     }
 
     @Override

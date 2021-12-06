@@ -59,7 +59,7 @@ public class ClientSessionRegistry {
 
             for (String channelId : channelMap.keySet()) {
                 ClientSession session = channelMap.get(channelId);
-                boolean valid = session.valid();
+                boolean valid = session.checkChannelState();
                 if (!valid) {
                     invalidChannelIdSet.add(channelId);
                 }
