@@ -3,14 +3,15 @@ package cn.rapidtsdb.tsdb.server.handler.rpc;
 import cn.rapidtsdb.tsdb.protocol.RpcConstants;
 import cn.rapidtsdb.tsdb.protocol.RpcResponseCode;
 import cn.rapidtsdb.tsdb.server.config.AppConfig;
-import cn.rapidtsdb.tsdb.server.handler.rpc.common.PrimitiveObjectWriteHandler;
 import cn.rapidtsdb.tsdb.server.handler.rpc.v1.V1ProtocolInitializer;
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.ReplayingDecoder;
 import lombok.extern.log4j.Log4j2;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import static cn.rapidtsdb.tsdb.server.handler.rpc.ProtocolInitiaHandler.InitState;
@@ -21,6 +22,11 @@ public class ProtocolInitiaHandler extends ReplayingDecoder<InitState> {
 
     public ProtocolInitiaHandler() {
         checkpoint(InitState.magic_number);
+    }
+
+    @Override
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        log.debug("{} add to {}", getClass().getSimpleName(), ctx.channel().id().asShortText());
     }
 
     @Override
@@ -40,8 +46,10 @@ public class ProtocolInitiaHandler extends ReplayingDecoder<InitState> {
                 } else {
                     checkpoint(InitState.error);
                     if (AppConfig.isDebug()) {
-                        ctx.pipeline().addLast(new PrimitiveObjectWriteHandler());
-                        ctx.writeAndFlush("magic number error, " + clientMagic);
+                        String errMsg = "magic number error, " + clientMagic;
+                        ByteBuf byteBuf = ctx.alloc().buffer(errMsg.length());
+                        byteBuf.writeBytes(errMsg.getBytes(StandardCharsets.UTF_8));
+                        ctx.writeAndFlush(byteBuf);
                     }
                     ctx.close();
                 }
@@ -50,9 +58,20 @@ public class ProtocolInitiaHandler extends ReplayingDecoder<InitState> {
                 int clientVersion = in.readInt();
                 log.debug("read client version:{}", clientVersion);
                 if (clientVersion >= AppConfig.getMinimumVersion() && clientVersion <= AppConfig.getCurrentVersion()) {
-                    ctx.writeAndFlush(RpcResponseCode.SUCCESS);
-                    ctx.writeAndFlush(1);
                     launchVersion(clientVersion, ctx.pipeline());
+                    ByteBuf versionRespBuf = ctx.alloc().buffer(8);
+                    versionRespBuf.writeInt(RpcResponseCode.SUCCESS);
+                    versionRespBuf.writeInt(clientVersion);
+                    ChannelFuture cf = ctx.writeAndFlush(versionRespBuf);
+                    cf.addListener((f) -> {
+                        if (f.isSuccess()) {
+                            log.debug("remove ");
+                            ctx.pipeline().remove(this);
+                        } else {
+                            log.error("send version resp failed,", f.cause());
+                        }
+                    });
+
                 } else {
                     checkpoint(InitState.error);
                     ctx.writeAndFlush("UnSupported Version");
@@ -72,7 +91,6 @@ public class ProtocolInitiaHandler extends ReplayingDecoder<InitState> {
 
     private void checkoutVersion1(ChannelPipeline pipeline) {
         log.debug("Protocol checkout Version 1");
-        pipeline.remove(this);
         pipeline.addLast(new V1ProtocolInitializer());
     }
 

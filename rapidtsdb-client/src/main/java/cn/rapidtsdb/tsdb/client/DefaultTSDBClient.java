@@ -3,10 +3,10 @@ package cn.rapidtsdb.tsdb.client;
 import cn.rapidtsdb.tsdb.client.event.TSDBUserEventListener;
 import cn.rapidtsdb.tsdb.client.handler.ClientChannelInitializer;
 import cn.rapidtsdb.tsdb.client.handler.v1.ClientSession;
+import cn.rapidtsdb.tsdb.client.handler.v1.ClientSessionRegistry;
 import cn.rapidtsdb.tsdb.model.proto.ConnectionAuth;
 import cn.rapidtsdb.tsdb.model.proto.TSDataMessage;
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
@@ -52,11 +52,11 @@ class DefaultTSDBClient implements TSDBClient {
                 log.error("Connect {} failed:{}", config.getServerBootstrap(), ch.cause().getMessage());
             }
         });
+        clientSession = ClientSessionRegistry.getRegistry().regist(channelFuture.channel());
+
         channelFuture.syncUninterruptibly();
-        if (channelFuture.isSuccess()) {
-            Channel channel = channelFuture.channel();
-            clientSession = new ClientSession(channel);
-        } else {
+        if (!channelFuture.isSuccess()) {
+            ClientSessionRegistry.getRegistry().deregist(channelFuture.channel());
             Throwable cause = channelFuture.cause();
             if (cause != null) {
                 throw new RuntimeException(cause);
@@ -74,12 +74,12 @@ class DefaultTSDBClient implements TSDBClient {
 
     @Override
     public WriteMetricResult writeMetric(String metric, long timestamp, double value) {
-
+        return null;
     }
 
     @Override
     public WriteMetricResult writeMetric(String metric, Datapoint dp) {
-
+        return null;
     }
 
     @Override
@@ -89,7 +89,14 @@ class DefaultTSDBClient implements TSDBClient {
                 .setTimestamp(TSTimer.getCachedTimer().getCurrentMills())
                 .setVal(value)
                 .build();
-        clientSession.send(sdp);
+        ChannelFuture cf = clientSession.send(sdp);
+        cf.addListener(f -> {
+            log.info("send metrics :{}", f.isSuccess());
+            if (!f.isSuccess()) {
+                log.error(f.cause());
+                f.cause().printStackTrace();
+            }
+        });
         return null;
     }
 

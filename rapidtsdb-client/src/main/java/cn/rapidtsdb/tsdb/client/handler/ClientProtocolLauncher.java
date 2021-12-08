@@ -1,5 +1,6 @@
 package cn.rapidtsdb.tsdb.client.handler;
 
+import cn.rapidtsdb.tsdb.client.handler.v1.in.AuthResponseHandler;
 import cn.rapidtsdb.tsdb.client.handler.v1.in.ConnectionStateHandler;
 import cn.rapidtsdb.tsdb.client.handler.v1.in.ProtoMsgReaderHandler;
 import cn.rapidtsdb.tsdb.client.handler.v1.out.NumberWriterHandler;
@@ -27,8 +28,11 @@ public class ClientProtocolLauncher {
         log.info("Client Version Code 1");
         pipeline.addLast(
                 new ConnectionStateHandler(),
-                new ProtoMsgReaderHandler()); // in
-        pipeline.addLast(new ProtoMsgWriterHandler(),
-                new NumberWriterHandler());
+                new ProtoMsgReaderHandler(),
+                new AuthResponseHandler()
+        ); // in
+        pipeline.addLast(new NumberWriterHandler(),
+                new ProtoMsgWriterHandler()
+        );
     }
 }

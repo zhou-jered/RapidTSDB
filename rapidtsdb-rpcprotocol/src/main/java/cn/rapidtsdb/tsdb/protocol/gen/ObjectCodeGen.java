@@ -10,10 +10,12 @@ public class ObjectCodeGen {
             ConnectionInit.ProtoConnectionConfig.class,
             TSDataMessage.ProtoTSTag.class,
             TSDataMessage.ProtoDatapoint.class,
+            TSDataMessage.ProtoSimpleDatapoint.class,
             TSDataMessage.ProtoDatapoints.class,
             TSDBResponse.ProtoDataResponse.class,
             TSDBResponse.ProtoCommonResponse.class,
             TSQueryMessage.ProtoTSQuery.class
+
     };
 
     public static void main(String[] args) {
@@ -28,7 +30,7 @@ public class ObjectCodeGen {
 
         String mapEntryTemplate = "protoObjectCodeMap.put(\"%s\", %s);";
         for (int i = 0; i < protoClasses.length; i++) {
-            String classNameKey = protoClasses[i].getCanonicalName();
+            String classNameKey = protoClasses[i].getName();
             String mapDef = String.format(mapEntryTemplate, classNameKey, i + 1);
             System.out.println(mapDef);
         }

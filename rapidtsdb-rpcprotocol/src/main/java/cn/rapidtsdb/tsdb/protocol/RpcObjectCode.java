@@ -14,26 +14,28 @@ public class RpcObjectCode {
     public static final int ProtoConnectionConfig = 4;
     public static final int ProtoTSTag = 5;
     public static final int ProtoDatapoint = 6;
-    public static final int ProtoDatapoints = 7;
-    public static final int ProtoDataResponse = 8;
-    public static final int ProtoCommonResponse = 9;
-    public static final int ProtoTSQuery = 10;
+    public static final int ProtoSimpleDatapoint = 7;
+    public static final int ProtoDatapoints = 8;
+    public static final int ProtoDataResponse = 9;
+    public static final int ProtoCommonResponse = 10;
+    public static final int ProtoTSQuery = 11;
 
 
     private static Map<String, Integer> protoObjectCodeMap = new ConcurrentHashMap<>(128);
     private static Map<Integer, Parser> protoParserMap = new ConcurrentHashMap<>();
 
     static {
-        protoObjectCodeMap.put("cn.rapidtsdb.tsdb.model.proto.ConnectionAuth.ProtoAuthParams", 1);
-        protoObjectCodeMap.put("cn.rapidtsdb.tsdb.model.proto.ConnectionAuth.ProtoAuthMessage", 2);
-        protoObjectCodeMap.put("cn.rapidtsdb.tsdb.model.proto.ConnectionAuth.ProtoAuthResp", 3);
-        protoObjectCodeMap.put("cn.rapidtsdb.tsdb.model.proto.ConnectionInit.ProtoConnectionConfig", 4);
-        protoObjectCodeMap.put("cn.rapidtsdb.tsdb.model.proto.TSDataMessage.ProtoTSTag", 5);
-        protoObjectCodeMap.put("cn.rapidtsdb.tsdb.model.proto.TSDataMessage.ProtoDatapoint", 6);
-        protoObjectCodeMap.put("cn.rapidtsdb.tsdb.model.proto.TSDataMessage.ProtoDatapoints", 7);
-        protoObjectCodeMap.put("cn.rapidtsdb.tsdb.model.proto.TSDBResponse.ProtoDataResponse", 8);
-        protoObjectCodeMap.put("cn.rapidtsdb.tsdb.model.proto.TSDBResponse.ProtoCommonResponse", 9);
-        protoObjectCodeMap.put("cn.rapidtsdb.tsdb.model.proto.TSQueryMessage.ProtoTSQuery", 10);
+        protoObjectCodeMap.put("cn.rapidtsdb.tsdb.model.proto.ConnectionAuth$ProtoAuthParams", 1);
+        protoObjectCodeMap.put("cn.rapidtsdb.tsdb.model.proto.ConnectionAuth$ProtoAuthMessage", 2);
+        protoObjectCodeMap.put("cn.rapidtsdb.tsdb.model.proto.ConnectionAuth$ProtoAuthResp", 3);
+        protoObjectCodeMap.put("cn.rapidtsdb.tsdb.model.proto.ConnectionInit$ProtoConnectionConfig", 4);
+        protoObjectCodeMap.put("cn.rapidtsdb.tsdb.model.proto.TSDataMessage$ProtoTSTag", 5);
+        protoObjectCodeMap.put("cn.rapidtsdb.tsdb.model.proto.TSDataMessage$ProtoDatapoint", 6);
+        protoObjectCodeMap.put("cn.rapidtsdb.tsdb.model.proto.TSDataMessage$ProtoSimpleDatapoint", 7);
+        protoObjectCodeMap.put("cn.rapidtsdb.tsdb.model.proto.TSDataMessage$ProtoDatapoints", 8);
+        protoObjectCodeMap.put("cn.rapidtsdb.tsdb.model.proto.TSDBResponse$ProtoDataResponse", 9);
+        protoObjectCodeMap.put("cn.rapidtsdb.tsdb.model.proto.TSDBResponse$ProtoCommonResponse", 10);
+        protoObjectCodeMap.put("cn.rapidtsdb.tsdb.model.proto.TSQueryMessage$ProtoTSQuery", 11);
 
         for (String clsName : protoObjectCodeMap.keySet()) {
             Integer code = protoObjectCodeMap.get(clsName);
@@ -56,7 +58,7 @@ public class RpcObjectCode {
 
 
     public static final short getObjectCode(Class protoClass) {
-        return getObjectCode(protoClass.getCanonicalName());
+        return getObjectCode(protoClass.getName());
     }
 
     public static final short getObjectCode(String classCanonicalName) {

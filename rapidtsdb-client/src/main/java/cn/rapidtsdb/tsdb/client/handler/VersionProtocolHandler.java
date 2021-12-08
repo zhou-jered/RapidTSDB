@@ -1,5 +1,8 @@
 package cn.rapidtsdb.tsdb.client.handler;
 
+import cn.rapidtsdb.tsdb.client.handler.v1.ClientSession;
+import cn.rapidtsdb.tsdb.client.handler.v1.ClientSessionRegistry;
+import cn.rapidtsdb.tsdb.client.utils.ChannelUtils;
 import cn.rapidtsdb.tsdb.protocol.RpcConstants;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -31,10 +34,16 @@ import java.util.List;
 @Log4j2
 public class VersionProtocolHandler extends ReplayingDecoder<VersionProtocolHandler.VersionStata> {
 
+    private ClientSessionRegistry sessionRegistry;
+
+    public VersionProtocolHandler() {
+        sessionRegistry = ClientSessionRegistry.getRegistry();
+    }
+
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         checkpoint(VersionStata.resp_code);
-        log.info("init protocol");
+        log.info("init protocol {}", ChannelUtils.getChannelId(ctx.channel()));
         ByteBuf byteBuf = ctx.alloc().buffer(8);
         byteBuf.writeInt(RpcConstants.MAGIC_NUMBER);
         byteBuf.writeInt(RpcConstants.PROTOCOL_VERSION);
@@ -44,6 +53,7 @@ public class VersionProtocolHandler extends ReplayingDecoder<VersionProtocolHand
     @Override
     protected void decode(ChannelHandlerContext channelHandlerContext, ByteBuf byteBuf, List<Object> list) throws Exception {
         VersionStata vs = state();
+        log.debug("decoding...{}", vs);
         switch (vs) {
             case resp_code:
                 int respCode = byteBuf.readInt();
@@ -56,35 +66,17 @@ public class VersionProtocolHandler extends ReplayingDecoder<VersionProtocolHand
                 break;
             case version:
                 int version = byteBuf.readInt();
-                channelHandlerContext.pipeline().remove(this);
                 ClientProtocolLauncher.launchProtocol(channelHandlerContext.pipeline(), version);
+                channelHandlerContext.pipeline().remove(this);
+                ClientSession currentSession = sessionRegistry.getClientSession(channelHandlerContext.channel());
+                currentSession.versionNegotiatedCompleted();
                 break;
             default:
                 ;
-
-
         }
 
     }
 
-
-    protected void channelRead0(ChannelHandlerContext channelHandlerContext, ByteBuf byteBuf) throws Exception {
-        if (byteBuf.readableBytes() < 8) {
-            log.error("too slow network");
-        }
-        byte[] okBytes = new byte[2];
-        byteBuf.readBytes(okBytes);
-        if (okBytes[0] == 'o' && okBytes[1] == 'k') {
-            int serverVersion = byteBuf.readInt();
-            ClientProtocolLauncher.launchProtocol(channelHandlerContext.pipeline(), serverVersion);
-        } else {
-            byteBuf.resetReaderIndex();
-            byte[] mb = new byte[byteBuf.readableBytes()];
-            byteBuf.readBytes(mb);
-            log.error(new String(mb));
-            channelHandlerContext.close();
-        }
-    }
 
     protected enum VersionStata {
         resp_code,
