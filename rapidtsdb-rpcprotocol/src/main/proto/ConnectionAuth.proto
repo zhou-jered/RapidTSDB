@@ -17,5 +17,5 @@ message ProtoAuthMessage {
 message ProtoAuthResp {
   int64 authCode = 1;
   string msg = 2;
-  repeated string permissions = 3;
+  int32 permissions = 3;
 }

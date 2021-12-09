@@ -1,6 +1,6 @@
 package cn.rapidtsdb.tsdb.server.handler.rpc;
 
-import cn.rapidtsdb.tsdb.plugins.Permissions;
+import cn.rapidtsdb.tsdb.protocol.OperationPermissionMasks;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.util.concurrent.GenericFutureListener;
@@ -8,9 +8,6 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
-import java.util.HashSet;
-import java.util.Set;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -27,14 +24,12 @@ public class ServerClientSession {
     @Getter
     private Channel channel;
     @Getter
-    private Set<Permissions> permissions = new HashSet<>();
+    private int permissions;
 
     public ServerClientSession(Channel channel,
-                               Set<Permissions> permissions) {
+                               int permissions) {
         this.channel = channel;
-        if (permissions != null) {
-            this.permissions = permissions;
-        }
+        this.permissions = permissions;
         launchTime = System.currentTimeMillis();
     }
 
@@ -50,23 +45,19 @@ public class ServerClientSession {
     }
 
     public void close() {
+        channel.disconnect();
         channel.close();
     }
 
-    public boolean hadPermission(
-            Permissions permission) {
-        return permissions.contains(permission);
-    }
-
     public boolean hadReadPermission() {
-        return hadPermission(Permissions.READ);
+        return OperationPermissionMasks.hadReadPermission(permissions);
     }
 
     public boolean hadWritePermission() {
-        return hadPermission(Permissions.WRITE);
+        return OperationPermissionMasks.hadWritePermission(permissions);
     }
 
     public boolean hadAdminPermission() {
-        return hadPermission(Permissions.ADMIN);
+        return OperationPermissionMasks.hadAdminPermission(permissions);
     }
 }

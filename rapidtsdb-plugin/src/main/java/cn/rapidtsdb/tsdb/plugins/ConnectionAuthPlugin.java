@@ -1,7 +1,6 @@
 package cn.rapidtsdb.tsdb.plugins;
 
 import java.util.Map;
-import java.util.Set;
 
 public interface ConnectionAuthPlugin {
 
@@ -11,5 +10,5 @@ public interface ConnectionAuthPlugin {
 
     boolean hasAdminPermission(String authType, int version, Map<String, String> authParams);
 
-    Set<Permissions> getPermissions(String authType, int version, Map<String, String> authParams);
+    int getPermissions(String authType, int version, Map<String, String> authParams);
 }

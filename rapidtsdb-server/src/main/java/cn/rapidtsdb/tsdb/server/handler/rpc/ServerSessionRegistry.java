@@ -1,11 +1,9 @@
 package cn.rapidtsdb.tsdb.server.handler.rpc;
 
-import cn.rapidtsdb.tsdb.plugins.Permissions;
 import cn.rapidtsdb.tsdb.server.config.ServerConfig;
 import io.netty.channel.Channel;
 
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -35,7 +33,7 @@ public class ServerSessionRegistry {
 
     public synchronized ServerClientSession regist(
             Channel nettyChannel,
-            Set<Permissions> channelPermissions) {
+            int channelPermissions) {
         if (registry.size() >= serverConfig.getMaxClientNumber()) {
             throw new RuntimeException("max connection client number reached");
         }

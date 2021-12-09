@@ -25,11 +25,6 @@ public class ProtocolInitiaHandler extends ReplayingDecoder<InitState> {
     }
 
     @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        log.debug("{} add to {}", getClass().getSimpleName(), ctx.channel().id().asShortText());
-    }
-
-    @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         log.debug("new connection:{}", ctx.channel().remoteAddress());
     }
@@ -46,7 +41,7 @@ public class ProtocolInitiaHandler extends ReplayingDecoder<InitState> {
                 } else {
                     checkpoint(InitState.error);
                     if (AppConfig.isDebug()) {
-                        String errMsg = "magic number error, " + clientMagic;
+                        String errMsg = "unknown client, " + Integer.toHexString(clientMagic);
                         ByteBuf byteBuf = ctx.alloc().buffer(errMsg.length());
                         byteBuf.writeBytes(errMsg.getBytes(StandardCharsets.UTF_8));
                         ctx.writeAndFlush(byteBuf);
@@ -65,7 +60,6 @@ public class ProtocolInitiaHandler extends ReplayingDecoder<InitState> {
                     ChannelFuture cf = ctx.writeAndFlush(versionRespBuf);
                     cf.addListener((f) -> {
                         if (f.isSuccess()) {
-                            log.debug("remove ");
                             ctx.pipeline().remove(this);
                         } else {
                             log.error("send version resp failed,", f.cause());

@@ -1,6 +1,5 @@
 package cn.rapidtsdb.tsdb.client.handler.v1.out;
 
-import cn.rapidtsdb.tsdb.client.utils.ChannelUtils;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
@@ -11,8 +10,8 @@ import lombok.extern.log4j.Log4j2;
 public class NumberWriterHandler extends ChannelOutboundHandlerAdapter {
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-        log.debug("channel:{}, {} write class:{}", ChannelUtils.getChannelId(ctx.channel()), getClass().getSimpleName(), msg.getClass());
         ByteBuf byteBuf = null;
+
         if (msg instanceof Short) {
             byteBuf = ctx.alloc().buffer(2);
             byteBuf.writeShort((Short) msg);
@@ -25,10 +24,20 @@ public class NumberWriterHandler extends ChannelOutboundHandlerAdapter {
             byteBuf = ctx.alloc().buffer(8);
             byteBuf.writeLong((Long) msg);
         }
-        if(byteBuf!=null) {
+        if (msg instanceof String) {
+            byteBuf = ctx.alloc().buffer(((String) msg).length());
+            byteBuf.writeBytes(((String) msg).getBytes());
+        }
+        if (byteBuf != null) {
             ctx.writeAndFlush(byteBuf);
         } else {
-            ctx.pipeline().writeAndFlush(msg);
+            ctx.writeAndFlush(msg);
         }
+        promise.setSuccess();
+    }
+
+    @Override
+    public void flush(ChannelHandlerContext ctx) throws Exception {
+        super.flush(ctx);
     }
 }

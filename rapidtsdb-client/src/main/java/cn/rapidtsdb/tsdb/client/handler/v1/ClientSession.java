@@ -19,6 +19,7 @@ public class ClientSession {
     private AtomicReference<ClientSessionState> clientState = new AtomicReference<>(ClientSessionState.INIT);
     private Lock sessStateLock = new ReentrantLock();
     private Condition sessStateCondition = sessStateLock.newCondition();
+    private int permissions = 0;
 
     public ClientSession(Channel channel) {
         this.channel = channel;
@@ -29,11 +30,16 @@ public class ClientSession {
         checkSessionState(ClientSessionState.PENDING_AUTH);
     }
 
+    public void authCompleted(int permissions) {
+        this.permissions = permissions;
+        checkSessionState(ClientSessionState.ACTIVE);
+
+    }
+
     public ChannelFuture auth(
             ConnectionAuth.ProtoAuthMessage authMsg) {
         checkChannelState();
         checkOrWaitSessionState(ClientSessionState.PENDING_AUTH);
-        log.debug("client pipeline send auth msg");
         return channel.pipeline().writeAndFlush(authMsg);
     }
 
@@ -54,6 +60,12 @@ public class ClientSession {
     public ClientSessionState checkSessionState(ClientSessionState newState) {
         ClientSessionState origin = clientState.get();
         if (clientState.compareAndSet(origin, newState)) {
+            try {
+                sessStateLock.lock();
+                sessStateCondition.signalAll();
+            } finally {
+                sessStateLock.unlock();
+            }
             return newState;
         } else {
             return clientState.get();

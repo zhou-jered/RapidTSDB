@@ -2,8 +2,8 @@ package cn.rapidtsdb.tsdb.server.handler.rpc.v1.in;
 
 import cn.rapidtsdb.tsdb.model.proto.ConnectionAuth;
 import cn.rapidtsdb.tsdb.plugins.ConnectionAuthPlugin;
-import cn.rapidtsdb.tsdb.plugins.Permissions;
 import cn.rapidtsdb.tsdb.plugins.PluginManager;
+import cn.rapidtsdb.tsdb.protocol.OperationPermissionMasks;
 import cn.rapidtsdb.tsdb.protocol.RpcResponseCode;
 import cn.rapidtsdb.tsdb.protocol.constants.AuthTypes;
 import cn.rapidtsdb.tsdb.server.defaults.DefaultAuthPlugins;
@@ -16,8 +16,6 @@ import lombok.extern.log4j.Log4j2;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 @Log4j2
 public class AuthHandler extends SimpleChannelInboundHandler<ConnectionAuth.ProtoAuthMessage> {
@@ -50,13 +48,13 @@ public class AuthHandler extends SimpleChannelInboundHandler<ConnectionAuth.Prot
                     }
                 });
             }
-            Set<Permissions> enumPermissions = authPlugin.getPermissions(protoAuthMessage.getAuthType(), protoAuthMessage.getAuthVersion(), authParams);
+            int permissions = authPlugin.getPermissions(protoAuthMessage.getAuthType(), protoAuthMessage.getAuthVersion(), authParams);
             ConnectionAuth.ProtoAuthResp authResp = ConnectionAuth.ProtoAuthResp.newBuilder()
                     .setMsg("ok").setAuthCode(RpcResponseCode.SUCCESS)
-                    .addAllPermissions(enumPermissions.stream()
-                            .map(v -> v.name()).collect(Collectors.toList())).build();
+                    .setPermissions(OperationPermissionMasks.RW_PERMISSION)
+                    .build();
             channelHandlerContext.writeAndFlush(authResp);
-            serverSessionRegistry.regist(channelHandlerContext.channel(), enumPermissions);
+            serverSessionRegistry.regist(channelHandlerContext.channel(), permissions);
 
         } else {
             ConnectionAuth.ProtoAuthResp protoAuthResp = ConnectionAuth.ProtoAuthResp.newBuilder().setAuthCode(RpcResponseCode.AUTH_FAILED).setMsg("unsupported auth type").build();

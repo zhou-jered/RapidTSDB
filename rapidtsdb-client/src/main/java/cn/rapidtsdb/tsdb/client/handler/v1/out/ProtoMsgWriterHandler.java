@@ -22,15 +22,13 @@ public class ProtoMsgWriterHandler extends ChannelOutboundHandlerAdapter {
             short objId = RpcObjectCode.getObjectCode(protoMsg.getClass());
             byte[] protoBytes = protoMsg.toByteArray();
             short len = (short) protoBytes.length;
-            ByteBuf nettyBuf = ctx.alloc().buffer(protoBytes.length);
-            nettyBuf.writeBytes(protoBytes);
-            log.debug("write proto obj:{} id:{}, len:{}, actual len:{}", protoMsg.getClass().getSimpleName(), objId, len, nettyBuf.writerIndex());
-            
-            ctx.writeAndFlush(objId);
-            ctx.writeAndFlush(len);
-            ctx.writeAndFlush(nettyBuf);
+            ByteBuf protoObjBuf = ctx.alloc().buffer(protoBytes.length);
+            protoObjBuf.writeBytes(protoBytes);
+            ctx.write(objId);
+            ctx.write(len);
+            ctx.write(protoObjBuf);
+            ctx.flush();
         }
     }
-
 
 }

@@ -7,11 +7,9 @@ import com.google.protobuf.Parser;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
-import io.netty.util.ByteProcessor;
 import lombok.extern.log4j.Log4j2;
 
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static cn.rapidtsdb.tsdb.server.handler.rpc.v1.in.ProtocolDecodeHandler.DecodeState;
 import static cn.rapidtsdb.tsdb.server.handler.rpc.v1.in.ProtocolDecodeHandler.DecodeState.len;
@@ -46,16 +44,7 @@ public class ProtocolDecodeHandler extends ReplayingDecoder<DecodeState> {
                 checkpoint(obj);
                 break;
             case obj:
-                AtomicInteger debugCnt = new AtomicInteger(0);
-                in.forEachByte(new ByteProcessor() {
-                    @Override
-                    public boolean process(byte value) throws Exception {
-                        debugCnt.incrementAndGet();
-                        log.debug("cnt:"+debugCnt.get());
-                        return true;
-                    }
-                });
-                log.debug("try read object id:{}, len:{}, bufLen:{}", objId, objLen, debugCnt.get());
+                log.debug("try read object id:{}, len:{}, bufLen:{}", objId, objLen, in.writerIndex());
                 in.readBytes(objBytes);
                 Message protoObj = getProtoMsg();
                 log.debug("{} add obj of class:{} to out ", getClass().getSimpleName(), protoObj.getClass().getSimpleName());

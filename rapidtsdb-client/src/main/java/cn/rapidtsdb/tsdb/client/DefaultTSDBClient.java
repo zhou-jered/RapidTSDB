@@ -44,6 +44,8 @@ class DefaultTSDBClient implements TSDBClient {
                 .handler(new ClientChannelInitializer())
                 .option(ChannelOption.SO_KEEPALIVE, keepAlive)
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 3000)
+                .option(ChannelOption.SO_RCVBUF, 4096)
+                .option(ChannelOption.SO_SNDBUF, 4096)
                 .option(ChannelOption.TCP_NODELAY, true);
         ChannelFuture channelFuture = bootstrap.connect(fromBootstarp(config.getServerBootstrap())).addListener(ch -> {
             if (ch.isSuccess()) {
