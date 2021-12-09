@@ -1,5 +1,6 @@
 package cn.rapidtsdb.tsdb.client;
 
+import cn.rapidtsdb.tsdb.protocol.constants.AuthTypes;
 import lombok.extern.log4j.Log4j2;
 
 import java.util.HashMap;
@@ -15,6 +16,7 @@ public class BaseFlowTest {
 
         TSDBClientConfig config = TSDBClientConfig.newBuilder()
                 .serverBootstrap("127.0.0.1:9100")
+                .authType(AuthTypes.AUTH_TYPE_TOKEN)
                 .authParams(authParams)
                 .build();
         TSDBClient tsdbClient = TSDBClientFactory.getTSDBClient(config);

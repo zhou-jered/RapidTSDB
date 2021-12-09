@@ -2,7 +2,6 @@ package cn.rapidtsdb.tsdb.client.handler;
 
 import cn.rapidtsdb.tsdb.client.handler.v1.ClientSession;
 import cn.rapidtsdb.tsdb.client.handler.v1.ClientSessionRegistry;
-import cn.rapidtsdb.tsdb.client.utils.ChannelUtils;
 import cn.rapidtsdb.tsdb.protocol.RpcConstants;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -10,6 +9,8 @@ import io.netty.handler.codec.ReplayingDecoder;
 import lombok.extern.log4j.Log4j2;
 
 import java.util.List;
+
+import static cn.rapidtsdb.tsdb.common.utils.ChannelUtils.getChannelId;
 
 /**
  * when connection launched
@@ -43,7 +44,7 @@ public class VersionProtocolHandler extends ReplayingDecoder<VersionProtocolHand
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         checkpoint(VersionStata.resp_code);
-        log.info("init protocol {}", ChannelUtils.getChannelId(ctx.channel()));
+        log.info("init protocol {}", getChannelId(ctx.channel()));
         ByteBuf byteBuf = ctx.alloc().buffer(8);
         byteBuf.writeInt(RpcConstants.MAGIC_NUMBER);
         byteBuf.writeInt(RpcConstants.PROTOCOL_VERSION);

@@ -1,4 +1,4 @@
-package cn.rapidtsdb.tsdb.server.handler.rpc.v1.in;
+package cn.rapidtsdb.tsdb.common.protonetty.in;
 
 import cn.rapidtsdb.tsdb.protocol.RpcObjectCode;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -11,20 +11,15 @@ import lombok.extern.log4j.Log4j2;
 
 import java.util.List;
 
-import static cn.rapidtsdb.tsdb.server.handler.rpc.v1.in.ProtocolDecodeHandler.DecodeState;
-import static cn.rapidtsdb.tsdb.server.handler.rpc.v1.in.ProtocolDecodeHandler.DecodeState.len;
-import static cn.rapidtsdb.tsdb.server.handler.rpc.v1.in.ProtocolDecodeHandler.DecodeState.obj;
-import static cn.rapidtsdb.tsdb.server.handler.rpc.v1.in.ProtocolDecodeHandler.DecodeState.obj_id;
-
 @Log4j2
-public class ProtocolDecodeHandler extends ReplayingDecoder<DecodeState> {
+public class ProtocolDecodeHandler extends ReplayingDecoder<ProtocolDecodeHandler.DecodeState> {
 
     private short objId;
     private short objLen;
     private byte[] objBytes;
 
     public ProtocolDecodeHandler() {
-        checkpoint(obj_id);
+        checkpoint(DecodeState.obj_id);
     }
 
     @Override
@@ -32,24 +27,21 @@ public class ProtocolDecodeHandler extends ReplayingDecoder<DecodeState> {
             ChannelHandlerContext ctx, ByteBuf in,
             List<Object> out) {
         DecodeState state = state();
-        log.debug("decoding state:{}", state);
         switch (state) {
             case obj_id:
                 objId = in.readShort();
-                checkpoint(len);
+                checkpoint(DecodeState.len);
                 break;
             case len:
                 objLen = in.readShort();
                 objBytes = new byte[objLen];
-                checkpoint(obj);
+                checkpoint(DecodeState.obj);
                 break;
             case obj:
-                log.debug("try read object id:{}, len:{}, bufLen:{}", objId, objLen, in.writerIndex());
                 in.readBytes(objBytes);
                 Message protoObj = getProtoMsg();
-                log.debug("{} add obj of class:{} to out ", getClass().getSimpleName(), protoObj.getClass().getSimpleName());
                 out.add(protoObj);
-                checkpoint(obj_id);
+                checkpoint(DecodeState.obj_id);
         }
     }
 

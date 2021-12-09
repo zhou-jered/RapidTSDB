@@ -1,6 +1,6 @@
-package cn.rapidtsdb.tsdb.client.handler.v1.out;
+package cn.rapidtsdb.tsdb.common.protonetty.out;
 
-import cn.rapidtsdb.tsdb.client.utils.ChannelUtils;
+import cn.rapidtsdb.tsdb.common.utils.ChannelUtils;
 import cn.rapidtsdb.tsdb.protocol.RpcObjectCode;
 import com.google.protobuf.GeneratedMessageV3;
 import io.netty.buffer.ByteBuf;
@@ -10,8 +10,7 @@ import io.netty.channel.ChannelPromise;
 import lombok.extern.log4j.Log4j2;
 
 @Log4j2
-public class ProtoMsgWriterHandler extends ChannelOutboundHandlerAdapter {
-
+public class ProtoObjectHandler extends ChannelOutboundHandlerAdapter {
 
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {

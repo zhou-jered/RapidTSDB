@@ -2,9 +2,9 @@ package cn.rapidtsdb.tsdb.client.handler;
 
 import cn.rapidtsdb.tsdb.client.handler.v1.in.AuthResponseHandler;
 import cn.rapidtsdb.tsdb.client.handler.v1.in.ConnectionStateHandler;
-import cn.rapidtsdb.tsdb.client.handler.v1.in.ProtoMsgReaderHandler;
-import cn.rapidtsdb.tsdb.client.handler.v1.out.NumberWriterHandler;
-import cn.rapidtsdb.tsdb.client.handler.v1.out.ProtoMsgWriterHandler;
+import cn.rapidtsdb.tsdb.common.protonetty.in.ProtocolDecodeHandler;
+import cn.rapidtsdb.tsdb.common.protonetty.out.PrimitiveObjectWriteHandler;
+import cn.rapidtsdb.tsdb.common.protonetty.out.ProtoObjectHandler;
 import io.netty.channel.ChannelPipeline;
 import lombok.extern.log4j.Log4j2;
 
@@ -28,11 +28,11 @@ public class ClientProtocolLauncher {
         log.info("Client Version Code 1");
         pipeline.addLast(
                 new ConnectionStateHandler(),
-                new ProtoMsgReaderHandler(),
+                new ProtocolDecodeHandler(),
                 new AuthResponseHandler()
         ); // in
-        pipeline.addLast(new NumberWriterHandler(),
-                new ProtoMsgWriterHandler()
+        pipeline.addLast(new PrimitiveObjectWriteHandler(),
+                new ProtoObjectHandler()
         );
     }
 }

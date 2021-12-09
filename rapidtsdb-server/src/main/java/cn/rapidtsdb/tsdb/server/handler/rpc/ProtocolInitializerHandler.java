@@ -14,13 +14,13 @@ import lombok.extern.log4j.Log4j2;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-import static cn.rapidtsdb.tsdb.server.handler.rpc.ProtocolInitiaHandler.InitState;
+import static cn.rapidtsdb.tsdb.server.handler.rpc.ProtocolInitializerHandler.InitState;
 
 @Log4j2
-public class ProtocolInitiaHandler extends ReplayingDecoder<InitState> {
+public class ProtocolInitializerHandler extends ReplayingDecoder<InitState> {
 
 
-    public ProtocolInitiaHandler() {
+    public ProtocolInitializerHandler() {
         checkpoint(InitState.magic_number);
     }
 

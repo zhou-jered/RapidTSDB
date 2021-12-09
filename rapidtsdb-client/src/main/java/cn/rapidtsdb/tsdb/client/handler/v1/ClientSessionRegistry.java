@@ -9,7 +9,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static cn.rapidtsdb.tsdb.client.utils.ChannelUtils.getChannelId;
+import static cn.rapidtsdb.tsdb.common.utils.ChannelUtils.getChannelId;
 
 @Log4j2
 public class ClientSessionRegistry {

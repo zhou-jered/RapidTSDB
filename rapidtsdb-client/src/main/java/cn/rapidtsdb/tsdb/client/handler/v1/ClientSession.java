@@ -1,6 +1,6 @@
 package cn.rapidtsdb.tsdb.client.handler.v1;
 
-import cn.rapidtsdb.tsdb.client.utils.ChannelUtils;
+import cn.rapidtsdb.tsdb.common.utils.ChannelUtils;
 import cn.rapidtsdb.tsdb.model.proto.ConnectionAuth;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -33,7 +33,6 @@ public class ClientSession {
     public void authCompleted(int permissions) {
         this.permissions = permissions;
         checkSessionState(ClientSessionState.ACTIVE);
-
     }
 
     public ChannelFuture auth(
@@ -45,6 +44,7 @@ public class ClientSession {
 
     public ChannelFuture send(Object obj) {
         checkChannelState();
+        checkOrWaitSessionState(ClientSessionState.PENDING_AUTH);
         ChannelFuture cf = channel.pipeline().writeAndFlush(obj);
         return cf;
     }

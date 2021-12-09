@@ -2,7 +2,7 @@ package cn.rapidtsdb.tsdb.client.handler.v1.in;
 
 import cn.rapidtsdb.tsdb.client.handler.v1.ClientSession;
 import cn.rapidtsdb.tsdb.client.handler.v1.ClientSessionRegistry;
-import cn.rapidtsdb.tsdb.client.utils.ChannelUtils;
+import cn.rapidtsdb.tsdb.common.utils.ChannelUtils;
 import cn.rapidtsdb.tsdb.model.proto.ConnectionAuth;
 import cn.rapidtsdb.tsdb.protocol.RpcResponseCode;
 import io.netty.channel.ChannelHandlerContext;

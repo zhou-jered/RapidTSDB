@@ -1,14 +1,17 @@
-package cn.rapidtsdb.tsdb.server.handler.rpc.common;
+package cn.rapidtsdb.tsdb.common.protonetty.out;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
+import lombok.extern.log4j.Log4j2;
 
+@Log4j2
 public class PrimitiveObjectWriteHandler extends ChannelOutboundHandlerAdapter {
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
         ByteBuf byteBuf = null;
+        log.debug("Pirmitive Write:{}", msg.getClass().getSimpleName());
         if (msg instanceof String) {
             String str = (String) msg;
             byteBuf = ctx.alloc().buffer(str.length());
@@ -26,9 +29,16 @@ public class PrimitiveObjectWriteHandler extends ChannelOutboundHandlerAdapter {
             byteBuf = ctx.alloc().buffer(8);
             byteBuf.writeLong((Long) msg);
         }
+        if (msg instanceof byte[]) {
+            byteBuf = ctx.alloc().buffer(((byte[]) msg).length);
+            byteBuf.writeBytes((byte[]) msg);
+        }
         if (byteBuf != null) {
             ctx.writeAndFlush(byteBuf);
+        } else {
+            ctx.writeAndFlush(msg);
         }
+        promise.setSuccess();
     }
 
 }

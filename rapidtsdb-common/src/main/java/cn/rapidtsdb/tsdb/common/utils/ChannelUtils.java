@@ -1,4 +1,4 @@
-package cn.rapidtsdb.tsdb.client.utils;
+package cn.rapidtsdb.tsdb.common.utils;
 
 import io.netty.channel.Channel;
 

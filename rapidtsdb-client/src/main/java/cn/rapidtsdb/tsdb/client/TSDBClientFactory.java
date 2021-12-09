@@ -10,6 +10,7 @@ public class TSDBClientFactory {
     public static TSDBClient getTSDBClient(TSDBClientConfig clientConfig) {
         DefaultTSDBClient defaultTSDBClient = new DefaultTSDBClient(clientConfig);
         defaultTSDBClient.connect();
+        log.debug("auth type:{}", clientConfig.getAuthType());
         ConnectionAuth.ProtoAuthMessage.Builder authMessageBuilder = ConnectionAuth.ProtoAuthMessage.newBuilder()
                 .setAuthType(clientConfig.getAuthType());
         Map<String, String> authParams = clientConfig.getAuthParams();

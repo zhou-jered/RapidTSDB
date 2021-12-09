@@ -53,12 +53,13 @@ public class AuthHandler extends SimpleChannelInboundHandler<ConnectionAuth.Prot
                     .setMsg("ok").setAuthCode(RpcResponseCode.SUCCESS)
                     .setPermissions(OperationPermissionMasks.RW_PERMISSION)
                     .build();
-            channelHandlerContext.writeAndFlush(authResp);
+            channelHandlerContext.pipeline().writeAndFlush(authResp);
             serverSessionRegistry.regist(channelHandlerContext.channel(), permissions);
 
         } else {
             ConnectionAuth.ProtoAuthResp protoAuthResp = ConnectionAuth.ProtoAuthResp.newBuilder().setAuthCode(RpcResponseCode.AUTH_FAILED).setMsg("unsupported auth type").build();
             channelHandlerContext.writeAndFlush(protoAuthResp);
+            channelHandlerContext.disconnect();
             channelHandlerContext.close();
         }
     }

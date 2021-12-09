@@ -11,6 +11,7 @@ import cn.rapidtsdb.tsdb.server.handler.admin.AdminChannelInitializer;
 import cn.rapidtsdb.tsdb.server.handler.console.ConsoleChannelInitializer;
 import cn.rapidtsdb.tsdb.server.handler.http.HttpChannelInitializer;
 import cn.rapidtsdb.tsdb.server.handler.rpc.BinChannelInitializer;
+import cn.rapidtsdb.tsdb.server.handler.rpc.ServerSessionRegistry;
 import cn.rapidtsdb.tsdb.server.utils.ServerUtils;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
@@ -69,7 +70,17 @@ public class ProtocolServerInstance implements Initializer, Runner, Closer {
                 .childHandler(getServerInitializer(serverConfig.getProtocol()));
         ServerUtils.configServerTcp(serverConfig.getProtocol().name(),
                 serverBootstrap, serverConfig.getTcp());
+        initProtocolComponent();
+    }
 
+    private void initProtocolComponent() {
+        switch (serverConfig.getProtocol()) {
+            case bin:
+                ServerSessionRegistry.init(serverConfig);
+                break;
+            default:
+                ;
+        }
     }
 
     @Override
