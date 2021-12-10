@@ -18,12 +18,15 @@ import org.apache.commons.lang.StringUtils;
 import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Log4j2
 class DefaultTSDBClient implements TSDBClient {
 
-    TSDBClientConfig config;
-    ClientSession clientSession;
+    private TSDBClientConfig config;
+    private ClientSession clientSession;
+    private AtomicInteger reqIdIndex = new AtomicInteger(0);
 
     private final static boolean DEFAULT_KEEP_ALIVE = true;
 
@@ -39,6 +42,7 @@ class DefaultTSDBClient implements TSDBClient {
 
     public void connect(boolean keepAlive) {
         EventLoopGroup worker = new NioEventLoopGroup(config.getClientThreads());
+        worker.scheduleAtFixedRate(() -> checkReqIdIndex(), TimeUnit.MINUTES.toMillis(10), TimeUnit.MINUTES.toMillis(10), TimeUnit.MILLISECONDS);
         Bootstrap bootstrap = new Bootstrap().group(worker);
         bootstrap.channel(NioSocketChannel.class)
                 .handler(new ClientChannelInitializer())
@@ -70,8 +74,21 @@ class DefaultTSDBClient implements TSDBClient {
     }
 
 
-    public void auth(ConnectionAuth.ProtoAuthMessage authMessage) {
-        clientSession.auth(authMessage);
+    public void auth(String authType, Map<String, String> authParams) {
+        ConnectionAuth.ProtoAuthMessage.Builder authMessageBuilder =
+                ConnectionAuth.ProtoAuthMessage.newBuilder()
+                        .setAuthType(authType)
+                        .setReqId(reqIdIndex.incrementAndGet());
+        if (authParams != null && authParams.size() > 0) {
+            authParams.forEach((apk, apv) -> {
+                ConnectionAuth.ProtoAuthParams pap = ConnectionAuth.ProtoAuthParams.newBuilder()
+                        .setKey(apk)
+                        .setValue(apv)
+                        .build();
+                authMessageBuilder.addAuthParams(pap);
+            });
+        }
+        clientSession.auth(authMessageBuilder.build());
     }
 
     @Override
@@ -90,8 +107,9 @@ class DefaultTSDBClient implements TSDBClient {
                 .setMetric(metric)
                 .setTimestamp(TSTimer.getCachedTimer().getCurrentMills())
                 .setVal(value)
+                .setReqId(99)
                 .build();
-        ChannelFuture cf = clientSession.send(sdp);
+        ChannelFuture cf = clientSession.write(sdp);
         cf.addListener(f -> {
             log.info("send metrics :{}", f.isSuccess());
             if (!f.isSuccess()) {
@@ -176,5 +194,16 @@ class DefaultTSDBClient implements TSDBClient {
         return inetSocketAddress;
     }
 
+    public void checkReqIdIndex() {
+        if (reqIdIndex.get() > 1e5) {
+            while (true) {
+                int old = reqIdIndex.get();
+                boolean setSucc = reqIdIndex.compareAndSet(old, 0);
+                if (setSucc) {
+                    break;
+                }
+            }
+        }
+    }
 
 }

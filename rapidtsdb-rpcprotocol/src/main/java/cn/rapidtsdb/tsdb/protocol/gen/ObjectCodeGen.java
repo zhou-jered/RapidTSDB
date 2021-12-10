@@ -1,13 +1,15 @@
 package cn.rapidtsdb.tsdb.protocol.gen;
 
-import cn.rapidtsdb.tsdb.model.proto.*;
+import cn.rapidtsdb.tsdb.model.proto.ConnectionAuth;
+import cn.rapidtsdb.tsdb.model.proto.TSDBResponse;
+import cn.rapidtsdb.tsdb.model.proto.TSDataMessage;
+import cn.rapidtsdb.tsdb.model.proto.TSQueryMessage;
 
 public class ObjectCodeGen {
     private static Class[] protoClasses = new Class[]{
             ConnectionAuth.ProtoAuthParams.class,
             ConnectionAuth.ProtoAuthMessage.class,
             ConnectionAuth.ProtoAuthResp.class,
-            ConnectionInit.ProtoConnectionConfig.class,
             TSDataMessage.ProtoTSTag.class,
             TSDataMessage.ProtoDatapoint.class,
             TSDataMessage.ProtoSimpleDatapoint.class,

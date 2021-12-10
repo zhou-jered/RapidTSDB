@@ -10,6 +10,7 @@ message ProtoTSQuery {
     string aggregator = 4;
     string downSampler = 5;
     repeated ProtoTSTag tags = 6;
+    int32 reqId = 7;
 }
 
 

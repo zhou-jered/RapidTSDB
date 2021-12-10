@@ -36,11 +36,15 @@ public class ProtocolDecodeHandler extends ReplayingDecoder<ProtocolDecodeHandle
                 objLen = in.readShort();
                 objBytes = new byte[objLen];
                 checkpoint(DecodeState.obj);
-                break;
+                if (objLen > 0) {
+                    // some proto object may has a 0 bytes array.
+                    break;
+                }
             case obj:
                 in.readBytes(objBytes);
                 Message protoObj = getProtoMsg();
                 out.add(protoObj);
+                log.debug("read protoObject:{}", protoObj.getClass().getSimpleName());
                 checkpoint(DecodeState.obj_id);
         }
     }

@@ -1,6 +1,7 @@
 package cn.rapidtsdb.tsdb.client.handler;
 
 import cn.rapidtsdb.tsdb.client.handler.v1.in.AuthResponseHandler;
+import cn.rapidtsdb.tsdb.client.handler.v1.in.CommonResponseHandler;
 import cn.rapidtsdb.tsdb.client.handler.v1.in.ConnectionStateHandler;
 import cn.rapidtsdb.tsdb.common.protonetty.in.ProtocolDecodeHandler;
 import cn.rapidtsdb.tsdb.common.protonetty.out.PrimitiveObjectWriteHandler;
@@ -29,7 +30,8 @@ public class ClientProtocolLauncher {
         pipeline.addLast(
                 new ConnectionStateHandler(),
                 new ProtocolDecodeHandler(),
-                new AuthResponseHandler()
+                new AuthResponseHandler(),
+                new CommonResponseHandler()
         ); // in
         pipeline.addLast(new PrimitiveObjectWriteHandler(),
                 new ProtoObjectHandler()

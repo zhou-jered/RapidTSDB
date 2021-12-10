@@ -1,9 +1,6 @@
 package cn.rapidtsdb.tsdb.client;
 
-import cn.rapidtsdb.tsdb.model.proto.ConnectionAuth;
 import lombok.extern.log4j.Log4j2;
-
-import java.util.Map;
 
 @Log4j2
 public class TSDBClientFactory {
@@ -11,20 +8,7 @@ public class TSDBClientFactory {
         DefaultTSDBClient defaultTSDBClient = new DefaultTSDBClient(clientConfig);
         defaultTSDBClient.connect();
         log.debug("auth type:{}", clientConfig.getAuthType());
-        ConnectionAuth.ProtoAuthMessage.Builder authMessageBuilder = ConnectionAuth.ProtoAuthMessage.newBuilder()
-                .setAuthType(clientConfig.getAuthType());
-        Map<String, String> authParams = clientConfig.getAuthParams();
-        if (authParams != null && authParams.size() > 0) {
-            authParams.forEach((apk, apv) -> {
-                ConnectionAuth.ProtoAuthParams pap = ConnectionAuth.ProtoAuthParams.newBuilder()
-                        .setKey(apk)
-                        .setValue(apv)
-                        .build();
-                authMessageBuilder.addAuthParams(pap);
-            });
-
-            defaultTSDBClient.auth(authMessageBuilder.build());
-        }
+        defaultTSDBClient.auth(clientConfig.getAuthType(), clientConfig.getAuthParams());
         return defaultTSDBClient;
     }
 }

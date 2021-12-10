@@ -40,6 +40,12 @@ public class TSDBConfig {
     private String storeHandlerImplClass;
 
 
+    /**
+     * max request number allowed for each connection
+     */
+    @Getter
+    private int singleConnectionMaxConcurrentRequestNumber = 100;
+
 
     @Getter
     private Boolean printBanner = true;

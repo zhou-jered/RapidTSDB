@@ -9,5 +9,4 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class WriteMetricResult {
     private boolean success;
-
 }

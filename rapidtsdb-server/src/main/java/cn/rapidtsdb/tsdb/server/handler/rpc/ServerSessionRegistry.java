@@ -1,5 +1,6 @@
 package cn.rapidtsdb.tsdb.server.handler.rpc;
 
+import cn.rapidtsdb.tsdb.common.utils.ChannelUtils;
 import cn.rapidtsdb.tsdb.server.config.ServerConfig;
 import io.netty.channel.Channel;
 
@@ -50,6 +51,10 @@ public class ServerSessionRegistry {
     public ServerClientSession getSession(
             int sessId) {
         return registry.get(sessId);
+    }
+
+    public ServerClientSession getSession(Channel channel) {
+        return registry.get(ChannelUtils.getChannelId(channel));
     }
 
 

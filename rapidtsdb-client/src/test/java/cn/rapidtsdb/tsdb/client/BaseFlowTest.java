@@ -20,7 +20,8 @@ public class BaseFlowTest {
                 .authParams(authParams)
                 .build();
         TSDBClient tsdbClient = TSDBClientFactory.getTSDBClient(config);
-        tsdbClient.writeMetric("me.local", 1.3);
+        WriteMetricResult writeMetricResult = tsdbClient.writeMetric("me.local", 1.3);
+        System.out.println(writeMetricResult);
 //        tsdbClient.close()
         log.info(tsdbClient);
     }

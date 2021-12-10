@@ -2,7 +2,9 @@ package cn.rapidtsdb.tsdb.common.protonetty.out;
 
 import cn.rapidtsdb.tsdb.common.utils.ChannelUtils;
 import cn.rapidtsdb.tsdb.protocol.RpcObjectCode;
+import com.google.protobuf.Descriptors;
 import com.google.protobuf.GeneratedMessageV3;
+import com.sun.xml.internal.org.jvnet.fastinfoset.FastInfosetException;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
@@ -23,10 +25,13 @@ public class ProtoObjectHandler extends ChannelOutboundHandlerAdapter {
             short len = (short) protoBytes.length;
             ByteBuf protoObjBuf = ctx.alloc().buffer(protoBytes.length);
             protoObjBuf.writeBytes(protoBytes);
+            //optimize todo
+            log.debug("proto write code:{} len:{}", objId, len);
             ctx.write(objId);
             ctx.write(len);
             ctx.write(protoObjBuf);
             ctx.flush();
+            promise.setSuccess();
         }
     }
 

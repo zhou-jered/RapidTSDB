@@ -28,7 +28,7 @@ public class RpcObjectCode {
         protoObjectCodeMap.put("cn.rapidtsdb.tsdb.model.proto.ConnectionAuth$ProtoAuthParams", 1);
         protoObjectCodeMap.put("cn.rapidtsdb.tsdb.model.proto.ConnectionAuth$ProtoAuthMessage", 2);
         protoObjectCodeMap.put("cn.rapidtsdb.tsdb.model.proto.ConnectionAuth$ProtoAuthResp", 3);
-        protoObjectCodeMap.put("cn.rapidtsdb.tsdb.model.proto.ConnectionInit$ProtoConnectionConfig", 4);
+//        protoObjectCodeMap.put("cn.rapidtsdb.tsdb.model.proto.ConnectionInit$ProtoConnectionConfig", 4); // removed
         protoObjectCodeMap.put("cn.rapidtsdb.tsdb.model.proto.TSDataMessage$ProtoTSTag", 5);
         protoObjectCodeMap.put("cn.rapidtsdb.tsdb.model.proto.TSDataMessage$ProtoDatapoint", 6);
         protoObjectCodeMap.put("cn.rapidtsdb.tsdb.model.proto.TSDataMessage$ProtoSimpleDatapoint", 7);
