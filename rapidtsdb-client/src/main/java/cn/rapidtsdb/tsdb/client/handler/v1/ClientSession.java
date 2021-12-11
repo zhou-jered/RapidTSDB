@@ -5,6 +5,7 @@ import cn.rapidtsdb.tsdb.common.utils.ChannelUtils;
 import cn.rapidtsdb.tsdb.model.proto.ConnectionAuth;
 import cn.rapidtsdb.tsdb.model.proto.TSDBResponse;
 import cn.rapidtsdb.tsdb.model.proto.TSDataMessage;
+import cn.rapidtsdb.tsdb.model.proto.TSQueryMessage;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import lombok.extern.log4j.Log4j2;
@@ -46,21 +47,42 @@ public class ClientSession {
             ConnectionAuth.ProtoAuthMessage authMsg) {
         checkChannelState();
         checkOrWaitSessionState(ClientSessionState.PENDING_AUTH);
-//        return channel.pipeline().writeAndFlush(authMsg);
-        return channel.writeAndFlush(1);
+        return channel.pipeline().writeAndFlush(authMsg);
+    }
+
+
+    public void exchange(MsgExchange exchanger) {
+        Object req = exchanger.getRequest();
+        channel.pipeline().writeAndFlush(req);
+
+    }
+
+    public void write(TSDataMessage.ProtoDatapoint pdp) {
+
     }
 
     public RequestFuture write(TSDataMessage.ProtoSimpleDatapoint sdp) {
         checkChannelState();
 //        checkOrWaitSessionState(ClientSessionState.ACTIVE);
-        channel.pipeline().writeAndFlush(sdp);
+        ChannelFuture channelFuture = channel.pipeline().writeAndFlush(sdp);
         RequestFuture requestFuture = new RequestFuture(sdp.getReqId());
-        requestFutureMap.put(sdp.getReqId(), requestFuture);
         return requestFuture;
     }
 
-    public void setCommonResponse(int reqId, TSDBResponse.ProtoCommonResponse commonResponse) {
+    public void write(TSDataMessage.ProtoDatapoints dps) {
+        checkChannelState();
+        checkOrWaitSessionState(ClientSessionState.ACTIVE);
+    }
 
+    public void query(TSQueryMessage.ProtoTSQuery query) {
+        checkChannelState();
+        checkOrWaitSessionState(ClientSessionState.ACTIVE);
+    }
+
+
+    public void setCommonResponse(int reqId, TSDBResponse.ProtoCommonResponse commonResponse) {
+        RequestFuture requestFuture = requestFutureMap.get(reqId);
+        requestFuture.setResult(commonResponse);
     }
 
     public ChannelFuture heartbeat() {
@@ -94,6 +116,12 @@ public class ClientSession {
     public void close() {
         channel.disconnect();
         channel.close();
+
+    }
+
+    public void channeInActive() {
+        log.error("channel InActive, close it.");
+        close();
     }
 
     /**

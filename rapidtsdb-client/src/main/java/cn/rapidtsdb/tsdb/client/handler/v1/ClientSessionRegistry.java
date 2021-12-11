@@ -41,12 +41,17 @@ public class ClientSessionRegistry {
         return clientSession;
     }
 
+    public boolean deregist(String sessId) {
+        return channelMap.remove(sessId) != null;
+    }
+
     public boolean deregist(Channel channel) {
-        final String channelId = getChannelId(channel);
-        return channelMap.remove(channelId) != null;
+        final String sessId = getChannelId(channel);
+        return deregist(sessId);
     }
 
 
+    //todo improved need
     static class CheckExpiredSessionTask extends ClientRunnable {
         public CheckExpiredSessionTask() {
             super("CheckExpiresSessionTask", true);

@@ -14,15 +14,18 @@ public class CommonResponseHandler extends SimpleChannelInboundHandler<TSDBRespo
 
 
     @Override
-    public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        super.channelActive(ctx);
-        clientSession = ClientSessionRegistry.getRegistry().getClientSession(ctx.channel());
+    protected void channelRead0(ChannelHandlerContext ctx, TSDBResponse.ProtoCommonResponse commonResp) throws Exception {
+        if (clientSession == null) {
+            clientSession = ClientSessionRegistry.getRegistry().getClientSession(ctx.channel());
+        }
+        log.debug("commresponse:{}, {} , {}", commonResp.getCode(), commonResp.getReqId(), commonResp.getMsg());
+        int reqId = commonResp.getReqId();
+
+        clientSession.setCommonResponse(reqId, commonResp);
     }
 
     @Override
-    protected void channelRead0(ChannelHandlerContext ctx, TSDBResponse.ProtoCommonResponse commonResp) throws Exception {
-        log.debug("commresponse:{}, {} , {}", commonResp.getCode(), commonResp.getReqId(), commonResp.getMsg());
-        int reqId = commonResp.getReqId();
-        clientSession.setCommonResponse(reqId, commonResp);
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        log.error("exception", cause);
     }
 }

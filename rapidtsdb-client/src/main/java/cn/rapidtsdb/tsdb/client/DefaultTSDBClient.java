@@ -4,6 +4,7 @@ import cn.rapidtsdb.tsdb.client.event.TSDBUserEventListener;
 import cn.rapidtsdb.tsdb.client.handler.ClientChannelInitializer;
 import cn.rapidtsdb.tsdb.client.handler.v1.ClientSession;
 import cn.rapidtsdb.tsdb.client.handler.v1.ClientSessionRegistry;
+import cn.rapidtsdb.tsdb.common.protonetty.RequestFuture;
 import cn.rapidtsdb.tsdb.model.proto.ConnectionAuth;
 import cn.rapidtsdb.tsdb.model.proto.TSDataMessage;
 import io.netty.bootstrap.Bootstrap;
@@ -58,6 +59,7 @@ class DefaultTSDBClient implements TSDBClient {
                 log.error("Connect {} failed:{}", config.getServerBootstrap(), ch.cause().getMessage());
             }
         });
+        log.info("channgel regist");
         clientSession = ClientSessionRegistry.getRegistry().regist(channelFuture.channel());
 
         channelFuture.syncUninterruptibly();
@@ -109,7 +111,7 @@ class DefaultTSDBClient implements TSDBClient {
                 .setVal(value)
                 .setReqId(99)
                 .build();
-        ChannelFuture cf = clientSession.write(sdp);
+        RequestFuture cf = clientSession.write(sdp);
         cf.addListener(f -> {
             log.info("send metrics :{}", f.isSuccess());
             if (!f.isSuccess()) {
