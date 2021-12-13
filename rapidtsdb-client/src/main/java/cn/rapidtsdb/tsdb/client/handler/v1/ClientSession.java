@@ -56,7 +56,7 @@ public class ClientSession {
         checkOrWaitSessionState(ClientSessionState.PENDING_AUTH);
         return channel.pipeline().writeAndFlush(authMsg);
     }
-    
+
 
     public WriteMetricResult write(TSDataMessage.ProtoSimpleDatapoint sdp) {
         MsgExchange<TSDataMessage.ProtoSimpleDatapoint, TSDBResponse.ProtoCommonResponse>
@@ -120,18 +120,19 @@ public class ClientSession {
         return this.clientState.get();
     }
 
-
     public void close() {
+        if (sessionState() == ClientSessionState.ACTIVE) {
+            exchangerMap.values()
+                    .forEach(val -> {
+                        val.cancel();
+                    });
+            exchangerMap.clear();
+        }
+        checkSessionState(ClientSessionState.CLOSED);
         if (channel.isActive()) {
             channel.disconnect();
             channel.close();
         }
-        checkSessionState(ClientSessionState.CLOSED);
-    }
-
-    public void channeInActive() {
-        log.error("channel InActive, close it.");
-        close();
     }
 
 
@@ -156,6 +157,22 @@ public class ClientSession {
         } else {
             log.error("MsgExchange NULL from exchangeMap");
         }
+    }
+
+    public void setException(int reqId, Throwable throwable) {
+        MsgExchange msgExchange = exchangerMap.get(reqId);
+        if (msgExchange != null) {
+            msgExchange.setException(throwable);
+        } else {
+            log.error("MsgExchange NULL from exchangeMap when set Exception");
+        }
+    }
+
+    public void channelException(Throwable throwable) {
+        exchangerMap.values().forEach(val -> {
+            val.setException(throwable);
+        });
+        exchangerMap.clear();
     }
 
 

@@ -1,7 +1,7 @@
 package cn.rapidtsdb.tsdb.client.handler.v1.in;
 
 import cn.rapidtsdb.tsdb.client.handler.v1.ClientSession;
-import cn.rapidtsdb.tsdb.client.handler.v1.ClientSessionRegistry;
+import cn.rapidtsdb.tsdb.client.utils.ChannelAttributes;
 import cn.rapidtsdb.tsdb.model.proto.TSDBResponse;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -12,11 +12,10 @@ public class CommonResponseHandler extends SimpleChannelInboundHandler<TSDBRespo
 
     private ClientSession clientSession;
 
-
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, TSDBResponse.ProtoCommonResponse commonResp) throws Exception {
         if (clientSession == null) {
-            clientSession = ClientSessionRegistry.getRegistry().getClientSession(ctx.channel());
+            clientSession = ChannelAttributes.getSessionAttribute(ctx);
         }
         int reqId = commonResp.getReqId();
         clientSession.setResult(reqId, commonResp);
@@ -25,5 +24,11 @@ public class CommonResponseHandler extends SimpleChannelInboundHandler<TSDBRespo
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         log.error("exception", cause);
+        if (clientSession == null) {
+            clientSession = ChannelAttributes.getSessionAttribute(ctx);
+        }
+        ctx.close();
+        clientSession.channelException(cause);
+        clientSession.close();
     }
 }
