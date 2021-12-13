@@ -9,4 +9,12 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class WriteMetricResult {
     private boolean success;
+    private int errCode;
+    private String errMsg;
+
+    public WriteMetricResult(boolean success) {
+        this.success = success;
+    }
+
+    public static final WriteMetricResult OK = new WriteMetricResult(true);
 }

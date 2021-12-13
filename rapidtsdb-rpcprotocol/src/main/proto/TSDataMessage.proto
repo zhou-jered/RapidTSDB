@@ -26,6 +26,7 @@ message ProtoDatapoints {
   string metric = 1;
   repeated ProtoDatapoint dps = 2;
   repeated ProtoTSTag tags = 3;
+  int32 reqId = 4;
 }
 
 

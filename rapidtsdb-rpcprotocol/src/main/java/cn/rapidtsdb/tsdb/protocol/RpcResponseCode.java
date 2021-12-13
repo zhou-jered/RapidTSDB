@@ -14,4 +14,8 @@ public class RpcResponseCode {
 
     public static final byte AUTH_FAILED = 0x40;
 
+    public static String getErrMsg(int code) {
+        return "failed";
+    }
+
 }

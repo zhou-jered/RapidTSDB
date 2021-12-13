@@ -29,6 +29,8 @@ public class TSDBClientConfig {
     private String writeMode = WRITE_MODE_BATCH;
     @Getter
     private int clientThreads = 2;
+    @Getter
+    private int maxConcurrentRequestPerChannel = 10;
 
     @Getter
     private boolean autoReconnect = true;

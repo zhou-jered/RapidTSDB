@@ -1,17 +1,22 @@
 package cn.rapidtsdb.tsdb.client.handler.v1;
 
-import cn.rapidtsdb.tsdb.common.protonetty.RequestFuture;
+import cn.rapidtsdb.tsdb.client.TSDBClientConfig;
+import cn.rapidtsdb.tsdb.client.WriteMetricResult;
+import cn.rapidtsdb.tsdb.client.exceptions.NoPermissionException;
 import cn.rapidtsdb.tsdb.common.utils.ChannelUtils;
 import cn.rapidtsdb.tsdb.model.proto.ConnectionAuth;
 import cn.rapidtsdb.tsdb.model.proto.TSDBResponse;
 import cn.rapidtsdb.tsdb.model.proto.TSDataMessage;
 import cn.rapidtsdb.tsdb.model.proto.TSQueryMessage;
+import cn.rapidtsdb.tsdb.protocol.OperationPermissionMasks;
+import cn.rapidtsdb.tsdb.protocol.RpcResponseCode;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import lombok.extern.log4j.Log4j2;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
@@ -26,10 +31,13 @@ public class ClientSession {
     private Lock sessStateLock = new ReentrantLock();
     private Condition sessStateCondition = sessStateLock.newCondition();
     private int permissions = 0;
-    private Map<Integer, RequestFuture> requestFutureMap = new ConcurrentHashMap<>();
+    private Map<Integer, MsgExchange> exchangerMap = new ConcurrentHashMap<>();
+    private Semaphore concurrentRequestSem;
 
-    public ClientSession(Channel channel) {
+    public ClientSession(Channel channel, TSDBClientConfig config) {
         this.channel = channel;
+        final int concurrentLevel = Math.max(config.getMaxConcurrentRequestPerChannel(), 1);
+        concurrentRequestSem = new Semaphore(concurrentLevel, true);
     }
 
 
@@ -45,45 +53,51 @@ public class ClientSession {
 
     public ChannelFuture auth(
             ConnectionAuth.ProtoAuthMessage authMsg) {
-        checkChannelState();
         checkOrWaitSessionState(ClientSessionState.PENDING_AUTH);
         return channel.pipeline().writeAndFlush(authMsg);
     }
 
 
-    public void exchange(MsgExchange exchanger) {
-        Object req = exchanger.getRequest();
-        channel.pipeline().writeAndFlush(req);
-
+    public WriteMetricResult write(TSDataMessage.ProtoDatapoint pdp) {
+        MsgExchange<TSDataMessage.ProtoDatapoint, TSDBResponse.ProtoCommonResponse>
+                msgExchange = new MsgExchange<>(pdp.getReqId(), pdp);
+        return writeExchange(msgExchange);
     }
 
-    public void write(TSDataMessage.ProtoDatapoint pdp) {
-
+    public WriteMetricResult write(TSDataMessage.ProtoSimpleDatapoint sdp) {
+        MsgExchange<TSDataMessage.ProtoSimpleDatapoint, TSDBResponse.ProtoCommonResponse>
+                msgExchange = new MsgExchange<>(sdp.getReqId(), sdp);
+        return writeExchange(msgExchange);
     }
 
-    public RequestFuture write(TSDataMessage.ProtoSimpleDatapoint sdp) {
-        checkChannelState();
-//        checkOrWaitSessionState(ClientSessionState.ACTIVE);
-        ChannelFuture channelFuture = channel.pipeline().writeAndFlush(sdp);
-        RequestFuture requestFuture = new RequestFuture(sdp.getReqId());
-        return requestFuture;
+    public WriteMetricResult write(TSDataMessage.ProtoDatapoints dps) {
+        MsgExchange<TSDataMessage.ProtoDatapoints, TSDBResponse.ProtoCommonResponse>
+                msgExchange = new MsgExchange<>(dps.getReqId(), dps);
+        return writeExchange(msgExchange);
     }
 
-    public void write(TSDataMessage.ProtoDatapoints dps) {
-        checkChannelState();
+    private WriteMetricResult writeExchange(MsgExchange<?, TSDBResponse.ProtoCommonResponse> msgExchange) {
         checkOrWaitSessionState(ClientSessionState.ACTIVE);
+        if (OperationPermissionMasks.hadWritePermission(permissions)) {
+            exchange(msgExchange);
+            TSDBResponse.ProtoCommonResponse response = msgExchange.get();
+            if (response.getCode() == RpcResponseCode.SUCCESS) {
+                return WriteMetricResult.OK;
+            } else {
+                WriteMetricResult wmr = new WriteMetricResult(false);
+                wmr.setErrCode(response.getCode());
+                wmr.setErrMsg(RpcResponseCode.getErrMsg(response.getCode()));
+                return wmr;
+            }
+        } else {
+            throw new NoPermissionException();
+        }
     }
 
     public void query(TSQueryMessage.ProtoTSQuery query) {
-        checkChannelState();
         checkOrWaitSessionState(ClientSessionState.ACTIVE);
     }
 
-
-    public void setCommonResponse(int reqId, TSDBResponse.ProtoCommonResponse commonResponse) {
-        RequestFuture requestFuture = requestFutureMap.get(reqId);
-        requestFuture.setResult(commonResponse);
-    }
 
     public ChannelFuture heartbeat() {
         return null;
@@ -116,7 +130,7 @@ public class ClientSession {
     public void close() {
         channel.disconnect();
         channel.close();
-
+        checkSessionState(ClientSessionState.CLOSED);
     }
 
     public void channeInActive() {
@@ -124,26 +138,44 @@ public class ClientSession {
         close();
     }
 
-    /**
-     * called by channel registry, when channel become inactive,
-     * this method will be called.
-     */
-    boolean checkChannelState() {
-        if (!channel.isActive()) {
-            throw new RuntimeException("channel inactive");
+
+    public void exchange(MsgExchange exchanger) {
+        try {
+            concurrentRequestSem.acquire();
+            exchangerMap.put(exchanger.getExchangeId(), exchanger);
+            Object req = exchanger.getRequest();
+            channel.pipeline().writeAndFlush(req);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            concurrentRequestSem.release();
         }
-        return true;
     }
+
+    public void setResult(int reqId, Object result) {
+        MsgExchange msgExchange = exchangerMap.get(reqId);
+        if (msgExchange != null) {
+            msgExchange.setResult(result);
+            exchangerMap.remove(reqId);
+        } else {
+            log.error("MsgExchange NULL from exchangeMap");
+        }
+    }
+
 
     private void checkOrWaitSessionState(ClientSessionState expectState) {
         if (sessionState() == expectState) {
             return;
+        } else if (sessionState() == ClientSessionState.CLOSED) {
+            throw new RuntimeException("Session Closed");
         } else {
             try {
                 sessStateLock.lock();
                 while (true) {
                     if (sessionState() == expectState) {
                         return;
+                    } else if (sessionState() == ClientSessionState.CLOSED) {
+                        throw new RuntimeException("Session Closed");
                     }
                     sessStateCondition.await(3, TimeUnit.SECONDS);
                 }

@@ -20,8 +20,7 @@ public class CommonResponseHandler extends SimpleChannelInboundHandler<TSDBRespo
         }
         log.debug("commresponse:{}, {} , {}", commonResp.getCode(), commonResp.getReqId(), commonResp.getMsg());
         int reqId = commonResp.getReqId();
-
-        clientSession.setCommonResponse(reqId, commonResp);
+        clientSession.setResult(reqId, commonResp);
     }
 
     @Override

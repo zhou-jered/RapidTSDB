@@ -4,7 +4,6 @@ import cn.rapidtsdb.tsdb.client.event.TSDBUserEventListener;
 import cn.rapidtsdb.tsdb.client.handler.ClientChannelInitializer;
 import cn.rapidtsdb.tsdb.client.handler.v1.ClientSession;
 import cn.rapidtsdb.tsdb.client.handler.v1.ClientSessionRegistry;
-import cn.rapidtsdb.tsdb.common.protonetty.RequestFuture;
 import cn.rapidtsdb.tsdb.model.proto.ConnectionAuth;
 import cn.rapidtsdb.tsdb.model.proto.TSDataMessage;
 import io.netty.bootstrap.Bootstrap;
@@ -44,6 +43,7 @@ class DefaultTSDBClient implements TSDBClient {
     public void connect(boolean keepAlive) {
         EventLoopGroup worker = new NioEventLoopGroup(config.getClientThreads());
         worker.scheduleAtFixedRate(() -> checkReqIdIndex(), TimeUnit.MINUTES.toMillis(10), TimeUnit.MINUTES.toMillis(10), TimeUnit.MILLISECONDS);
+        ClientSessionRegistry.getRegistry().scheduleRegistry(worker);
         Bootstrap bootstrap = new Bootstrap().group(worker);
         bootstrap.channel(NioSocketChannel.class)
                 .handler(new ClientChannelInitializer())
@@ -60,7 +60,7 @@ class DefaultTSDBClient implements TSDBClient {
             }
         });
         log.info("channgel regist");
-        clientSession = ClientSessionRegistry.getRegistry().regist(channelFuture.channel());
+        clientSession = ClientSessionRegistry.getRegistry().regist(channelFuture.channel(), config);
 
         channelFuture.syncUninterruptibly();
         if (!channelFuture.isSuccess()) {
@@ -111,15 +111,7 @@ class DefaultTSDBClient implements TSDBClient {
                 .setVal(value)
                 .setReqId(99)
                 .build();
-        RequestFuture cf = clientSession.write(sdp);
-        cf.addListener(f -> {
-            log.info("send metrics :{}", f.isSuccess());
-            if (!f.isSuccess()) {
-                log.error(f.cause());
-                f.cause().printStackTrace();
-            }
-        });
-        return null;
+        return clientSession.write(sdp);
     }
 
     @Override
