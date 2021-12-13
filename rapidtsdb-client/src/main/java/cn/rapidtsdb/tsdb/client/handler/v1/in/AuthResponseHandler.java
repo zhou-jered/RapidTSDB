@@ -2,7 +2,6 @@ package cn.rapidtsdb.tsdb.client.handler.v1.in;
 
 import cn.rapidtsdb.tsdb.client.handler.v1.ClientSession;
 import cn.rapidtsdb.tsdb.client.handler.v1.ClientSessionRegistry;
-import cn.rapidtsdb.tsdb.client.utils.ChannelAttributes;
 import cn.rapidtsdb.tsdb.common.utils.ChannelUtils;
 import cn.rapidtsdb.tsdb.model.proto.ConnectionAuth;
 import cn.rapidtsdb.tsdb.protocol.RpcResponseCode;
@@ -31,7 +30,6 @@ public class AuthResponseHandler extends SimpleChannelInboundHandler<ConnectionA
             ClientSession clientSession = ClientSessionRegistry.getRegistry().getClientSession(channelHandlerContext.channel());
             if (clientSession != null) {
                 clientSession.authCompleted(protoAuthResp.getPermissions());
-                ChannelAttributes.setSessionAttribute(channelHandlerContext, clientSession);
             }
         }
     }

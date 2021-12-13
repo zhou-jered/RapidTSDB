@@ -1,7 +1,8 @@
 package cn.rapidtsdb.tsdb.core.persistent;
 
-import cn.rapidtsdb.tsdb.TSDBTaskCallback;
 import cn.rapidtsdb.tsdb.TSDBRunnableTask;
+import cn.rapidtsdb.tsdb.TSDBTaskCallback;
+import cn.rapidtsdb.tsdb.common.TimeUtils;
 import cn.rapidtsdb.tsdb.core.TSBlock;
 import cn.rapidtsdb.tsdb.core.TSBlockMeta;
 import cn.rapidtsdb.tsdb.core.TSBlockSnapshot;
@@ -16,7 +17,6 @@ import cn.rapidtsdb.tsdb.lifecycle.Initializer;
 import cn.rapidtsdb.tsdb.plugins.StoreHandlerPlugin;
 import cn.rapidtsdb.tsdb.store.StoreHandlerFactory;
 import cn.rapidtsdb.tsdb.utils.TSBlockUtils;
-import cn.rapidtsdb.tsdb.common.TimeUtils;
 import lombok.extern.log4j.Log4j2;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -117,6 +117,14 @@ public class TSBlockPersister implements Initializer, Closer {
         return null;
     }
 
+    /**
+     * need improve todo
+     *
+     * @param metricId
+     * @param startTimestamp
+     * @param endTimestamp
+     * @return
+     */
     public ArrayList<TSBlock> getTSBlocks(Integer metricId, long startTimestamp, long endTimestamp) {
         ArrayList<TSBlock> blocks = new ArrayList<>((int) ((endTimestamp - startTimestamp) / TimeUnit.HOURS.toMillis(2) + 1));
         long baseTime = TimeUtils.getBlockBaseTime(startTimestamp);

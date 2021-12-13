@@ -5,7 +5,6 @@ package cn.rapidtsdb.tsdb.model.proto;
 message ProtoDatapoint {
   int64 timestamp = 1;
   double val = 2;
-  int32 reqId = 3;
 }
 
 message ProtoSimpleDatapoint {

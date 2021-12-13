@@ -4,6 +4,7 @@ import cn.rapidtsdb.tsdb.client.event.TSDBUserEventListener;
 import cn.rapidtsdb.tsdb.client.handler.ClientChannelInitializer;
 import cn.rapidtsdb.tsdb.client.handler.v1.ClientSession;
 import cn.rapidtsdb.tsdb.client.handler.v1.ClientSessionRegistry;
+import cn.rapidtsdb.tsdb.client.utils.ChannelAttributes;
 import cn.rapidtsdb.tsdb.model.proto.ConnectionAuth;
 import cn.rapidtsdb.tsdb.model.proto.TSDataMessage;
 import io.netty.bootstrap.Bootstrap;
@@ -16,6 +17,7 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang.StringUtils;
 
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -59,9 +61,8 @@ class DefaultTSDBClient implements TSDBClient {
                 log.error("Connect {} failed:{}", config.getServerBootstrap(), ch.cause().getMessage());
             }
         });
-        log.info("channgel regist");
         clientSession = ClientSessionRegistry.getRegistry().regist(channelFuture.channel(), config);
-
+        ChannelAttributes.setSessionAttribute(channelFuture.channel(), clientSession);
         channelFuture.syncUninterruptibly();
         if (!channelFuture.isSuccess()) {
             ClientSessionRegistry.getRegistry().deregist(channelFuture.channel());
@@ -95,48 +96,42 @@ class DefaultTSDBClient implements TSDBClient {
 
     @Override
     public WriteMetricResult writeMetric(String metric, long timestamp, double value) {
-        return null;
+        return writeSingleInternal(metric, null, timestamp, value);
     }
 
     @Override
     public WriteMetricResult writeMetric(String metric, Datapoint dp) {
-        return null;
+        return writeSingleInternal(metric, null, dp.getTimestamp(), dp.getVal());
     }
 
     @Override
     public WriteMetricResult writeMetric(String metric, double value) {
-        TSDataMessage.ProtoSimpleDatapoint sdp = TSDataMessage.ProtoSimpleDatapoint.newBuilder()
-                .setMetric(metric)
-                .setTimestamp(TSTimer.getCachedTimer().getCurrentMills())
-                .setVal(value)
-                .setReqId(99)
-                .build();
-        return clientSession.write(sdp);
+        return writeSingleInternal(metric, null, TSTimer.getCachedTimer().getCurrentMills(), value);
     }
 
     @Override
     public WriteMetricResult writeMetrics(String metric, List<Datapoint> dps) {
-        return null;
+        return writeMultiInternal(metric, null, dps);
     }
 
     @Override
     public WriteMetricResult writeMetric(String metric, long timestamp, double value, Map<String, String> tags) {
-        return null;
+        return writeSingleInternal(metric, tags, timestamp, value);
     }
 
     @Override
     public WriteMetricResult writeMetric(String metric, Datapoint dp, Map<String, String> tags) {
-        return null;
+        return writeSingleInternal(metric, tags, dp.getTimestamp(), dp.getVal());
     }
 
     @Override
     public WriteMetricResult writeMetric(String metric, double value, Map<String, String> tags) {
-        return null;
+        return writeSingleInternal(metric, tags, TSTimer.getCachedTimer().getCurrentMills(), value);
     }
 
     @Override
     public WriteMetricResult writeMetrics(String metric, List<Datapoint> dps, Map<String, String> tags) {
-        return null;
+        return writeMultiInternal(metric, tags, dps);
     }
 
     @Override
@@ -175,8 +170,8 @@ class DefaultTSDBClient implements TSDBClient {
     }
 
     private InetSocketAddress fromBootstarp(String bootsrap) {
-        String host = "127.0.0.1";
-        int port = 9099;
+        String host = "127.0.0.1"; // default address
+        int port = 9099; // default port
         if (StringUtils.isNotEmpty(bootsrap)) {
             String[] parts = bootsrap.trim().split(":");
             host = parts[0];
@@ -189,7 +184,7 @@ class DefaultTSDBClient implements TSDBClient {
     }
 
     public void checkReqIdIndex() {
-        if (reqIdIndex.get() > 1e5) {
+        if (reqIdIndex.get() > 16000) { // maximum 2 bytes protobuf number is 16383
             while (true) {
                 int old = reqIdIndex.get();
                 boolean setSucc = reqIdIndex.compareAndSet(old, 0);
@@ -198,6 +193,56 @@ class DefaultTSDBClient implements TSDBClient {
                 }
             }
         }
+    }
+
+    private WriteMetricResult writeSingleInternal(String metric, Map<String, String> tags, long timestamp, double val) {
+        TSDataMessage.ProtoSimpleDatapoint sdp = TSDataMessage.ProtoSimpleDatapoint.newBuilder()
+                .setMetric(metric)
+                .addAllTags(mapTag2ProtoTag(tags))
+                .setTimestamp(TSTimer.getCachedTimer().getCurrentMills())
+                .setVal(val)
+                .setReqId(reqIdIndex.incrementAndGet())
+                .build();
+        return clientSession.write(sdp);
+    }
+
+    private WriteMetricResult writeMultiInternal(String metric, Map<String, String> tags, List<Datapoint> dps) {
+        if (dps != null && dps.size() > 0) {
+            List<TSDataMessage.ProtoDatapoint> protoDps = new ArrayList<>();
+            dps.forEach(dp -> {
+                TSDataMessage.ProtoDatapoint protoDp = TSDataMessage.ProtoDatapoint.newBuilder()
+                        .setTimestamp(dp.getTimestamp())
+                        .setVal(dp.getVal()).build();
+                protoDps.add(protoDp);
+            });
+            TSDataMessage.ProtoDatapoints pdps = TSDataMessage.ProtoDatapoints.newBuilder()
+                    .setMetric(metric)
+                    .addAllTags(mapTag2ProtoTag(tags))
+                    .addAllDps(protoDps)
+                    .build();
+            return clientSession.write(pdps);
+        }
+        return new WriteMetricResult(false);
+    }
+
+
+
+    private List<TSDataMessage.ProtoTSTag> mapTag2ProtoTag(Map<String, String> tags) {
+        if (tags == null || tags.size() == 0) {
+            return null;
+        }
+        if (tags.size() > 128) {
+            throw new RuntimeException("Exceed Maximum tag size 32");
+        }
+        List<TSDataMessage.ProtoTSTag> protoTSTags = new ArrayList<>();
+        tags.forEach((k, v) -> {
+            TSDataMessage.ProtoTSTag pt = TSDataMessage.ProtoTSTag.newBuilder()
+                    .setKey(k)
+                    .setValue(v)
+                    .build();
+            protoTSTags.add(pt);
+        });
+        return protoTSTags;
     }
 
 }

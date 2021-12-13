@@ -56,13 +56,7 @@ public class ClientSession {
         checkOrWaitSessionState(ClientSessionState.PENDING_AUTH);
         return channel.pipeline().writeAndFlush(authMsg);
     }
-
-
-    public WriteMetricResult write(TSDataMessage.ProtoDatapoint pdp) {
-        MsgExchange<TSDataMessage.ProtoDatapoint, TSDBResponse.ProtoCommonResponse>
-                msgExchange = new MsgExchange<>(pdp.getReqId(), pdp);
-        return writeExchange(msgExchange);
-    }
+    
 
     public WriteMetricResult write(TSDataMessage.ProtoSimpleDatapoint sdp) {
         MsgExchange<TSDataMessage.ProtoSimpleDatapoint, TSDBResponse.ProtoCommonResponse>
@@ -128,8 +122,10 @@ public class ClientSession {
 
 
     public void close() {
-        channel.disconnect();
-        channel.close();
+        if (channel.isActive()) {
+            channel.disconnect();
+            channel.close();
+        }
         checkSessionState(ClientSessionState.CLOSED);
     }
 

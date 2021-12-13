@@ -93,26 +93,21 @@ public class LRUCache<K, V> {
     }
 
     private void touchNode(int nodeIdx) {
-        try {
-            rwLock.writeLock().lock(); // reenter
-            heap[nodeIdx].accessTime = TimeUtils.currentMills();
-            while (nodeIdx < heapIdx) {
-                int leftIdx = nodeIdx * 2;
-                int rightIdx = nodeIdx * 2 + 1;
-                int targetIdx = leftIdx;
-                if (leftIdx >= heapIdx) {
-                    break;
-                }
-                if (rightIdx < heapIdx && heap[rightIdx].accessTime < heap[leftIdx].accessTime) {
-                    targetIdx = rightIdx;
-                }
-                HeapNode tmp = heap[nodeIdx];
-                heap[nodeIdx] = heap[targetIdx];
-                heap[targetIdx] = tmp;
-                nodeIdx = targetIdx;
+        heap[nodeIdx].accessTime = TimeUtils.currentMills();
+        while (nodeIdx < heapIdx) {
+            int leftIdx = nodeIdx * 2;
+            int rightIdx = nodeIdx * 2 + 1;
+            int targetIdx = leftIdx;
+            if (leftIdx >= heapIdx) {
+                break;
             }
-        } finally {
-            rwLock.writeLock().unlock();
+            if (rightIdx < heapIdx && heap[rightIdx].accessTime < heap[leftIdx].accessTime) {
+                targetIdx = rightIdx;
+            }
+            HeapNode tmp = heap[nodeIdx];
+            heap[nodeIdx] = heap[targetIdx];
+            heap[targetIdx] = tmp;
+            nodeIdx = targetIdx;
         }
     }
 

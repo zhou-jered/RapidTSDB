@@ -18,7 +18,6 @@ public class CommonResponseHandler extends SimpleChannelInboundHandler<TSDBRespo
         if (clientSession == null) {
             clientSession = ClientSessionRegistry.getRegistry().getClientSession(ctx.channel());
         }
-        log.debug("commresponse:{}, {} , {}", commonResp.getCode(), commonResp.getReqId(), commonResp.getMsg());
         int reqId = commonResp.getReqId();
         clientSession.setResult(reqId, commonResp);
     }

@@ -1,5 +1,6 @@
 package cn.rapidtsdb.tsdb.server.handler.rpc.v1.in.datahandler;
 
+import cn.rapidtsdb.tsdb.TSDBBridge;
 import cn.rapidtsdb.tsdb.model.proto.TSDBResponse;
 import cn.rapidtsdb.tsdb.model.proto.TSDataMessage;
 import cn.rapidtsdb.tsdb.protocol.OperationPermissionMasks;
@@ -22,6 +23,9 @@ public class SimpleDatapointHandler extends SimpleChannelInboundHandler<TSDataMe
     protected void channelRead0(ChannelHandlerContext ctx, TSDataMessage.ProtoSimpleDatapoint sdp) throws Exception {
         log.debug("get sdp:{}, {}, {} ,{}", sdp.getMetric(), sdp.getTagsList(), sdp.getTimestamp(), sdp.getVal());
         log.debug("sdp reqId:{}", sdp.getReqId());
+        // temp impl todo
+        TSDBBridge.getDatabase().writeMetric(sdp.getMetric(),
+                sdp.getVal(), sdp.getTimestamp());
         if (authed) {
             TSDBResponse.ProtoCommonResponse commonResponse =
                     TSDBResponse.ProtoCommonResponse.newBuilder()
