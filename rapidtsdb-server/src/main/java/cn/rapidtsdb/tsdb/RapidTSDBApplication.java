@@ -10,6 +10,7 @@ import cn.rapidtsdb.tsdb.server.ServerInfo;
 import cn.rapidtsdb.tsdb.server.TSDBServer;
 import cn.rapidtsdb.tsdb.server.config.ServerConfig;
 import cn.rapidtsdb.tsdb.server.config.ServerProtocol;
+import cn.rapidtsdb.tsdb.server.middleware.TSDBExecutor;
 import cn.rapidtsdb.tsdb.utils.CliParser;
 import cn.rapidtsdb.tsdb.utils.ResourceUtils;
 import com.alibaba.fastjson.JSON;
@@ -71,6 +72,7 @@ public class RapidTSDBApplication implements Initializer, Runner {
         log.info("start to init");
         tsdb = new TSDB();
         tsdb.init();
+        TSDBExecutor.start(tsdb);
         loadServerInfo();
         server = new TSDBServer(serverInfo);
         server.init();

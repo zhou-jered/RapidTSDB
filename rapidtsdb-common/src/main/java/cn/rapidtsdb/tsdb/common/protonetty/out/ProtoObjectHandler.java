@@ -2,9 +2,7 @@ package cn.rapidtsdb.tsdb.common.protonetty.out;
 
 import cn.rapidtsdb.tsdb.common.utils.ChannelUtils;
 import cn.rapidtsdb.tsdb.protocol.RpcObjectCode;
-import com.google.protobuf.Descriptors;
 import com.google.protobuf.GeneratedMessageV3;
-import com.sun.xml.internal.org.jvnet.fastinfoset.FastInfosetException;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
@@ -19,7 +17,6 @@ public class ProtoObjectHandler extends ChannelOutboundHandlerAdapter {
         log.debug("channel:{}, {} write class:{}", ChannelUtils.getChannelId(ctx.channel()), getClass().getSimpleName(), msg.getClass().getSimpleName());
         if (msg instanceof GeneratedMessageV3) {
             GeneratedMessageV3 protoMsg = (GeneratedMessageV3) msg;
-
             short objId = RpcObjectCode.getObjectCode(protoMsg.getClass());
             byte[] protoBytes = protoMsg.toByteArray();
             short len = (short) protoBytes.length;

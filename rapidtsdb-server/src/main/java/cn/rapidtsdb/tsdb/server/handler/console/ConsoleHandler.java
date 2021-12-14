@@ -1,11 +1,14 @@
 package cn.rapidtsdb.tsdb.server.handler.console;
 
-import cn.rapidtsdb.tsdb.*;
+import cn.rapidtsdb.tsdb.TSDBBridge;
+import cn.rapidtsdb.tsdb.TSDBDataOperationTask;
+import cn.rapidtsdb.tsdb.TSDBRunnableTask;
+import cn.rapidtsdb.tsdb.TSDBTaskCallback;
+import cn.rapidtsdb.tsdb.TSDataOperationQueue;
 import cn.rapidtsdb.tsdb.core.SimpleDataQuery;
 import cn.rapidtsdb.tsdb.core.TSDB;
 import cn.rapidtsdb.tsdb.core.TSDataPoint;
 import cn.rapidtsdb.tsdb.core.persistent.MetricsKeyManager;
-import cn.rapidtsdb.tsdb.obj.WriteMetricResult;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
@@ -195,22 +198,16 @@ public class ConsoleHandler extends SimpleChannelInboundHandler<ByteBuf> {
         @Override
         public void run() {
             TSDB database = TSDBBridge.getDatabase();
-            WriteMetricResult writeMetricResult = null;
             try {
-                writeMetricResult = database.writeMetric(metric, dp.getValue(), dp.getTimestamp());
+                database.writeMetric(metric, dp.getValue(), dp.getTimestamp());
             } catch (Exception e) {
                 if (callback != null) {
                     callback.onException(this, dp, e);
                 }
+                callback.onFailed(this, null);
                 return;
             }
-            if (writeMetricResult.isSuccess()) {
-                if (callback != null) {
-                    callback.onSuccess(writeMetricResult);
-                }
-            } else if (callback != null) {
-                callback.onFailed(this, writeMetricResult);
-            }
+            callback.onSuccess(null);
         }
     }
 
@@ -223,7 +220,6 @@ public class ConsoleHandler extends SimpleChannelInboundHandler<ByteBuf> {
 
         @Override
         public Object onSuccess(Object data) {
-
             ctx.writeAndFlush("ok");
             newLine(ctx);
             return null;
@@ -231,28 +227,14 @@ public class ConsoleHandler extends SimpleChannelInboundHandler<ByteBuf> {
 
         @Override
         public void onFailed(TSDBRunnableTask task, Object data) {
-            if (data instanceof WriteMetricResult) {
-                WriteMetricResult wmr = (WriteMetricResult) data;
-                ByteBuf byteBuf = ctx.alloc().buffer(1024);
-                byteBuf.writeBytes("Failed:".getBytes());
-                if (wmr.getMsg() != null) {
-                    byteBuf.writeBytes(wmr.getMsg().getBytes());
-                }
-                ctx.writeAndFlush(byteBuf);
-            }
+            ByteBuf byteBuf = ctx.alloc().buffer(15);
+            byteBuf.writeBytes("Failed:".getBytes());
+            ctx.writeAndFlush(byteBuf);
             newLine(ctx);
         }
 
         @Override
         public void onException(TSDBRunnableTask task, Object data, Throwable exception) {
-            if (data instanceof WriteMetricResult) {
-                WriteMetricResult wmr = (WriteMetricResult) data;
-                if (wmr.getMsg() != null) {
-                    ctx.writeAndFlush("Failed:" + wmr.getMsg());
-                } else {
-                    ctx.writeAndFlush("Failed:code:" + wmr.getCode());
-                }
-            }
             if (exception != null) {
                 ctx.writeAndFlush("\n");
                 ctx.writeAndFlush("Exception:" + exception.getMessage());

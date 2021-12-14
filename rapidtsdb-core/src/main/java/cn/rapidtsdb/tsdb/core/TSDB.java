@@ -12,17 +12,16 @@ import cn.rapidtsdb.tsdb.core.persistent.TSDBCheckPointManager;
 import cn.rapidtsdb.tsdb.executors.ManagedThreadPool;
 import cn.rapidtsdb.tsdb.lifecycle.Closer;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
-import cn.rapidtsdb.tsdb.obj.WriteMetricResult;
 import cn.rapidtsdb.tsdb.tasks.BlockCompressTask;
 import cn.rapidtsdb.tsdb.tasks.TwoHoursTriggerTask;
 import cn.rapidtsdb.tsdb.utils.TSDataUtils;
 import lombok.extern.log4j.Log4j2;
-import org.apache.commons.lang.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * TSDB main class
@@ -40,7 +39,7 @@ public class TSDB implements Initializer, Closer {
     public static final int DB_STATE_INIT = 0;
     public static final int DB_STATE_RUNNING = 1;
     public static final int DB_STATE_CLOSED = 2;
-    private int dbState = DB_STATE_INIT;
+    private AtomicInteger dbState = new AtomicInteger(DB_STATE_INIT);
 
     TSDBConfig config;
 
@@ -69,14 +68,14 @@ public class TSDB implements Initializer, Closer {
         blockManager.init();
         recoveryDBData();
         initScheduleTimeTask();
-        dbState = DB_STATE_RUNNING;
+        dbState.set(DB_STATE_RUNNING);
     }
 
 
     @Override
     public void close() {
         log.info("Closing TSDB");
-        dbState = DB_STATE_CLOSED;
+        dbState.set(DB_STATE_CLOSED);
         appendOnlyLogManager.close();
         metricsKeyManager.close();
         blockManager.close();
@@ -86,35 +85,24 @@ public class TSDB implements Initializer, Closer {
     }
 
 
-    public WriteMetricResult writeMetric(String metric, double val) throws Exception {
-        return writeMetric(metric, val, TimeUtils.currentTimestamp());
+    public void writeMetric(String metric, double val) throws Exception {
+        writeMetric(metric, val, TimeUtils.currentTimestamp());
     }
 
-    public WriteMetricResult writeMetric(String metric, double val, long timestamp) {
-        if (StringUtils.isBlank(metric)) {
-            return WriteMetricResult.FAILED_METRIC_EMPTY;
-        }
-        if (dbState != DB_STATE_RUNNING) {
-            return WriteMetricResult.DB_STATE_NOT_RUNNING;
-        }
+    public void writeMetric(String metric, double val, long timestamp) {
         Integer mIdx = metricsKeyManager.getMetricsIndex(metric);
-        WriteMetricResult internalWResult = writeMetricInternal(mIdx, timestamp, val);
-        if (internalWResult.isSuccess()) {
-            appendOnlyLogManager.appendLog(mIdx, timestamp, val);
-        }
-        return internalWResult;
+        writeMetricInternal(mIdx, timestamp, val);
+        appendOnlyLogManager.appendLog(mIdx, timestamp, val);
     }
 
 
-    private WriteMetricResult writeMetricInternal(int mid, long timestamp, double val) {
+    private void writeMetricInternal(int mid, long timestamp, double val) {
         TSBlock tsBlock = blockManager.getCurrentWriteBlock(mid, timestamp);
         if (tsBlock != null) {
             tsBlock.appendDataPoint(timestamp, val);
-            return WriteMetricResult.SUCCESS;
         } else if (TimeUtils.currentSeconds() - timestamp / 1000 < config.getMaxAllowedDelaySeconds()) {
             tooOldWriteQueue.write(mid, timestamp, val);
         }
-        return WriteMetricResult.FAILED_TIME_FAILED;
     }
 
     public List<TSDataPoint> queryTimeSeriesData(SimpleDataQuery query) {
