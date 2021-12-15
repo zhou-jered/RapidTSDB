@@ -1,6 +1,7 @@
 package cn.rapidtsdb.tsdb.core;
 
 import cn.rapidtsdb.tsdb.exception.BlockDataMissMatchException;
+import cn.rapidtsdb.tsdb.object.TSDataPoint;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Longs;
 import lombok.Getter;

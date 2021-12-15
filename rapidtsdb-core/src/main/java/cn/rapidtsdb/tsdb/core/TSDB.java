@@ -1,6 +1,5 @@
 package cn.rapidtsdb.tsdb.core;
 
-import cn.rapidtsdb.tsdb.TSDBBridge;
 import cn.rapidtsdb.tsdb.calculate.CalculatorFactory;
 import cn.rapidtsdb.tsdb.calculate.DownSampler;
 import cn.rapidtsdb.tsdb.common.TimeUtils;
@@ -12,10 +11,13 @@ import cn.rapidtsdb.tsdb.core.persistent.TSDBCheckPointManager;
 import cn.rapidtsdb.tsdb.executors.ManagedThreadPool;
 import cn.rapidtsdb.tsdb.lifecycle.Closer;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
+import cn.rapidtsdb.tsdb.object.TSDataPoint;
+import cn.rapidtsdb.tsdb.object.TSQuery;
 import cn.rapidtsdb.tsdb.tasks.BlockCompressTask;
 import cn.rapidtsdb.tsdb.tasks.TwoHoursTriggerTask;
 import cn.rapidtsdb.tsdb.utils.TSDataUtils;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.lang.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -51,7 +53,7 @@ public class TSDB implements Initializer, Closer {
         blockManager = new TSBlockManager(config);
         appendOnlyLogManager = new AppendOnlyLogManager();
         checkPointManager = TSDBCheckPointManager.getInstance();
-        TSDBBridge.regist(this);
+
     }
 
 
@@ -105,7 +107,7 @@ public class TSDB implements Initializer, Closer {
         }
     }
 
-    public List<TSDataPoint> queryTimeSeriesData(SimpleDataQuery query) {
+    public List<TSDataPoint> queryTimeSeriesData(TSQuery query) {
         int mid = metricsKeyManager.getMetricsIndex(query.getMetric());
         List<TSBlock> blocks = blockManager.getBlockWithTimeRange(mid, query.getStartTime(), query.getEndTime());
         List<TSDataPoint> dps = new ArrayList<>();
@@ -115,13 +117,16 @@ public class TSDB implements Initializer, Closer {
         int left = TSDataUtils.binarySearchByTimestamp(dps, query.getStartTime(), true);
         int right = TSDataUtils.binarySearchByTimestamp(dps, query.getEndTime(), false);
         List<TSDataPoint> queriedResult = dps.subList(left, right);
+        queriedResult = downSampleIfNecessary(query, queriedResult);
         return queriedResult;
     }
 
-    public List<TSDataPoint> queryTimeSeriesData(SimpleDataQuery query, String downsampler) {
-        DownSampler downSampler = CalculatorFactory.getDownSample(downsampler);
-        List<TSDataPoint> dps = queryTimeSeriesData(query);
-        return downSampler.downSample(dps);
+    private List<TSDataPoint> downSampleIfNecessary(TSQuery query, List<TSDataPoint> dps) {
+        if (StringUtils.isNotBlank(query.getDownSampler())) {
+            DownSampler downSampler = CalculatorFactory.getDownSample(query.getDownSampler());
+            return downSampler.downSample(dps);
+        }
+        return dps;
     }
 
     public void triggerBlockPersist() {

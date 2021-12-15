@@ -1,6 +1,6 @@
 package cn.rapidtsdb.tsdb.calculate;
 
-import cn.rapidtsdb.tsdb.core.TSDataPoint;
+import cn.rapidtsdb.tsdb.object.TSDataPoint;
 
 import java.util.List;
 

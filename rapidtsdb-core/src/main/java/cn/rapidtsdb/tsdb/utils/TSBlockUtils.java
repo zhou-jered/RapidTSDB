@@ -3,7 +3,7 @@ package cn.rapidtsdb.tsdb.utils;
 import cn.rapidtsdb.tsdb.core.TSBlock;
 import cn.rapidtsdb.tsdb.core.TSBlockFactory;
 import cn.rapidtsdb.tsdb.core.TSBlockSnapshot;
-import cn.rapidtsdb.tsdb.core.TSDataPoint;
+import cn.rapidtsdb.tsdb.object.TSDataPoint;
 import cn.rapidtsdb.tsdb.core.io.TSBlockDeserializer;
 import lombok.extern.log4j.Log4j2;
 

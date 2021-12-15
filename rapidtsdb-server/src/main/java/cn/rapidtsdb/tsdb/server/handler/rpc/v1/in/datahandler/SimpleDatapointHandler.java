@@ -1,6 +1,6 @@
 package cn.rapidtsdb.tsdb.server.handler.rpc.v1.in.datahandler;
 
-import cn.rapidtsdb.tsdb.core.TSDataPoint;
+import cn.rapidtsdb.tsdb.object.TSDataPoint;
 import cn.rapidtsdb.tsdb.meta.BizMetric;
 import cn.rapidtsdb.tsdb.model.proto.TSDBResponse;
 import cn.rapidtsdb.tsdb.model.proto.TSDataMessage;
@@ -10,7 +10,7 @@ import cn.rapidtsdb.tsdb.server.handler.rpc.ServerClientSession;
 import cn.rapidtsdb.tsdb.server.handler.rpc.v1.AttrKeys;
 import cn.rapidtsdb.tsdb.server.handler.rpc.v1.SessionPermissionChangeEvent;
 import cn.rapidtsdb.tsdb.server.middleware.TSDBExecutor;
-import cn.rapidtsdb.tsdb.server.utils.DpsUtils;
+import cn.rapidtsdb.tsdb.server.utils.ProtoObjectUtils;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.util.Attribute;
@@ -32,8 +32,8 @@ public class SimpleDatapointHandler extends SimpleChannelInboundHandler<TSDataMe
         log.debug("get sdp:{}, {}, {} ,{}", sdp.getMetric(), sdp.getTagsList(), sdp.getTimestamp(), sdp.getVal());
         log.debug("sdp reqId:{}", sdp.getReqId());
         if (authed) {
-            BizMetric bizMetric = DpsUtils.getBizMetric(sdp.getMetric(), sdp.getTagsList());
-            TSDataPoint dp = DpsUtils.getDp(sdp);
+            BizMetric bizMetric = ProtoObjectUtils.getBizMetric(sdp.getMetric(), sdp.getTagsList());
+            TSDataPoint dp = ProtoObjectUtils.getDp(sdp);
             tsdbExecutor.write(bizMetric, dp);
             TSDBResponse.ProtoCommonResponse commonResponse =
                     TSDBResponse.ProtoCommonResponse.newBuilder()

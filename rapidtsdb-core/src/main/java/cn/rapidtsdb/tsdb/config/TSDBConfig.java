@@ -75,6 +75,9 @@ public class TSDBConfig {
     int maxMemoryDirtyBlocks = 64;
 
     @Getter
+    int dbServerThreads = 5;
+
+    @Getter
     private AdvancedConfig advancedConfig = new AdvancedConfig();
 
     private static Object initWaiter = new Object();

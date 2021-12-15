@@ -3,6 +3,7 @@ package cn.rapidtsdb.tsdb.core;
 import cn.rapidtsdb.tsdb.core.io.TSBlockDeserializer;
 import cn.rapidtsdb.tsdb.core.persistent.TSBlockPersister;
 import cn.rapidtsdb.tsdb.core.persistent.file.FileLocation;
+import cn.rapidtsdb.tsdb.object.TSDataPoint;
 import cn.rapidtsdb.tsdb.plugins.StoreHandlerPlugin;
 import cn.rapidtsdb.tsdb.store.StoreHandlerFactory;
 import cn.rapidtsdb.tsdb.common.TimeUtils;

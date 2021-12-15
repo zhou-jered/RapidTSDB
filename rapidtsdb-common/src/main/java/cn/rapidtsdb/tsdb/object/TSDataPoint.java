@@ -1,4 +1,4 @@
-package cn.rapidtsdb.tsdb.core;
+package cn.rapidtsdb.tsdb.object;
 
 import lombok.Data;
 

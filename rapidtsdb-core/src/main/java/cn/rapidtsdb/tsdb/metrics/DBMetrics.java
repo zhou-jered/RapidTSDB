@@ -1,6 +1,5 @@
 package cn.rapidtsdb.tsdb.metrics;
 
-import cn.rapidtsdb.tsdb.TSDBBridge;
 import lombok.extern.log4j.Log4j2;
 
 @Log4j2
@@ -25,7 +24,7 @@ public class DBMetrics {
     public void reportMetrics(String metricsName, double val) {
         String prefix = "DB_INTERNAL_";
         try {
-            TSDBBridge.getDatabase().writeMetric(prefix + metricsName, val);
+            //todo
         } catch (Exception e) {
             log.error(e);
         }

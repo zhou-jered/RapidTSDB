@@ -7,6 +7,7 @@ import cn.rapidtsdb.tsdb.client.handler.v1.ClientSessionRegistry;
 import cn.rapidtsdb.tsdb.client.utils.ChannelAttributes;
 import cn.rapidtsdb.tsdb.model.proto.ConnectionAuth;
 import cn.rapidtsdb.tsdb.model.proto.TSDataMessage;
+import cn.rapidtsdb.tsdb.model.proto.TSDataMessage.ProtoSimpleDatapoint;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelOption;
@@ -196,14 +197,16 @@ class DefaultTSDBClient implements TSDBClient {
     }
 
     private WriteMetricResult writeSingleInternal(String metric, Map<String, String> tags, long timestamp, double val) {
-        TSDataMessage.ProtoSimpleDatapoint sdp = TSDataMessage.ProtoSimpleDatapoint.newBuilder()
-                .setMetric(metric)
-                .addAllTags(mapTag2ProtoTag(tags))
-                .setTimestamp(TSTimer.getCachedTimer().getCurrentMills())
+        ProtoSimpleDatapoint.Builder builder = ProtoSimpleDatapoint.newBuilder();
+        if (tags != null && tags.size() > 0) {
+            builder.addAllTags(mapTag2ProtoTag(tags));
+        }
+        builder.setMetric(metric)
+                .setTimestamp(timestamp)
                 .setVal(val)
                 .setReqId(reqIdIndex.incrementAndGet())
                 .build();
-        return clientSession.write(sdp);
+        return clientSession.write(builder.build());
     }
 
     private WriteMetricResult writeMultiInternal(String metric, Map<String, String> tags, List<Datapoint> dps) {
@@ -224,7 +227,6 @@ class DefaultTSDBClient implements TSDBClient {
         }
         return new WriteMetricResult(false);
     }
-
 
 
     private List<TSDataMessage.ProtoTSTag> mapTag2ProtoTag(Map<String, String> tags) {

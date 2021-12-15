@@ -1,14 +1,14 @@
 package cn.rapidtsdb.tsdb.server.handler.console;
 
-import cn.rapidtsdb.tsdb.TSDBBridge;
 import cn.rapidtsdb.tsdb.TSDBDataOperationTask;
 import cn.rapidtsdb.tsdb.TSDBRunnableTask;
 import cn.rapidtsdb.tsdb.TSDBTaskCallback;
 import cn.rapidtsdb.tsdb.TSDataOperationQueue;
-import cn.rapidtsdb.tsdb.core.SimpleDataQuery;
-import cn.rapidtsdb.tsdb.core.TSDB;
-import cn.rapidtsdb.tsdb.core.TSDataPoint;
 import cn.rapidtsdb.tsdb.core.persistent.MetricsKeyManager;
+import cn.rapidtsdb.tsdb.meta.BizMetric;
+import cn.rapidtsdb.tsdb.object.TSDataPoint;
+import cn.rapidtsdb.tsdb.object.TSQuery;
+import cn.rapidtsdb.tsdb.server.middleware.TSDBExecutor;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
@@ -22,6 +22,10 @@ public class ConsoleHandler extends SimpleChannelInboundHandler<ByteBuf> {
 
     public static final String CONSOLE_RESP_NO_PARAMS = "No Parameters find.";
     public static final String CONSOLE_RESP_PARAMS_NUMBER_ERROR = "Parameters Number Error.";
+
+    public ConsoleHandler() {
+
+    }
 
     @Override
     public void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
@@ -106,7 +110,6 @@ public class ConsoleHandler extends SimpleChannelInboundHandler<ByteBuf> {
     }
 
     private void get(ChannelHandlerContext ctx, String... params) {
-        TSDB database = TSDBBridge.getDatabase();
         if (params == null || params.length < 3) {
             ctx.writeAndFlush("Params Number Error\n");
             ctx.writeAndFlush("GET ${metric} ${startTimeSeconds} ${endTimeSeconds}");
@@ -119,11 +122,17 @@ public class ConsoleHandler extends SimpleChannelInboundHandler<ByteBuf> {
                 ctx.writeAndFlush("[]");
                 return;
             }
+            TSQuery tsQuery = TSQuery.builder()
+                    .metric(metric)
+                    .startTime(startTime)
+                    .endTime(endTime)
+                    .build();
             List<TSDataPoint> dps = null;
             if (params.length > 3) {
-                dps = database.queryTimeSeriesData(new SimpleDataQuery(metric, startTime, endTime), params[3]);
+                tsQuery.setDownSampler(params[3]);
+                dps = TSDBExecutor.getEXECUTOR().read(tsQuery);
             } else {
-                dps = database.queryTimeSeriesData(new SimpleDataQuery(metric, startTime, endTime));
+                dps = TSDBExecutor.getEXECUTOR().read(tsQuery);
             }
             if (dps == null || dps.size() == 0) {
                 ctx.writeAndFlush("[]");
@@ -197,9 +206,9 @@ public class ConsoleHandler extends SimpleChannelInboundHandler<ByteBuf> {
 
         @Override
         public void run() {
-            TSDB database = TSDBBridge.getDatabase();
             try {
-                database.writeMetric(metric, dp.getValue(), dp.getTimestamp());
+                TSDBExecutor.getEXECUTOR().write(BizMetric.cache(metric),
+                        dp);
             } catch (Exception e) {
                 if (callback != null) {
                     callback.onException(this, dp, e);

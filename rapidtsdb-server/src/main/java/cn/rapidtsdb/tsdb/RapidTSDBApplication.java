@@ -72,7 +72,8 @@ public class RapidTSDBApplication implements Initializer, Runner {
         log.info("start to init");
         tsdb = new TSDB();
         tsdb.init();
-        TSDBExecutor.start(tsdb);
+        TSDBExecutor.start(tsdb, TSDBConfig.getConfigInstance());
+        TSDBExecutor.getEXECUTOR().shutdown();
         loadServerInfo();
         server = new TSDBServer(serverInfo);
         server.init();
