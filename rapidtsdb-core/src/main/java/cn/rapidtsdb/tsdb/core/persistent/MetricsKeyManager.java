@@ -45,9 +45,8 @@ public class MetricsKeyManager implements Initializer, Closer {
     private String metricsKeyFile = "mk.data";
     private String metricsKeyIdxFile = "mk.idx";
     private String metricsKeyListFile = "mk.list";
-    private String METRICS_LEGAL_CHARS = "plokmijnuhbygvtfcrdxeszwaqPLOKMIJNUHBYGVTFCRDXESZWAQ0987654321@#$-_.+=:;,^/";
     private TrieNode trieNodeRoot = new TrieNode('0');
-    private boolean[] legalCharMap = new boolean[256];
+
     private transient Kryo kryo = new Kryo();
     private Lock metricsWriteLock = new ReentrantLock(false);
 
@@ -67,12 +66,6 @@ public class MetricsKeyManager implements Initializer, Closer {
     public void init() {
         if (!status.compareAndSet(STATUS_UNINIT, STATUS_INITIALIZING)) {
             return;
-        }
-        for (int i = 0; i < legalCharMap.length; i++) {
-            legalCharMap[i] = true;
-        }
-        for (int i = 0; i < METRICS_LEGAL_CHARS.length(); i++) {
-            legalCharMap[METRICS_LEGAL_CHARS.charAt(i)] = true;
         }
         tsdbConfig = TSDBConfig.getConfigInstance();
         storeHandler = StoreHandlerFactory.getStoreHandler();
@@ -116,11 +109,6 @@ public class MetricsKeyManager implements Initializer, Closer {
             return idx;
         }
         char[] chars = metric.toCharArray();
-        for (char c : chars) {
-            if (((int) c) > 256 || !legalCharMap[c]) {
-                throw new RuntimeException("Illegal Metrics char: " + c + " code:" + ((int) c) + " in metrics:" + metric);
-            }
-        }
         idx = getMetricsIndexInternal(chars);
         idxCache.put(metric, idx);
         return idx;

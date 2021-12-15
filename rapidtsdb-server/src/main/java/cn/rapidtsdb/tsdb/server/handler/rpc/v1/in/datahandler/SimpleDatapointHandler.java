@@ -1,14 +1,16 @@
 package cn.rapidtsdb.tsdb.server.handler.rpc.v1.in.datahandler;
 
-import cn.rapidtsdb.tsdb.object.TSDataPoint;
 import cn.rapidtsdb.tsdb.meta.BizMetric;
-import cn.rapidtsdb.tsdb.model.proto.TSDBResponse;
+import cn.rapidtsdb.tsdb.model.proto.TSDBResponse.ProtoCommonResponse;
 import cn.rapidtsdb.tsdb.model.proto.TSDataMessage;
+import cn.rapidtsdb.tsdb.object.TSDataPoint;
 import cn.rapidtsdb.tsdb.protocol.OperationPermissionMasks;
 import cn.rapidtsdb.tsdb.protocol.RpcResponseCode;
 import cn.rapidtsdb.tsdb.server.handler.rpc.ServerClientSession;
 import cn.rapidtsdb.tsdb.server.handler.rpc.v1.AttrKeys;
 import cn.rapidtsdb.tsdb.server.handler.rpc.v1.SessionPermissionChangeEvent;
+import cn.rapidtsdb.tsdb.server.handler.rpc.v1.Validator;
+import cn.rapidtsdb.tsdb.server.handler.rpc.v1.Validator.ValidateResult;
 import cn.rapidtsdb.tsdb.server.middleware.TSDBExecutor;
 import cn.rapidtsdb.tsdb.server.utils.ProtoObjectUtils;
 import io.netty.channel.ChannelHandlerContext;
@@ -33,16 +35,28 @@ public class SimpleDatapointHandler extends SimpleChannelInboundHandler<TSDataMe
         log.debug("sdp reqId:{}", sdp.getReqId());
         if (authed) {
             BizMetric bizMetric = ProtoObjectUtils.getBizMetric(sdp.getMetric(), sdp.getTagsList());
-            TSDataPoint dp = ProtoObjectUtils.getDp(sdp);
-            tsdbExecutor.write(bizMetric, dp);
-            TSDBResponse.ProtoCommonResponse commonResponse =
-                    TSDBResponse.ProtoCommonResponse.newBuilder()
-                            .setReqId(sdp.getReqId())
-                            .setCode(RpcResponseCode.SUCCESS).build();
-            ctx.pipeline().writeAndFlush(commonResponse);
+            ValidateResult vr = Validator.validMetric(sdp.getMetric(), bizMetric.getTags());
+            if (vr.isValid()) {
+                TSDataPoint dp = ProtoObjectUtils.getDp(sdp);
+                tsdbExecutor.write(bizMetric, dp);
+                ProtoCommonResponse commonResponse =
+                        ProtoCommonResponse.newBuilder()
+                                .setReqId(sdp.getReqId())
+                                .setCode(RpcResponseCode.SUCCESS).build();
+                ctx.pipeline().writeAndFlush(commonResponse);
+            } else {
+                ProtoCommonResponse commonResponse =
+                        ProtoCommonResponse.newBuilder()
+                                .setReqId(sdp.getReqId())
+                                .setCode(RpcResponseCode.SERVER_REFUSED)
+                                .setMsg(vr.errMsg())
+                                .build();
+                ctx.pipeline().writeAndFlush(commonResponse);
+            }
+
         } else {
-            TSDBResponse.ProtoCommonResponse commonResponse
-                    = TSDBResponse.ProtoCommonResponse.newBuilder()
+            ProtoCommonResponse commonResponse
+                    = ProtoCommonResponse.newBuilder()
                     .setCode(RpcResponseCode.SERVER_REFUSED)
                     .setReqId(sdp.getReqId())
                     .setMsg("No Write Permission").build();
