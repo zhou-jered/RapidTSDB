@@ -25,5 +25,17 @@ public class TSQuery {
         this.endTime = endTime;
     }
 
+    public boolean hasTag() {
+        return tags != null && tags.size() > 0;
+    }
+
+    public boolean hasAggregator() {
+        return aggregator != null && aggregator.length() > 0;
+    }
+
+    public boolean hasDownSampler() {
+        return downSampler != null && downSampler.length() > 0;
+    }
+
 
 }

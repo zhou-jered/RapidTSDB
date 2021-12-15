@@ -1,6 +1,6 @@
 package cn.rapidtsdb.tsdb.server.handler.rpc.v1.in.datahandler;
 
-import cn.rapidtsdb.tsdb.meta.BizMetric;
+import cn.rapidtsdb.tsdb.object.BizMetric;
 import cn.rapidtsdb.tsdb.model.proto.TSDBResponse.ProtoCommonResponse;
 import cn.rapidtsdb.tsdb.model.proto.TSDataMessage;
 import cn.rapidtsdb.tsdb.object.TSDataPoint;
@@ -12,7 +12,7 @@ import cn.rapidtsdb.tsdb.server.handler.rpc.v1.SessionPermissionChangeEvent;
 import cn.rapidtsdb.tsdb.server.handler.rpc.v1.Validator;
 import cn.rapidtsdb.tsdb.server.handler.rpc.v1.Validator.ValidateResult;
 import cn.rapidtsdb.tsdb.server.middleware.TSDBExecutor;
-import cn.rapidtsdb.tsdb.server.utils.ProtoObjectUtils;
+import cn.rapidtsdb.tsdb.common.protonetty.utils.ProtoObjectUtils;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.util.Attribute;

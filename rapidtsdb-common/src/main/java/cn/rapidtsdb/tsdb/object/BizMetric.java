@@ -1,4 +1,4 @@
-package cn.rapidtsdb.tsdb.meta;
+package cn.rapidtsdb.tsdb.object;
 
 import cn.rapidtsdb.tsdb.common.LRUCache;
 import lombok.AllArgsConstructor;

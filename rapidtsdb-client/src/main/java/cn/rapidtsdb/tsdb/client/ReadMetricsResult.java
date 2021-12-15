@@ -1,5 +1,6 @@
 package cn.rapidtsdb.tsdb.client;
 
+import cn.rapidtsdb.tsdb.object.TSDataPoint;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -8,5 +9,5 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ReadMetricsResult {
-    private Datapoint[] dps; // should be sorted
+    private TSDataPoint[] dps; // should be sorted
 }

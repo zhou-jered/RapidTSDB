@@ -2,7 +2,7 @@ package cn.rapidtsdb.tsdb.server.middleware;
 
 import cn.rapidtsdb.tsdb.config.TSDBConfig;
 import cn.rapidtsdb.tsdb.core.TSDB;
-import cn.rapidtsdb.tsdb.meta.BizMetric;
+import cn.rapidtsdb.tsdb.object.BizMetric;
 import cn.rapidtsdb.tsdb.meta.MetricTransformer;
 import cn.rapidtsdb.tsdb.meta.exception.IllegalCharsException;
 import cn.rapidtsdb.tsdb.object.TSDataPoint;

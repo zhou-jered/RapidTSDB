@@ -5,19 +5,26 @@ import cn.rapidtsdb.tsdb.client.WriteMetricResult;
 import cn.rapidtsdb.tsdb.client.exceptions.NoPermissionException;
 import cn.rapidtsdb.tsdb.common.utils.ChannelUtils;
 import cn.rapidtsdb.tsdb.model.proto.ConnectionAuth;
-import cn.rapidtsdb.tsdb.model.proto.TSDBResponse;
-import cn.rapidtsdb.tsdb.model.proto.TSDataMessage;
-import cn.rapidtsdb.tsdb.model.proto.TSQueryMessage;
+import cn.rapidtsdb.tsdb.model.proto.TSDBResponse.ProtoCommonResponse;
+import cn.rapidtsdb.tsdb.model.proto.TSDBResponse.ProtoDataResponse;
+import cn.rapidtsdb.tsdb.model.proto.TSDataMessage.ProtoDatapoint;
+import cn.rapidtsdb.tsdb.model.proto.TSDataMessage.ProtoDatapoints;
+import cn.rapidtsdb.tsdb.model.proto.TSDataMessage.ProtoSimpleDatapoint;
+import cn.rapidtsdb.tsdb.model.proto.TSQueryMessage.ProtoTSQuery;
+import cn.rapidtsdb.tsdb.object.TSDataPoint;
 import cn.rapidtsdb.tsdb.protocol.OperationPermissionMasks;
 import cn.rapidtsdb.tsdb.protocol.RpcResponseCode;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import lombok.extern.log4j.Log4j2;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
@@ -58,23 +65,44 @@ public class ClientSession {
     }
 
 
-    public WriteMetricResult write(TSDataMessage.ProtoSimpleDatapoint sdp) {
-        MsgExchange<TSDataMessage.ProtoSimpleDatapoint, TSDBResponse.ProtoCommonResponse>
+    public WriteMetricResult write(ProtoSimpleDatapoint sdp) {
+        MsgExchange<ProtoSimpleDatapoint, ProtoCommonResponse>
                 msgExchange = new MsgExchange<>(sdp.getReqId(), sdp);
         return writeExchange(msgExchange);
     }
 
-    public WriteMetricResult write(TSDataMessage.ProtoDatapoints dps) {
-        MsgExchange<TSDataMessage.ProtoDatapoints, TSDBResponse.ProtoCommonResponse>
+    public WriteMetricResult write(ProtoDatapoints dps) {
+        MsgExchange<ProtoDatapoints, ProtoCommonResponse>
                 msgExchange = new MsgExchange<>(dps.getReqId(), dps);
         return writeExchange(msgExchange);
     }
 
-    private WriteMetricResult writeExchange(MsgExchange<?, TSDBResponse.ProtoCommonResponse> msgExchange) {
+    public List<TSDataPoint> read(ProtoTSQuery protoQuery) {
+        checkOrWaitSessionState(ClientSessionState.ACTIVE);
+        if (OperationPermissionMasks.hadReadPermission(permissions)) {
+            MsgExchange<ProtoTSQuery, ProtoDataResponse> msgExchange = new MsgExchange<>(protoQuery.getReqId(), protoQuery);
+            exchange(msgExchange);
+            ProtoDataResponse protoDataResponse = msgExchange.get();
+            ProtoDatapoints pdps = protoDataResponse.getDps();
+            List<ProtoDatapoint> pl = pdps.getDpsList();
+            List<TSDataPoint> resultDps = new ArrayList<>(pl.size());
+            pl.forEach(dp -> resultDps.add(new TSDataPoint(dp.getTimestamp(), dp.getVal())));
+            return resultDps;
+        } else {
+            throw new NoPermissionException("No Read Permission, permission mask:" + permissions);
+        }
+    }
+
+    private WriteMetricResult writeExchange(MsgExchange<?, ProtoCommonResponse> msgExchange) {
         checkOrWaitSessionState(ClientSessionState.ACTIVE);
         if (OperationPermissionMasks.hadWritePermission(permissions)) {
             exchange(msgExchange);
-            TSDBResponse.ProtoCommonResponse response = msgExchange.get();
+            ProtoCommonResponse response = null;
+            try {
+                response = msgExchange.get(3, TimeUnit.SECONDS);
+            } catch (TimeoutException e) {
+                return new WriteMetricResult(false);
+            }
             if (response.getCode() == RpcResponseCode.SUCCESS) {
                 return WriteMetricResult.OK;
             } else {
@@ -84,11 +112,11 @@ public class ClientSession {
                 return wmr;
             }
         } else {
-            throw new NoPermissionException();
+            throw new NoPermissionException("No Write Permission, permission mask:" + permissions);
         }
     }
 
-    public void query(TSQueryMessage.ProtoTSQuery query) {
+    public void query(ProtoTSQuery query) {
         checkOrWaitSessionState(ClientSessionState.ACTIVE);
     }
 

@@ -1,10 +1,12 @@
-package cn.rapidtsdb.tsdb.server.utils;
+package cn.rapidtsdb.tsdb.common.protonetty.utils;
 
-import cn.rapidtsdb.tsdb.meta.BizMetric;
+
 import cn.rapidtsdb.tsdb.model.proto.TSQueryMessage.ProtoTSQuery;
+import cn.rapidtsdb.tsdb.object.BizMetric;
 import cn.rapidtsdb.tsdb.object.TSDataPoint;
 import cn.rapidtsdb.tsdb.object.TSQuery;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -51,6 +53,14 @@ public class ProtoObjectUtils {
             return mpTags;
         }
         return null;
+    }
+
+    public static List<ProtoTSTag> getProtoTags(Map<String, String> mapTags) {
+        List<ProtoTSTag> protoTSTags = new ArrayList<>(mapTags.size());
+        mapTags.forEach((k, v) -> {
+            protoTSTags.add(ProtoTSTag.newBuilder().setKey(k).setValue(v).build());
+        });
+        return protoTSTags;
     }
 
     public static TSQuery getTSQuery(ProtoTSQuery protoTSQuery) {

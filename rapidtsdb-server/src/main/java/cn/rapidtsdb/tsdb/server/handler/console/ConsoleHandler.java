@@ -5,7 +5,7 @@ import cn.rapidtsdb.tsdb.TSDBRunnableTask;
 import cn.rapidtsdb.tsdb.TSDBTaskCallback;
 import cn.rapidtsdb.tsdb.TSDataOperationQueue;
 import cn.rapidtsdb.tsdb.core.persistent.MetricsKeyManager;
-import cn.rapidtsdb.tsdb.meta.BizMetric;
+import cn.rapidtsdb.tsdb.object.BizMetric;
 import cn.rapidtsdb.tsdb.object.TSDataPoint;
 import cn.rapidtsdb.tsdb.object.TSQuery;
 import cn.rapidtsdb.tsdb.server.middleware.TSDBExecutor;

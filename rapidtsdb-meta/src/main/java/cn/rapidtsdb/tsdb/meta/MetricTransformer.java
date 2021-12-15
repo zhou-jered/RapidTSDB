@@ -1,5 +1,6 @@
 package cn.rapidtsdb.tsdb.meta;
 
+import cn.rapidtsdb.tsdb.object.BizMetric;
 import cn.rapidtsdb.tsdb.meta.exception.IllegalCharsException;
 import cn.rapidtsdb.tsdb.utils.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
