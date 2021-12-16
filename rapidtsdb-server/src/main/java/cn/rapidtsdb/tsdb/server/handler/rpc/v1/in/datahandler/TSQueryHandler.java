@@ -50,7 +50,7 @@ public class TSQueryHandler extends SimpleChannelInboundHandler<ProtoTSQuery> {
                 .setDps(pdps)
                 .build();
         log.debug("server send data response:{}", pdps.getDpsCount());
-        ctx.writeAndFlush(dataResponse);
+        ctx.pipeline().writeAndFlush(dataResponse);
     }
 
 }
