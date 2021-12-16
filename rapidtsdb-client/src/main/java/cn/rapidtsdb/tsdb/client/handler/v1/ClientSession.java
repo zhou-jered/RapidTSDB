@@ -101,14 +101,15 @@ public class ClientSession {
             try {
                 response = msgExchange.get(3, TimeUnit.SECONDS);
             } catch (TimeoutException e) {
-                return new WriteMetricResult(false);
+                return new WriteMetricResult(false, -1, "timeout");
             }
             if (response.getCode() == RpcResponseCode.SUCCESS) {
                 return WriteMetricResult.OK;
             } else {
                 WriteMetricResult wmr = new WriteMetricResult(false);
                 wmr.setErrCode(response.getCode());
-                wmr.setErrMsg(RpcResponseCode.getErrMsg(response.getCode()));
+                String errMsg = response.getMsg() == null ? RpcResponseCode.getErrMsg(response.getCode()) : response.getMsg();
+                wmr.setErrMsg(errMsg);
                 return wmr;
             }
         } else {

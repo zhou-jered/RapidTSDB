@@ -2,9 +2,9 @@ package cn.rapidtsdb.tsdb.server.middleware;
 
 import cn.rapidtsdb.tsdb.config.TSDBConfig;
 import cn.rapidtsdb.tsdb.core.TSDB;
-import cn.rapidtsdb.tsdb.object.BizMetric;
 import cn.rapidtsdb.tsdb.meta.MetricTransformer;
 import cn.rapidtsdb.tsdb.meta.exception.IllegalCharsException;
+import cn.rapidtsdb.tsdb.object.BizMetric;
 import cn.rapidtsdb.tsdb.object.TSDataPoint;
 import cn.rapidtsdb.tsdb.object.TSQuery;
 import lombok.extern.log4j.Log4j2;
@@ -25,6 +25,7 @@ public class TSDBExecutor {
     private static final int RUNNING = 1;
     private static final int SHUTDOWN = 2;
     private TSDB db;
+    private MetricTransformer metricTransformer;
 
     private WriteQueue writeQueue;
     private QueueCoordinator queueCoordinator;
@@ -40,6 +41,7 @@ public class TSDBExecutor {
             int concurrent = config.getDbServerThreads();
             EXECUTOR.db = db;
             EXECUTOR.writeQueue = new WriteQueue(concurrent);
+            EXECUTOR.metricTransformer = new MetricTransformer();
             EXECUTOR.queueCoordinator = new QueueCoordinator(concurrent);
             EXECUTOR.threadPoolExecutor = new ThreadPoolExecutor(concurrent, concurrent,
                     1, TimeUnit.HOURS, new LinkedBlockingQueue<>(), new ExecutorThreadFactory(),

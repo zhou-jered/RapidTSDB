@@ -16,5 +16,6 @@ public class WriteMetricResult {
         this.success = success;
     }
 
+
     public static final WriteMetricResult OK = new WriteMetricResult(true);
 }

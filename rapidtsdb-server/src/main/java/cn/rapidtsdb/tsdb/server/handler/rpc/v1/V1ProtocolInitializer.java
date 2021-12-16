@@ -7,6 +7,7 @@ import cn.rapidtsdb.tsdb.server.handler.rpc.v1.in.AuthHandler;
 import cn.rapidtsdb.tsdb.server.handler.rpc.v1.in.datahandler.MultiDatapointHandler;
 import cn.rapidtsdb.tsdb.server.handler.rpc.v1.in.datahandler.SimpleDatapointHandler;
 import cn.rapidtsdb.tsdb.server.handler.rpc.v1.in.datahandler.TSQueryHandler;
+import cn.rapidtsdb.tsdb.server.handler.rpc.v1.out.ExceptionHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.nio.NioSocketChannel;
 
@@ -23,6 +24,7 @@ public class V1ProtocolInitializer extends ChannelInitializer<NioSocketChannel> 
                 new SimpleDatapointHandler(),
                 new MultiDatapointHandler(),
                 new TSQueryHandler(),
+                new ExceptionHandler(),
                 new PrimitiveObjectWriteHandler(),
                 new ProtoObjectHandler());
     }
