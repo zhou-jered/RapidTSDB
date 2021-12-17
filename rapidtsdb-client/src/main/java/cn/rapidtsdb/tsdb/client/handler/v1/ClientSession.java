@@ -7,19 +7,16 @@ import cn.rapidtsdb.tsdb.common.utils.ChannelUtils;
 import cn.rapidtsdb.tsdb.model.proto.ConnectionAuth;
 import cn.rapidtsdb.tsdb.model.proto.TSDBResponse.ProtoCommonResponse;
 import cn.rapidtsdb.tsdb.model.proto.TSDBResponse.ProtoDataResponse;
-import cn.rapidtsdb.tsdb.model.proto.TSDataMessage.ProtoDatapoint;
 import cn.rapidtsdb.tsdb.model.proto.TSDataMessage.ProtoDatapoints;
 import cn.rapidtsdb.tsdb.model.proto.TSDataMessage.ProtoSimpleDatapoint;
 import cn.rapidtsdb.tsdb.model.proto.TSQueryMessage.ProtoTSQuery;
-import cn.rapidtsdb.tsdb.object.TSDataPoint;
+import cn.rapidtsdb.tsdb.object.TSQueryResult;
 import cn.rapidtsdb.tsdb.protocol.OperationPermissionMasks;
 import cn.rapidtsdb.tsdb.protocol.RpcResponseCode;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import lombok.extern.log4j.Log4j2;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
@@ -77,17 +74,19 @@ public class ClientSession {
         return writeExchange(msgExchange);
     }
 
-    public List<TSDataPoint> read(ProtoTSQuery protoQuery) {
+    public TSQueryResult read(ProtoTSQuery protoQuery) {
         checkOrWaitSessionState(ClientSessionState.ACTIVE);
         if (OperationPermissionMasks.hadReadPermission(permissions)) {
             MsgExchange<ProtoTSQuery, ProtoDataResponse> msgExchange = new MsgExchange<>(protoQuery.getReqId(), protoQuery);
             exchange(msgExchange);
             ProtoDataResponse protoDataResponse = msgExchange.get();
-            ProtoDatapoints pdps = protoDataResponse.getDps();
-            List<ProtoDatapoint> pl = pdps.getDpsList();
-            List<TSDataPoint> resultDps = new ArrayList<>(pl.size());
-            pl.forEach(dp -> resultDps.add(new TSDataPoint(dp.getTimestamp(), dp.getVal())));
-            return resultDps;
+            TSQueryResult queryResult = TSQueryResult.builder()
+                    .dps(protoDataResponse.getDpsMap())
+                    .metric(protoDataResponse.getMetric())
+                    .tags(protoDataResponse.getTagsMap())
+                    .aggregatedTags(protoDataResponse.getAggregatedTagsList().toArray(new String[0]))
+                    .build();
+            return queryResult;
         } else {
             throw new NoPermissionException("No Read Permission, permission mask:" + permissions);
         }

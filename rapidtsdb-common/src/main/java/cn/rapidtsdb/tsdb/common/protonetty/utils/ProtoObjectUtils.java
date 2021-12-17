@@ -2,34 +2,16 @@ package cn.rapidtsdb.tsdb.common.protonetty.utils;
 
 
 import cn.rapidtsdb.tsdb.model.proto.TSQueryMessage.ProtoTSQuery;
-import cn.rapidtsdb.tsdb.object.BizMetric;
 import cn.rapidtsdb.tsdb.object.TSDataPoint;
 import cn.rapidtsdb.tsdb.object.TSQuery;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import static cn.rapidtsdb.tsdb.model.proto.TSDataMessage.ProtoDatapoint;
 import static cn.rapidtsdb.tsdb.model.proto.TSDataMessage.ProtoSimpleDatapoint;
-import static cn.rapidtsdb.tsdb.model.proto.TSDataMessage.ProtoTSTag;
 
 public class ProtoObjectUtils {
 
-    public static BizMetric getBizMetric(String metric, List<ProtoTSTag> protoTags) {
-        BizMetric bizMetric;
-        if (protoTags.size() > 0) {
-            Map<String, String> mpTags = new HashMap<>();
-            protoTags.forEach(ptag -> {
-                mpTags.put(ptag.getKey(), ptag.getValue());
-            });
-            bizMetric = BizMetric.of(metric, mpTags);
-        } else {
-            bizMetric = BizMetric.cache(metric);
-        }
-        return bizMetric;
-    }
 
     public static TSDataPoint getDp(ProtoSimpleDatapoint pdp) {
         return new TSDataPoint(pdp.getTimestamp(), pdp.getVal());
@@ -44,31 +26,13 @@ public class ProtoObjectUtils {
         return dps;
     }
 
-    public static Map<String, String> getTags(List<ProtoTSTag> protoTags) {
-        if (protoTags != null && protoTags.size() > 0) {
-            Map<String, String> mpTags = new HashMap<>();
-            protoTags.forEach(ptag -> {
-                mpTags.put(ptag.getKey(), ptag.getValue());
-            });
-            return mpTags;
-        }
-        return null;
-    }
-
-    public static List<ProtoTSTag> getProtoTags(Map<String, String> mapTags) {
-        List<ProtoTSTag> protoTSTags = new ArrayList<>(mapTags.size());
-        mapTags.forEach((k, v) -> {
-            protoTSTags.add(ProtoTSTag.newBuilder().setKey(k).setValue(v).build());
-        });
-        return protoTSTags;
-    }
 
     public static TSQuery getTSQuery(ProtoTSQuery protoTSQuery) {
         TSQuery tsQuery = TSQuery.builder()
                 .metric(protoTSQuery.getMetrics())
                 .startTime(protoTSQuery.getStartTime())
                 .endTime(protoTSQuery.getEndTime())
-                .tags(getTags(protoTSQuery.getTagsList()))
+                .tags(protoTSQuery.getTagsMap())
                 .downSampler(protoTSQuery.getDownSampler())
                 .aggregator(protoTSQuery.getAggregator())
                 .build();

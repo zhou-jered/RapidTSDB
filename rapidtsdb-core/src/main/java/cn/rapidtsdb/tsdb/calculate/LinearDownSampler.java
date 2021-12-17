@@ -1,9 +1,10 @@
 package cn.rapidtsdb.tsdb.calculate;
 
-import cn.rapidtsdb.tsdb.object.TSDataPoint;
-
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
 public class LinearDownSampler implements DownSampler {
 
@@ -16,34 +17,36 @@ public class LinearDownSampler implements DownSampler {
     }
 
     @Override
-    public List<TSDataPoint> downSample(List<TSDataPoint> orderedDps) {
-        List<TSDataPoint> result = new ArrayList<>();
+    public SortedMap<Long, Double> downSample(SortedMap<Long, Double> orderedDps) {
+        SortedMap<Long, Double> result = new TreeMap<>();
         List<Double> valueBuffer = new ArrayList<>();
         if (orderedDps != null && orderedDps.size() > 0) {
-
             BufferScope bufferScope = new BufferScope(timeRangeMills);
-            bufferScope.init(orderedDps.get(0).getTimestamp());
-            for (TSDataPoint dp : orderedDps) {
-                if (bufferScope.inScope(dp.getTimestamp())) {
-                    valueBuffer.add(dp.getValue());
-                } else if (bufferScope.inNextScope(dp.getTimestamp())) {
+            Iterator<Long> keyIter = orderedDps.keySet().iterator();
+            bufferScope.init(keyIter.next());
+            while (keyIter.hasNext()) {
+                long tp = keyIter.next();
+                double val = orderedDps.get(tp);
+                if (bufferScope.inScope(tp)) {
+                    valueBuffer.add(val);
+                } else if (bufferScope.inNextScope(tp)) {
                     if (valueBuffer.size() > 0) {
                         double aggreVal = downSamplerFunction.apply(valueBuffer);
                         valueBuffer.clear();
-                        result.add(new TSDataPoint(bufferScope.start, aggreVal));
+                        result.put(tp, aggreVal);
                     }
                     bufferScope.stepForward();
-                    valueBuffer.add(dp.getValue());
+                    valueBuffer.add(val);
                 } else {
-                    bufferScope.init(dp.getTimestamp());
-                    valueBuffer.add(dp.getValue());
+                    bufferScope.init(tp);
+                    valueBuffer.add(val);
                 }
-
             }
+
             if (valueBuffer.size() > 0) {
                 double aggreVal = downSamplerFunction.apply(valueBuffer);
                 valueBuffer.clear();
-                result.add(new TSDataPoint(bufferScope.start, aggreVal));
+                result.put(bufferScope.start, aggreVal);
             }
         }
         return result;

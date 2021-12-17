@@ -1,7 +1,7 @@
 package cn.rapidtsdb.tsdb.core;
 
-import cn.rapidtsdb.tsdb.exception.BlockDataMissMatchException;
 import cn.rapidtsdb.tsdb.common.TimeUtils;
+import cn.rapidtsdb.tsdb.exception.BlockDataMissMatchException;
 import cn.rapidtsdb.tsdb.object.TSDataPoint;
 import com.google.common.collect.Lists;
 import org.apache.commons.lang.math.RandomUtils;
@@ -13,6 +13,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class TSBlockTest {
 
@@ -30,13 +31,13 @@ public class TSBlockTest {
             values.add(val);
         }
 
-        List<TSDataPoint> dps = tsBlock.getDataPoints();
+        Map<Long, Double> dps = tsBlock.getDataPoints();
         System.out.println(dps.size());
         for (int i = 0; i < dpsNum; i++) {
-            Assert.assertEquals(baseTime + i, dps.get(i).getTimestamp());
-            Assert.assertTrue(values.get(i) - dps.get(i).getValue() < 0.000001);
+
+            Assert.assertTrue(values.get(i) - dps.get(baseTime + i) < 0.000001);
             if (i % 1000 == 0) {
-                System.out.println("sample : " + values.get(i) + " : " + dps.get(i).getValue());
+                System.out.println("sample : " + values.get(i) + " : " + dps.get(i + baseTime));
             }
         }
         System.out.println("total mem: " + tsBlock.getMemoryActualUsed());

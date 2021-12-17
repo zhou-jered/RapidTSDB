@@ -1,6 +1,5 @@
 syntax = "proto3";
 package cn.rapidtsdb.tsdb.model.proto;
-import "TSDataMessage.proto";
 
 message ProtoCommonResponse {
   int32 code = 1;
@@ -12,6 +11,9 @@ message ProtoCommonResponse {
 message ProtoDataResponse {
   string aggregator = 1;
   string downsampler = 2;
-  ProtoDatapoints dps = 3;
+  map<int64, double> dps = 3;
   int32 reqId = 4;
+  string metric = 5;
+  repeated string aggregatedTags = 6;
+  map<string, string> tags=7;
 }

@@ -7,9 +7,11 @@ import cn.rapidtsdb.tsdb.meta.exception.IllegalCharsException;
 import cn.rapidtsdb.tsdb.object.BizMetric;
 import cn.rapidtsdb.tsdb.object.TSDataPoint;
 import cn.rapidtsdb.tsdb.object.TSQuery;
+import cn.rapidtsdb.tsdb.object.TSQueryResult;
 import lombok.extern.log4j.Log4j2;
 
-import java.util.List;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -55,15 +57,16 @@ public class TSDBExecutor {
     }
 
     public boolean write(BizMetric metric, TSDataPoint dp) {
-        return write(metric, new TSDataPoint[]{dp});
+        WriteCommand writeCommand = new WriteCommand(metric, dp); // todo gc review
+        return writeQueue.write(queueCoordinator, writeCommand);
     }
 
-    public boolean write(BizMetric metric, TSDataPoint[] dps) {
+    public boolean write(BizMetric metric, Map<Long, Double> dps) {
         WriteCommand writeCommand = new WriteCommand(metric, dps); // todo gc review
         return writeQueue.write(queueCoordinator, writeCommand);
     }
 
-    public List<TSDataPoint> read(TSQuery query) {
+    public TSQueryResult read(TSQuery query) {
         return db.queryTimeSeriesData(query);
     }
 
@@ -106,8 +109,9 @@ public class TSDBExecutor {
                 MetricTransformer metricTransformer = new MetricTransformer();
                 try {
                     String internalMetric = metricTransformer.toInternalMetric(cmd.getMetric());
-                    TSDataPoint[] dps = cmd.getDps();
-                    for (TSDataPoint dp : dps) {
+                    Iterator<TSDataPoint> dpIter = cmd.iter();
+                    while (dpIter.hasNext()) {
+                        TSDataPoint dp = dpIter.next();
                         tsdb.writeMetric(internalMetric, dp.getValue(), dp.getTimestamp());
                     }
                 } catch (IllegalCharsException e) {

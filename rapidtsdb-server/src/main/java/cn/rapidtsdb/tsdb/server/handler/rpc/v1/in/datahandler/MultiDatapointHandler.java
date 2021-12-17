@@ -1,12 +1,10 @@
 package cn.rapidtsdb.tsdb.server.handler.rpc.v1.in.datahandler;
 
-import cn.rapidtsdb.tsdb.common.protonetty.utils.ProtoObjectUtils;
 import cn.rapidtsdb.tsdb.meta.MetricsChars;
 import cn.rapidtsdb.tsdb.meta.MetricsCharsCheckResult;
 import cn.rapidtsdb.tsdb.model.proto.TSDBResponse;
 import cn.rapidtsdb.tsdb.model.proto.TSDataMessage;
 import cn.rapidtsdb.tsdb.object.BizMetric;
-import cn.rapidtsdb.tsdb.object.TSDataPoint;
 import cn.rapidtsdb.tsdb.protocol.OperationPermissionMasks;
 import cn.rapidtsdb.tsdb.protocol.RpcResponseCode;
 import cn.rapidtsdb.tsdb.server.handler.rpc.ServerClientSession;
@@ -32,14 +30,13 @@ public class MultiDatapointHandler extends SimpleChannelInboundHandler<TSDataMes
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, TSDataMessage.ProtoDatapoints msdp) throws Exception {
-        log.debug("get msdp:{}, {}, {} ,{}", msdp.getMetric(), msdp.getTagsList(), msdp.getDpsCount());
+        log.debug("get msdp:{}, {}, {} ,{}", msdp.getMetric(), msdp.getTagsMap(), msdp.getDpsCount());
         log.debug("sdp reqId:{}", msdp.getReqId());
         if (authed) {
-            BizMetric bizMetric = ProtoObjectUtils.getBizMetric(msdp.getMetric(), msdp.getTagsList());
+            BizMetric bizMetric = new BizMetric(msdp.getMetric(), msdp.getTagsMap());
             MetricsCharsCheckResult charsCheckResult = MetricsChars.checkMetricChars(bizMetric);
             if (charsCheckResult.isPass()) {
-                TSDataPoint[] dps = ProtoObjectUtils.getDps(msdp.getDpsList());
-                tsdbExecutor.write(bizMetric, dps);
+                tsdbExecutor.write(bizMetric, msdp.getDpsMap());
                 TSDBResponse.ProtoCommonResponse commonResponse =
                         TSDBResponse.ProtoCommonResponse.newBuilder()
                                 .setReqId(msdp.getReqId())
@@ -71,7 +68,7 @@ public class MultiDatapointHandler extends SimpleChannelInboundHandler<TSDataMes
         if (evt instanceof SessionPermissionChangeEvent) {
             refreshPermission(ctx);
         }
-        
+
     }
 
     private void refreshPermission(ChannelHandlerContext ctx) {

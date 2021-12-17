@@ -1,16 +1,15 @@
 syntax = "proto3";
 package cn.rapidtsdb.tsdb.model.proto;
 
-import "TSDataMessage.proto";
 
 message ProtoTSQuery {
-    string metrics = 1;
-    int64 startTime = 2;
-    int64 endTime = 3;
-    string aggregator = 4;
-    string downSampler = 5;
-    repeated ProtoTSTag tags = 6;
-    int32 reqId = 7;
+  string metrics = 1;
+  int64 startTime = 2;
+  int64 endTime = 3;
+  string aggregator = 4;
+  string downSampler = 5;
+  map<string, string> tags = 6;
+  int32 reqId = 7;
 }
 
 

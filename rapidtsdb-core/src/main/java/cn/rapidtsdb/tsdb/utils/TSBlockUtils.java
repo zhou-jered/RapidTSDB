@@ -3,12 +3,10 @@ package cn.rapidtsdb.tsdb.utils;
 import cn.rapidtsdb.tsdb.core.TSBlock;
 import cn.rapidtsdb.tsdb.core.TSBlockFactory;
 import cn.rapidtsdb.tsdb.core.TSBlockSnapshot;
-import cn.rapidtsdb.tsdb.object.TSDataPoint;
 import cn.rapidtsdb.tsdb.core.io.TSBlockDeserializer;
 import lombok.extern.log4j.Log4j2;
 
-import java.util.LinkedList;
-import java.util.List;
+import java.util.Map;
 
 @Log4j2
 public class TSBlockUtils {
@@ -21,13 +19,12 @@ public class TSBlockUtils {
             throw new RuntimeException(String.format("Can not merge Block with different Basetime, trying to merge %s with %s",
                     preBlock.getBaseTime(), newBlock.getBaseTime()));
         }
-        List<TSDataPoint> dps = newBlock.getDataPoints();
-        if (dps != null) {
-            for (TSDataPoint dp : dps) {
-                preBlock.appendDataPoint(dp.getTimestamp(), dp.getValue());
-            }
-        }
-        preBlock.rewriteBytesData();
+        Map<Long, Double> dps1 = storedBlock.getData().getDataPoints();
+        Map<Long, Double> dps2 = memoryBlock.getTsBlock().getDataPoints();
+        dps1.putAll(dps2);
+
+        preBlock.rewriteBytesData(dps1);
+
         return preBlock;
     }
 
@@ -39,31 +36,13 @@ public class TSBlockUtils {
             return olderBlock;
         }
 
-        List<TSDataPoint> newerDps = newerBlock.getDataPoints();
-        List<TSDataPoint> olderDps = olderBlock.getDataPoints();
-        List<TSDataPoint> mergedDps = new LinkedList<>();
+        Map<Long, Double> newerDps = newerBlock.getDataPoints();
+        Map<Long, Double> olderDps = olderBlock.getDataPoints();
+        olderDps.putAll(newerDps);
 
-        int oidx = 0;
-        int nidx = 0;
-        while (oidx < olderDps.size() && nidx < newerDps.size()) {
-            TSDataPoint oldDp = olderDps.get(oidx);
-            TSDataPoint newDp = newerDps.get(nidx);
-            if (oldDp.getTimestamp() == newDp.getTimestamp()) {
-                mergedDps.add(newDp);
-                oidx++;
-                nidx++;
-            } else if (oldDp.getTimestamp() < newDp.getTimestamp()) {
-                mergedDps.add(oldDp);
-                oidx++;
-            } else {
-                mergedDps.add(newDp);
-                nidx++;
-            }
-        }
         TSBlock block = TSBlockFactory.newEmptyBlock(olderBlock);
-        for (TSDataPoint dp : mergedDps) {
-            block.appendDataPoint(dp.getTimestamp(), dp.getValue());
-        }
+        newerBlock.getDataPoints().forEach((k, v) -> block.appendDataPoint(k, v));
+
         return block;
     }
 }

@@ -31,10 +31,10 @@ public class SimpleDatapointHandler extends SimpleChannelInboundHandler<TSDataMe
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, TSDataMessage.ProtoSimpleDatapoint sdp) throws Exception {
-        log.debug("get sdp:{}, {}, {} ,{}", sdp.getMetric(), sdp.getTagsList(), sdp.getTimestamp(), sdp.getVal());
+        log.debug("get sdp:{}, {}, {} ,{}", sdp.getMetric(), sdp.getTagsMap(), sdp.getTimestamp(), sdp.getVal());
         log.debug("sdp reqId:{}", sdp.getReqId());
         if (authed) {
-            BizMetric bizMetric = ProtoObjectUtils.getBizMetric(sdp.getMetric(), sdp.getTagsList());
+            BizMetric bizMetric = new BizMetric(sdp.getMetric(), sdp.getTagsMap());
             MetricsCharsCheckResult charsCheckResult = MetricsChars.checkMetricChars(bizMetric);
             if (charsCheckResult.isPass()) {
                 TSDataPoint dp = ProtoObjectUtils.getDp(sdp);
@@ -63,7 +63,6 @@ public class SimpleDatapointHandler extends SimpleChannelInboundHandler<TSDataMe
             ctx.pipeline().writeAndFlush(commonResponse);
         }
     }
-
 
 
     @Override

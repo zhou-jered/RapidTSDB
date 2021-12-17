@@ -13,7 +13,7 @@ public class HbaseStoreHandler implements StoreHandlerPlugin {
     private Connection connection;
 
     public HbaseStoreHandler() {
-
+        
     }
 
     @Override

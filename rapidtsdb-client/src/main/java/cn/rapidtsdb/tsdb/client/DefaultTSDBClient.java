@@ -5,13 +5,13 @@ import cn.rapidtsdb.tsdb.client.handler.ClientChannelInitializer;
 import cn.rapidtsdb.tsdb.client.handler.v1.ClientSession;
 import cn.rapidtsdb.tsdb.client.handler.v1.ClientSessionRegistry;
 import cn.rapidtsdb.tsdb.client.utils.ChannelAttributes;
-import cn.rapidtsdb.tsdb.common.protonetty.utils.ProtoObjectUtils;
 import cn.rapidtsdb.tsdb.model.proto.ConnectionAuth;
 import cn.rapidtsdb.tsdb.model.proto.TSDataMessage;
 import cn.rapidtsdb.tsdb.model.proto.TSDataMessage.ProtoSimpleDatapoint;
 import cn.rapidtsdb.tsdb.model.proto.TSQueryMessage;
 import cn.rapidtsdb.tsdb.object.TSDataPoint;
 import cn.rapidtsdb.tsdb.object.TSQuery;
+import cn.rapidtsdb.tsdb.object.TSQueryResult;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelOption;
@@ -22,7 +22,6 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang.StringUtils;
 
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -115,7 +114,7 @@ class DefaultTSDBClient implements TSDBClient {
     }
 
     @Override
-    public WriteMetricResult writeMetrics(String metric, List<TSDataPoint> dps) {
+    public WriteMetricResult writeMetrics(String metric, Map<Long, Double> dps) {
         return writeMultiInternal(metric, null, dps);
     }
 
@@ -135,33 +134,33 @@ class DefaultTSDBClient implements TSDBClient {
     }
 
     @Override
-    public WriteMetricResult writeMetrics(String metric, List<TSDataPoint> dps, Map<String, String> tags) {
+    public WriteMetricResult writeMetrics(String metric, Map<Long, Double> dps, Map<String, String> tags) {
         return writeMultiInternal(metric, tags, dps);
     }
 
     @Override
-    public List<TSDataPoint> readMetrics(String metric, long startTimestamp, long endTimestamp) {
+    public TSQueryResult readMetrics(String metric, long startTimestamp, long endTimestamp) {
         return readMetrics(metric, startTimestamp, endTimestamp, null, null, null);
     }
 
     @Override
-    public List<TSDataPoint> readMetrics(String metric, long startTimestamp, long endTimestamp, String aggregator) {
+    public TSQueryResult readMetrics(String metric, long startTimestamp, long endTimestamp, String aggregator) {
         return readMetrics(metric, startTimestamp, endTimestamp, null, null, aggregator);
     }
 
     @Override
-    public List<TSDataPoint> readMetrics(String metric, long startTimestamp, long endTimestamp, String downsampler, String aggregator) {
+    public TSQueryResult readMetrics(String metric, long startTimestamp, long endTimestamp, String downsampler, String aggregator) {
         return readMetrics(metric, startTimestamp, endTimestamp, null, downsampler, aggregator);
     }
 
     @Override
-    public List<TSDataPoint> readMetrics(String metric, long startTimestamp, long endTimestamp, Map<String, String> tags, String aggregator) {
+    public TSQueryResult readMetrics(String metric, long startTimestamp, long endTimestamp, Map<String, String> tags, String aggregator) {
         return readMetrics(metric, startTimestamp, endTimestamp, tags, null, aggregator);
     }
 
 
     @Override
-    public List<TSDataPoint> readMetrics(String metric, long startTimestamp, long endTimestamp, Map<String, String> tags, String downsampler, String aggregator) {
+    public TSQueryResult readMetrics(String metric, long startTimestamp, long endTimestamp, Map<String, String> tags, String downsampler, String aggregator) {
 
         TSQuery tsQuery = TSQuery.builder()
                 .metric(metric)
@@ -218,7 +217,7 @@ class DefaultTSDBClient implements TSDBClient {
     private WriteMetricResult writeSingleInternal(String metric, Map<String, String> tags, long timestamp, double val) {
         ProtoSimpleDatapoint.Builder builder = ProtoSimpleDatapoint.newBuilder();
         if (tags != null && tags.size() > 0) {
-            builder.addAllTags(mapTag2ProtoTag(tags));
+            builder.putAllTags(tags);
         }
         builder.setMetric(metric)
                 .setTimestamp(timestamp)
@@ -228,12 +227,12 @@ class DefaultTSDBClient implements TSDBClient {
         return clientSession.write(builder.build());
     }
 
-    private List<TSDataPoint> readInternal(TSQuery tsQuery) {
+    private TSQueryResult readInternal(TSQuery tsQuery) {
         TSQueryMessage.ProtoTSQuery.Builder queryBuilder = TSQueryMessage.ProtoTSQuery.newBuilder();
         queryBuilder.setMetrics(tsQuery.getMetric()).setStartTime(tsQuery.getStartTime())
                 .setEndTime(tsQuery.getEndTime());
         if (tsQuery.hasTag()) {
-            queryBuilder.addAllTags(ProtoObjectUtils.getProtoTags(tsQuery.getTags()));
+            queryBuilder.putAllTags(tsQuery.getTags());
         }
         if (tsQuery.hasAggregator()) {
             queryBuilder.setAggregator(tsQuery.getAggregator());
@@ -245,42 +244,17 @@ class DefaultTSDBClient implements TSDBClient {
         return clientSession.read(queryBuilder.build());
     }
 
-    private WriteMetricResult writeMultiInternal(String metric, Map<String, String> tags, List<TSDataPoint> dps) {
+    private WriteMetricResult writeMultiInternal(String metric, Map<String, String> tags, Map<Long, Double> dps) {
         if (dps != null && dps.size() > 0) {
-            List<TSDataMessage.ProtoDatapoint> protoDps = new ArrayList<>();
-            dps.forEach(dp -> {
-                TSDataMessage.ProtoDatapoint protoDp = TSDataMessage.ProtoDatapoint.newBuilder()
-                        .setTimestamp(dp.getTimestamp())
-                        .setVal(dp.getValue()).build();
-                protoDps.add(protoDp);
-            });
             TSDataMessage.ProtoDatapoints pdps = TSDataMessage.ProtoDatapoints.newBuilder()
                     .setMetric(metric)
-                    .addAllTags(mapTag2ProtoTag(tags))
-                    .addAllDps(protoDps)
+                    .putAllTags(tags)
+                    .putAllDps(dps)
                     .build();
             return clientSession.write(pdps);
         }
         return new WriteMetricResult(false);
     }
 
-
-    private List<TSDataMessage.ProtoTSTag> mapTag2ProtoTag(Map<String, String> tags) {
-        if (tags == null || tags.size() == 0) {
-            return null;
-        }
-        if (tags.size() > 128) {
-            throw new RuntimeException("Exceed Maximum tag size 32");
-        }
-        List<TSDataMessage.ProtoTSTag> protoTSTags = new ArrayList<>();
-        tags.forEach((k, v) -> {
-            TSDataMessage.ProtoTSTag pt = TSDataMessage.ProtoTSTag.newBuilder()
-                    .setKey(k)
-                    .setValue(v)
-                    .build();
-            protoTSTags.add(pt);
-        });
-        return protoTSTags;
-    }
 
 }

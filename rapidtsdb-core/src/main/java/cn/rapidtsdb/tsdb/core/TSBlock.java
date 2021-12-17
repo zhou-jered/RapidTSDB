@@ -1,15 +1,15 @@
 package cn.rapidtsdb.tsdb.core;
 
 import cn.rapidtsdb.tsdb.exception.BlockDataMissMatchException;
-import cn.rapidtsdb.tsdb.object.TSDataPoint;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Longs;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 
 import java.lang.ref.WeakReference;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -52,7 +52,7 @@ public class TSBlock {
 
     public static final int DEFAULT_TIME_BYTES_LENGTH = Math.max(2 * 7200, 800);
     public static final int DEFAULT_VALUE_BYTES_LENGTH = 21600;
-    private WeakReference<List<TSDataPoint>> cachedDataPoints = new WeakReference<>(null);
+    private WeakReference<TreeMap<Long, Double>> cachedDataPoints = new WeakReference<>(null);
 
 
     public TSBlock(long baseTime, int blockLengthMills) {
@@ -210,8 +210,8 @@ public class TSBlock {
         preWrittenValue = value;
     }
 
-    public List<TSDataPoint> getDataPoints() {
-        List<TSDataPoint> dps = cachedDataPoints.get();
+    public TreeMap<Long, Double> getDataPoints() {
+        TreeMap<Long, Double> dps = cachedDataPoints.get();
         if (dps != null) {
             return dps;
         }
@@ -224,75 +224,28 @@ public class TSBlock {
             log.error("decode values:{}", decodedValues);
             throw new RuntimeException("Fatal, Not aligned time and values, " + decodedTimestamp.size() + ":" + decodedValues.size());
         }
-        dps = new ArrayList<>(blockLengthMills);
+        dps = new TreeMap<>();
         for (int i = 0; i < decodedTimestamp.size(); i++) {
-            dps.add(new TSDataPoint(decodedTimestamp.get(i), decodedValues.get(i)));
+            dps.put(decodedTimestamp.get(i), decodedValues.get(i));
         }
-        handleDuplicateDatapoint((ArrayList<TSDataPoint>) dps);
+//        handleDuplicateDatapoint((ArrayList<TSDataPoint>) dps);
         cachedDataPoints = new WeakReference<>(dps);
         return dps;
     }
 
-    public void rewriteBytesData() {
+    public void rewriteBytesData(Map<Long, Double> dps) {
         try {
             writeLock.lock();
             time = new TSBytes(Math.max(2 * blockLengthMills, 800));
             values = new TSBytes(21600);
-            List<TSDataPoint> dps = getDataPoints();
             if (dps != null) {
-                for (TSDataPoint dp : dps) {
-                    appendDataPoint(dp.getTimestamp(), dp.getValue());
-                }
+                dps.forEach((k, v) -> {
+                    appendDataPoint(k, v);
+                });
             }
         } finally {
             writeLock.unlock();
         }
-    }
-
-
-    private void handleDuplicateDatapoint(ArrayList<TSDataPoint> dps) {
-
-        TSDataPoint dp1 = null, dp2 = null;
-        boolean swapped = false;
-        for (int i = 0; i < dps.size(); i++) {
-            for (int j = 0; j < dps.size() - i - 1; j++) {
-                dp1 = dps.get(j);
-                dp2 = dps.get(j + 1);
-                if (dp1.getTimestamp() > dp2.getTimestamp()) {
-                    dps.set(j, dp2);
-                    dps.set(j + 1, dp1);
-                    swapped = true;
-                }
-            }
-            if (!swapped) {
-                break;
-            }
-        }
-        int writeIdx = 1;
-        if (dps.size() > 0) {
-            dp1 = dps.get(0);
-        }
-        boolean needMoveElement = false;
-        for (int i = 1; i < dps.size(); i++) {
-            dp2 = dps.get(i);
-            if (dp1.getTimestamp() == dp2.getTimestamp()) {
-                needMoveElement = true;
-                writeIdx--;
-            }
-            if (needMoveElement) {
-                dps.set(writeIdx, dp2);
-                writeIdx++;
-            } else {
-                writeIdx = i + 1;
-            }
-            dp1 = dp2;
-        }
-        if (dps.size() > writeIdx) {
-            for (int i = dps.size() - 1; i >= writeIdx; i--) {
-                dps.remove(i);
-            }
-        }
-
     }
 
 

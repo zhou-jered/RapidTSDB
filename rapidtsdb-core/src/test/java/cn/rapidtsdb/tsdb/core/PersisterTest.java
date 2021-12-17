@@ -1,12 +1,11 @@
 package cn.rapidtsdb.tsdb.core;
 
+import cn.rapidtsdb.tsdb.common.TimeUtils;
 import cn.rapidtsdb.tsdb.core.io.TSBlockDeserializer;
 import cn.rapidtsdb.tsdb.core.persistent.TSBlockPersister;
 import cn.rapidtsdb.tsdb.core.persistent.file.FileLocation;
-import cn.rapidtsdb.tsdb.object.TSDataPoint;
 import cn.rapidtsdb.tsdb.plugins.StoreHandlerPlugin;
 import cn.rapidtsdb.tsdb.store.StoreHandlerFactory;
-import cn.rapidtsdb.tsdb.common.TimeUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.FixMethodOrder;
@@ -15,7 +14,6 @@ import org.junit.runners.MethodSorters;
 
 import java.io.FileInputStream;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
@@ -61,7 +59,7 @@ public class PersisterTest {
         TSBlockPersister blockPersister = TSBlockPersister.getINSTANCE();
         TSBlock tsBlock = blockPersister.getTSBlock(1, basetime);
         Assert.assertNotNull(tsBlock);
-        List<TSDataPoint> dps = tsBlock.getDataPoints();
+        Map<Long, Double> dps = tsBlock.getDataPoints();
         Assert.assertEquals(1000, dps.size());
         for (int i = 0; i < 1000; i++) {
             if (i % 123 == 0) {

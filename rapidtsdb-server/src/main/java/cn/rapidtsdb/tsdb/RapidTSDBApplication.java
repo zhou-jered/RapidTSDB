@@ -6,6 +6,7 @@ import cn.rapidtsdb.tsdb.config.TSDBConfig;
 import cn.rapidtsdb.tsdb.core.TSDB;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
 import cn.rapidtsdb.tsdb.lifecycle.Runner;
+import cn.rapidtsdb.tsdb.model.proto.TSDataMessage;
 import cn.rapidtsdb.tsdb.server.ServerInfo;
 import cn.rapidtsdb.tsdb.server.TSDBServer;
 import cn.rapidtsdb.tsdb.server.config.ServerConfig;

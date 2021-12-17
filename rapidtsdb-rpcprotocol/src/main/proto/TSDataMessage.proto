@@ -11,20 +11,15 @@ message ProtoSimpleDatapoint {
   string metric = 1;
   int64 timestamp = 2;
   double val = 3;
-  repeated  ProtoTSTag tags = 4;
+  map<string, string> tags = 4;
   int32 reqId = 5;
 }
 
 
-message ProtoTSTag {
-  string key = 1;
-  string value = 2;
-}
-
 message ProtoDatapoints {
   string metric = 1;
-  repeated ProtoDatapoint dps = 2;
-  repeated ProtoTSTag tags = 3;
+  map<int64, double> dps = 2;
+  map<string, string> tags = 3;
   int32 reqId = 4;
 }
 

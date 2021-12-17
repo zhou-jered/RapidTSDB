@@ -10,7 +10,6 @@ public class ObjectCodeGen {
             ConnectionAuth.ProtoAuthParams.class,
             ConnectionAuth.ProtoAuthMessage.class,
             ConnectionAuth.ProtoAuthResp.class,
-            TSDataMessage.ProtoTSTag.class,
             TSDataMessage.ProtoDatapoint.class,
             TSDataMessage.ProtoSimpleDatapoint.class,
             TSDataMessage.ProtoDatapoints.class,
@@ -36,7 +35,6 @@ public class ObjectCodeGen {
             String mapDef = String.format(mapEntryTemplate, classNameKey, i + 1);
             System.out.println(mapDef);
         }
-
     }
 
 

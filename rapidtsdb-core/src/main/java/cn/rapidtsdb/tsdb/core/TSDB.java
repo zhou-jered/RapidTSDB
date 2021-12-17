@@ -1,7 +1,5 @@
 package cn.rapidtsdb.tsdb.core;
 
-import cn.rapidtsdb.tsdb.calculate.CalculatorFactory;
-import cn.rapidtsdb.tsdb.calculate.DownSampler;
 import cn.rapidtsdb.tsdb.common.TimeUtils;
 import cn.rapidtsdb.tsdb.config.TSDBConfig;
 import cn.rapidtsdb.tsdb.core.persistent.AOLog;
@@ -11,17 +9,17 @@ import cn.rapidtsdb.tsdb.core.persistent.TSDBCheckPointManager;
 import cn.rapidtsdb.tsdb.executors.ManagedThreadPool;
 import cn.rapidtsdb.tsdb.lifecycle.Closer;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
-import cn.rapidtsdb.tsdb.object.TSDataPoint;
 import cn.rapidtsdb.tsdb.object.TSQuery;
+import cn.rapidtsdb.tsdb.object.TSQueryResult;
 import cn.rapidtsdb.tsdb.tasks.BlockCompressTask;
 import cn.rapidtsdb.tsdb.tasks.TwoHoursTriggerTask;
-import cn.rapidtsdb.tsdb.utils.TSDataUtils;
 import lombok.extern.log4j.Log4j2;
-import org.apache.commons.lang.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -53,7 +51,6 @@ public class TSDB implements Initializer, Closer {
         blockManager = new TSBlockManager(config);
         appendOnlyLogManager = new AppendOnlyLogManager();
         checkPointManager = TSDBCheckPointManager.getInstance();
-
     }
 
 
@@ -107,27 +104,20 @@ public class TSDB implements Initializer, Closer {
         }
     }
 
-    public List<TSDataPoint> queryTimeSeriesData(TSQuery query) {
+    public TSQueryResult queryTimeSeriesData(TSQuery query) {
         int mid = metricsKeyManager.getMetricsIndex(query.getMetric());
         List<TSBlock> blocks = blockManager.getBlockWithTimeRange(mid, query.getStartTime(), query.getEndTime());
-        List<TSDataPoint> dps = new ArrayList<>();
+        SortedMap<Long, Double> dps = new TreeMap<>();
         for (TSBlock b : blocks) {
-            dps.addAll(b.getDataPoints());
+            dps.putAll(b.getDataPoints());
         }
-        int left = TSDataUtils.binarySearchByTimestamp(dps, query.getStartTime(), true);
-        int right = TSDataUtils.binarySearchByTimestamp(dps, query.getEndTime(), false);
-        List<TSDataPoint> queriedResult = dps.subList(left, right);
-        queriedResult = downSampleIfNecessary(query, queriedResult);
+        dps = dps.subMap(query.getStartTime(), query.getEndTime());
+        TSQueryResult queriedResult = new TSQueryResult();
+        queriedResult.setDps(dps);
         return queriedResult;
     }
 
-    private List<TSDataPoint> downSampleIfNecessary(TSQuery query, List<TSDataPoint> dps) {
-        if (StringUtils.isNotBlank(query.getDownSampler())) {
-            DownSampler downSampler = CalculatorFactory.getDownSample(query.getDownSampler());
-            return downSampler.downSample(dps);
-        }
-        return dps;
-    }
+
 
     public void triggerBlockPersist() {
         final long aolLogIdx = appendOnlyLogManager.getLogIndex();

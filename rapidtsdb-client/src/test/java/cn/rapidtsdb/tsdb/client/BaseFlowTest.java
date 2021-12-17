@@ -1,11 +1,10 @@
 package cn.rapidtsdb.tsdb.client;
 
-import cn.rapidtsdb.tsdb.object.TSDataPoint;
+import cn.rapidtsdb.tsdb.object.TSQueryResult;
 import cn.rapidtsdb.tsdb.protocol.constants.AuthTypes;
 import lombok.extern.log4j.Log4j2;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 @Log4j2
@@ -29,8 +28,9 @@ public class BaseFlowTest {
         }
 
         System.out.println("start read");
-        List<TSDataPoint> dps = tsdbClient.readMetrics("me.local", tp - 100, tp + 5);
-        System.out.println("read" + dps);
+        TSQueryResult queryResult = tsdbClient.readMetrics("me.local", tp - 100, tp + 5);
+        System.out.println("read" + queryResult.getDps());
+        System.out.println("Result:" + queryResult);
 
         tsdbClient.close();
         log.info(tsdbClient);

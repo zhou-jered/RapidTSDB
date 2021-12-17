@@ -8,6 +8,7 @@ import cn.rapidtsdb.tsdb.core.persistent.MetricsKeyManager;
 import cn.rapidtsdb.tsdb.object.BizMetric;
 import cn.rapidtsdb.tsdb.object.TSDataPoint;
 import cn.rapidtsdb.tsdb.object.TSQuery;
+import cn.rapidtsdb.tsdb.object.TSQueryResult;
 import cn.rapidtsdb.tsdb.server.middleware.TSDBExecutor;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
@@ -15,7 +16,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import lombok.extern.log4j.Log4j2;
 
-import java.util.List;
+import java.util.Map;
 
 @Log4j2
 public class ConsoleHandler extends SimpleChannelInboundHandler<ByteBuf> {
@@ -127,24 +128,24 @@ public class ConsoleHandler extends SimpleChannelInboundHandler<ByteBuf> {
                     .startTime(startTime)
                     .endTime(endTime)
                     .build();
-            List<TSDataPoint> dps = null;
+            TSQueryResult qResult = null;
             if (params.length > 3) {
                 tsQuery.setDownSampler(params[3]);
-                dps = TSDBExecutor.getEXECUTOR().read(tsQuery);
+                qResult = TSDBExecutor.getEXECUTOR().read(tsQuery);
             } else {
-                dps = TSDBExecutor.getEXECUTOR().read(tsQuery);
+                qResult = TSDBExecutor.getEXECUTOR().read(tsQuery);
             }
-            if (dps == null || dps.size() == 0) {
+            if (qResult == null || qResult.getDps().size() == 0) {
                 ctx.writeAndFlush("[]");
             } else {
-                for (int i = 0; i < dps.size(); i++) {
-                    String d = dps.get(i).getTimestamp() + ":" + dps.get(i).getValue();
+                Map<Long, Double> dps = qResult.getDps();
+                dps.forEach((k, v) -> {
+                    String d = k + ":" + v;
                     ctx.writeAndFlush(d);
-                    ctx.writeAndFlush("  ");
-                    if (i % 5 == 0 && i > 0) {
-                        ctx.writeAndFlush("\n");
-                    }
-                }
+                    ctx.writeAndFlush("\n");
+                    
+                });
+
             }
         } catch (NumberFormatException e) {
             ctx.writeAndFlush(e.getMessage());
