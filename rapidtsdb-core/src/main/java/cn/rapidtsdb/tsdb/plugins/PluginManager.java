@@ -6,25 +6,30 @@ import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class PluginManager {
 
-    private static Class[] plugins = new Class[]{ConnectionAuthPlugin.class, StoreHandlerPlugin.class};
+    private static Class[] plugins = new Class[]{ConnectionAuthPlugin.class, StoreHandlerPlugin.class,
+            ConfigProcessPlugin.class};
     private static Map<String, List> pluginRegistry = new ConcurrentHashMap<>();
+    private static AtomicBoolean inited = new AtomicBoolean(false);
 
     static {
         loadPlugins();
     }
 
-    private static synchronized void loadPlugins() {
-        pluginRegistry.clear();
-        for (Class clz : plugins) {
-            ServiceLoader serviceLoader = ServiceLoader.load(ConnectionAuthPlugin.class);
-            final String pluginName = clz.getCanonicalName();
-            pluginRegistry.put(pluginName, new ArrayList());
-            Iterator<ConnectionAuthPlugin> authPluginIterator = serviceLoader.iterator();
-            while (authPluginIterator.hasNext()) {
-                pluginRegistry.get(pluginName).add(authPluginIterator.next());
+    public static synchronized void loadPlugins() {
+        if (inited.compareAndSet(false, true)) {
+            pluginRegistry.clear();
+            for (Class clz : plugins) {
+                ServiceLoader serviceLoader = ServiceLoader.load(clz);
+                final String pluginName = clz.getCanonicalName();
+                pluginRegistry.put(pluginName, new ArrayList());
+                Iterator pluginIterator = serviceLoader.iterator();
+                while (pluginIterator.hasNext()) {
+                    pluginRegistry.get(pluginName).add(pluginIterator.next());
+                }
             }
         }
     }

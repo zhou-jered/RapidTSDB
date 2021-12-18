@@ -35,7 +35,7 @@ public class MetricsChars {
             MetricsCharsCheckResult r = MetricsCharsCheckResult.failed(chars[fp], fp, "metric");
             return r;
         }
-        MetricsCharsCheckResult charsCheckResult = null;
+        MetricsCharsCheckResult charsCheckResult = MetricsCharsCheckResult.OK;
         Map<String, String> tags = metric.getTags();
         if (tags != null && tags.size() > 0) {
             for (String k : tags.keySet()) {

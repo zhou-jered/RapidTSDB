@@ -66,6 +66,11 @@ public class SimpleDatapointHandler extends SimpleChannelInboundHandler<TSDataMe
 
 
     @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        log.error(cause);
+    }
+
+    @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         super.userEventTriggered(ctx, evt);
         if (evt instanceof SessionPermissionChangeEvent) {

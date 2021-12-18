@@ -23,7 +23,7 @@ public class BaseFlowTest {
         TSDBClient tsdbClient = TSDBClientFactory.getTSDBClient(config);
         long tp = System.currentTimeMillis();
         for (int i = 0; i < 10; i++) {
-            WriteMetricResult writeMetricResult = tsdbClient.writeMetric("me.loc/…………中文al", tp + i, 1.3 + i);
+            WriteMetricResult writeMetricResult = tsdbClient.writeMetric("me.local", tp + i, 1.3 + i);
             System.out.println(writeMetricResult);
         }
 
