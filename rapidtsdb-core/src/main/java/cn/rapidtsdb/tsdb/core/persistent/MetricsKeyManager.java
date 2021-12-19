@@ -7,8 +7,8 @@ import cn.rapidtsdb.tsdb.config.TSDBConfig;
 import cn.rapidtsdb.tsdb.executors.ManagedThreadPool;
 import cn.rapidtsdb.tsdb.lifecycle.Closer;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
-import cn.rapidtsdb.tsdb.plugins.StoreHandlerPlugin;
-import cn.rapidtsdb.tsdb.store.StoreHandlerFactory;
+import cn.rapidtsdb.tsdb.plugins.FileStoreHandlerPlugin;
+import cn.rapidtsdb.tsdb.plugins.PluginManager;
 import cn.rapidtsdb.tsdb.utils.CollectionUtils;
 import com.esotericsoftware.kryo.kryo5.Kryo;
 import com.esotericsoftware.kryo.kryo5.io.Input;
@@ -19,8 +19,21 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang.StringUtils;
 
 import javax.annotation.Nullable;
-import java.io.*;
-import java.util.*;
+import java.io.BufferedReader;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -37,7 +50,7 @@ public class MetricsKeyManager implements Initializer, Closer {
 
     private TSDBConfig tsdbConfig;
 
-    StoreHandlerPlugin storeHandler;
+    FileStoreHandlerPlugin storeHandler;
     /**
      * take care of this map's memory usage
      */
@@ -68,7 +81,7 @@ public class MetricsKeyManager implements Initializer, Closer {
             return;
         }
         tsdbConfig = TSDBConfig.getConfigInstance();
-        storeHandler = StoreHandlerFactory.getStoreHandler();
+        storeHandler = PluginManager.getPlugin(FileStoreHandlerPlugin.class);
         kryo.register(TrieNode.class);
         kryo.register(ArrayList.class);
         if (tsdbConfig.getAdvancedConfig().getMetricsIdxCacheSize() != null && tsdbConfig.getAdvancedConfig().getMetricsIdxCacheSize() > 0) {

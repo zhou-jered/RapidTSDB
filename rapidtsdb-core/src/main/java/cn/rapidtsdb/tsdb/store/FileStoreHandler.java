@@ -1,7 +1,6 @@
 package cn.rapidtsdb.tsdb.store;
 
-import cn.rapidtsdb.tsdb.config.TSDBConfig;
-import cn.rapidtsdb.tsdb.plugins.StoreHandlerPlugin;
+import cn.rapidtsdb.tsdb.plugins.FileStoreHandlerPlugin;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang.StringUtils;
 
@@ -11,22 +10,32 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Map;
 
 
 @Log4j2
-public class FileStoreHandler implements StoreHandlerPlugin {
+public class FileStoreHandler implements FileStoreHandlerPlugin {
 
-    TSDBConfig tsdbConfig;
     private String baseDir;
 
     @Override
-    public String getScheme() {
-        return "file";
+    public String getName() {
+        return "default-file-store";
     }
 
-    public FileStoreHandler(TSDBConfig tsdbConfig) {
-        this.tsdbConfig = tsdbConfig;
-        String configDataDir = tsdbConfig.getDataPath();
+    @Override
+    public void prepare() {
+
+    }
+
+    @Override
+    public String getInterestedPrefix() {
+        return "dataPath";
+    }
+
+    @Override
+    public void config(Map<String, String> subConfig) {
+        String configDataDir = subConfig.get("dataPath");
         if (StringUtils.isBlank(configDataDir)) {
             baseDir = "";
         } else {
@@ -49,6 +58,16 @@ public class FileStoreHandler implements StoreHandlerPlugin {
                 throw new RuntimeException("Can not write the data directory, check the file permission please.");
             }
         }
+    }
+
+    @Override
+    public String getScheme() {
+        return "file";
+    }
+
+    public FileStoreHandler() {
+
+
     }
 
     @Override
@@ -124,4 +143,5 @@ public class FileStoreHandler implements StoreHandlerPlugin {
             new File(dirPart).mkdirs();
         }
     }
+
 }

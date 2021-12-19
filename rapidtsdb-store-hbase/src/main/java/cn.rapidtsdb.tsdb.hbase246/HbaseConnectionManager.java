@@ -9,10 +9,9 @@ import java.io.IOException;
 public class HbaseConnectionManager {
     private Configuration configuration = new Configuration();
 
-    public HbaseConnectionManager(HbaseStorageConfig config) {
-
-        configuration.set("hbase.zookeeper.property.clientPort", config.getClientPort());
-        configuration.set("hbase.zookeeper.quorum", config.getZookeeperQuorum());
+    public HbaseConnectionManager() {
+//        configuration.set("hbase.zookeeper.property.clientPort", HbaseStoreConfig.getPort());
+//        configuration.set("hbase.zookeeper.quorum", HbaseStoreConfig.getQuoqum());
     }
 
     private Connection cachedConnection = null;

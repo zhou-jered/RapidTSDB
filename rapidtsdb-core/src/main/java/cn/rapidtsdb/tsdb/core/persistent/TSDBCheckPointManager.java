@@ -1,8 +1,8 @@
 package cn.rapidtsdb.tsdb.core.persistent;
 
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
-import cn.rapidtsdb.tsdb.plugins.StoreHandlerPlugin;
-import cn.rapidtsdb.tsdb.store.StoreHandlerFactory;
+import cn.rapidtsdb.tsdb.plugins.FileStoreHandlerPlugin;
+import cn.rapidtsdb.tsdb.plugins.PluginManager;
 import lombok.extern.log4j.Log4j2;
 
 import java.io.DataInputStream;
@@ -14,7 +14,7 @@ import java.io.OutputStream;
 @Log4j2
 public class TSDBCheckPointManager implements Initializer {
 
-    private final StoreHandlerPlugin storeHandler = StoreHandlerFactory.getStoreHandler();
+    private FileStoreHandlerPlugin storeHandler;
     private final String checkPointFilename = "ckFile.checkpoint";
     private static TSDBCheckPointManager INSTANCE;
 
@@ -23,7 +23,7 @@ public class TSDBCheckPointManager implements Initializer {
 
     @Override
     public void init() {
-
+        storeHandler = PluginManager.getPlugin(FileStoreHandlerPlugin.class);
     }
 
     public void savePoint(long point) {
@@ -61,7 +61,6 @@ public class TSDBCheckPointManager implements Initializer {
             synchronized (TSDBCheckPointManager.class) {
                 if (INSTANCE == null) {
                     INSTANCE = new TSDBCheckPointManager();
-                    INSTANCE.init();
                 }
             }
         }

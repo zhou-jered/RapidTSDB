@@ -2,16 +2,23 @@ package cn.rapidtsdb.tsdb.core.persistent;
 
 import cn.rapidtsdb.tsdb.TSDBRunnableTask;
 import cn.rapidtsdb.tsdb.app.AppInfo;
+import cn.rapidtsdb.tsdb.common.TimeUtils;
 import cn.rapidtsdb.tsdb.executors.ManagedThreadPool;
 import cn.rapidtsdb.tsdb.lifecycle.Closer;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
 import cn.rapidtsdb.tsdb.metrics.DBMetrics;
-import cn.rapidtsdb.tsdb.plugins.StoreHandlerPlugin;
-import cn.rapidtsdb.tsdb.store.StoreHandlerFactory;
-import cn.rapidtsdb.tsdb.common.TimeUtils;
+import cn.rapidtsdb.tsdb.plugins.FileStoreHandlerPlugin;
+import cn.rapidtsdb.tsdb.plugins.PluginManager;
 import lombok.extern.log4j.Log4j2;
 
-import java.io.*;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.BlockingQueue;
@@ -27,7 +34,7 @@ public class AppendOnlyLogManager implements Initializer, Closer {
     private final String LOG_START_IDX_FILE = "aol.start.idx"; // the logical log offset of the file start
     private final String LOG_END_IDX_FILE = "aol.end.idx"; // the logical log length
     private volatile boolean initialized = false;
-    private StoreHandlerPlugin storeHandler;
+    private FileStoreHandlerPlugin storeHandler;
     private int MAX_WRITE_LENGTH = 1024 * 1024 * 1024 / AOLog.SERIES_BYTES_LENGTH;
 
     private RandomAccessFile seekableAolFile = null;
@@ -49,7 +56,7 @@ public class AppendOnlyLogManager implements Initializer, Closer {
             return;
         }
         initialized = true;
-        storeHandler = StoreHandlerFactory.getStoreHandler();
+        storeHandler = PluginManager.getPlugin(FileStoreHandlerPlugin.class);
         writeLogTask = new WriteLogTask(bufferQ);
         writeThread = ManagedThreadPool.getInstance().newThread(writeLogTask);
         writeThread.start();

@@ -3,9 +3,6 @@ package cn.rapidtsdb.tsdb.core;
 import cn.rapidtsdb.tsdb.common.TimeUtils;
 import cn.rapidtsdb.tsdb.core.io.TSBlockDeserializer;
 import cn.rapidtsdb.tsdb.core.persistent.TSBlockPersister;
-import cn.rapidtsdb.tsdb.core.persistent.file.FileLocation;
-import cn.rapidtsdb.tsdb.plugins.StoreHandlerPlugin;
-import cn.rapidtsdb.tsdb.store.StoreHandlerFactory;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.FixMethodOrder;
@@ -46,11 +43,7 @@ public class PersisterTest {
         memoryBlock.put(1, tsBlock);
         persister.persistTSBlockSync(memoryBlock);
 
-        StoreHandlerPlugin storeHandler = StoreHandlerFactory.getStoreHandler();
 
-
-        FileLocation storeFileLocation = TSBlockPersister.FilenameStrategy.getTodayFileLocation(1, basetime);
-        Assert.assertTrue(storeHandler.fileExisted(storeFileLocation.getPathWithFilename()));
     }
 
     @Test

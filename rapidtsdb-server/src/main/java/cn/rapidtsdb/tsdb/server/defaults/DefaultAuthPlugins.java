@@ -10,6 +10,26 @@ import java.util.Map;
  */
 public class DefaultAuthPlugins implements ConnectionAuthPlugin {
     @Override
+    public String getName() {
+        return "default-auth";
+    }
+
+    @Override
+    public void prepare() {
+
+    }
+
+    @Override
+    public String getInterestedPrefix() {
+        return null;
+    }
+
+    @Override
+    public void config(Map<String, String> subConfig) {
+
+    }
+
+    @Override
     public boolean hasReadPermission(String authType, int version, Map<String, String> authParams) {
         return true;
     }

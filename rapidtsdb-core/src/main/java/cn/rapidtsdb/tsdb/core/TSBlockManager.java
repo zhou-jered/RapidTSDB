@@ -54,6 +54,7 @@ public class TSBlockManager extends AbstractTSBlockManager implements Initialize
 
     @Override
     public void init() {
+        blockPersister.init();
         dirtyBlocksRef.set(new HashMap<>());
         preRoundBlockRef.set(newTSMap());
         currentBlockCacheRef.set(newTSMap());

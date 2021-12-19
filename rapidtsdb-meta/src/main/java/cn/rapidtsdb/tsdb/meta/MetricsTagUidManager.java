@@ -5,8 +5,8 @@ import cn.rapidtsdb.tsdb.common.LRUCache;
 import cn.rapidtsdb.tsdb.executors.ManagedThreadPool;
 import cn.rapidtsdb.tsdb.lifecycle.Closer;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
-import cn.rapidtsdb.tsdb.plugins.StoreHandlerPlugin;
-import cn.rapidtsdb.tsdb.store.StoreHandlerFactory;
+import cn.rapidtsdb.tsdb.plugins.FileStoreHandlerPlugin;
+import cn.rapidtsdb.tsdb.plugins.PluginManager;
 import com.esotericsoftware.kryo.kryo5.Kryo;
 import com.esotericsoftware.kryo.kryo5.io.Input;
 import com.esotericsoftware.kryo.kryo5.io.Output;
@@ -14,8 +14,18 @@ import lombok.Data;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang.StringUtils;
 
-import java.io.*;
-import java.util.*;
+import java.io.BufferedReader;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -34,7 +44,7 @@ public class MetricsTagUidManager implements Initializer, Closer {
 
     private final int UID_FILE_RANGE_STEP = 10000;
     private Map<Integer, Lock> uidRangLockMap = new ConcurrentHashMap<>();
-    private StoreHandlerPlugin storeHandler = null;
+    private FileStoreHandlerPlugin storeHandler = null;
     private Kryo kryo = new Kryo();
     private LRUCache<Integer, String> id2TagCache = new LRUCache<>();
     private LRUCache<Integer, String> id2KeyCache = new LRUCache<>();
@@ -61,7 +71,7 @@ public class MetricsTagUidManager implements Initializer, Closer {
         kryo.register(Node.class);
         kryo.register(List.class);
         kryo.register(ArrayList.class);
-        storeHandler = StoreHandlerFactory.getStoreHandler();
+        storeHandler = PluginManager.getPlugin(FileStoreHandlerPlugin.class);
         recoveryData();
         status.set(STATUS_RUNNING);
         synchronized (status) {

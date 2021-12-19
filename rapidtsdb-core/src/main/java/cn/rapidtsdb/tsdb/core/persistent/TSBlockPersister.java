@@ -14,8 +14,8 @@ import cn.rapidtsdb.tsdb.core.persistent.file.FileLocation;
 import cn.rapidtsdb.tsdb.executors.ManagedThreadPool;
 import cn.rapidtsdb.tsdb.lifecycle.Closer;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
-import cn.rapidtsdb.tsdb.plugins.StoreHandlerPlugin;
-import cn.rapidtsdb.tsdb.store.StoreHandlerFactory;
+import cn.rapidtsdb.tsdb.plugins.FileStoreHandlerPlugin;
+import cn.rapidtsdb.tsdb.plugins.PluginManager;
 import cn.rapidtsdb.tsdb.utils.TSBlockUtils;
 import lombok.extern.log4j.Log4j2;
 import org.apache.logging.log4j.LogManager;
@@ -45,7 +45,7 @@ public class TSBlockPersister implements Initializer, Closer {
 
     private ThreadPoolExecutor ioExecutor = ManagedThreadPool.getInstance().ioExecutor();
     private static TSBlockPersister INSTANCE = null;
-    private StoreHandlerPlugin storeHandler;
+    private FileStoreHandlerPlugin storeHandler;
     private TSBlockDeserializer blockReader = new TSBlockDeserializer();
 
     private TSBlockPersister() {
@@ -53,7 +53,7 @@ public class TSBlockPersister implements Initializer, Closer {
 
     @Override
     public void init() {
-        storeHandler = StoreHandlerFactory.getStoreHandler();
+        storeHandler = PluginManager.getPlugin(FileStoreHandlerPlugin.class);
     }
 
     @Override
@@ -146,7 +146,6 @@ public class TSBlockPersister implements Initializer, Closer {
             synchronized (TSBlockPersister.class) {
                 if (INSTANCE == null) {
                     INSTANCE = new TSBlockPersister();
-                    INSTANCE.init();
                 }
             }
         }
@@ -274,7 +273,7 @@ public class TSBlockPersister implements Initializer, Closer {
         private int metricId;
         private FileLocation fileLocation;
         private TSBlockSnapshot snapshot;
-        private StoreHandlerPlugin storeHandler;
+        private FileStoreHandlerPlugin storeHandler;
         private TSDBTaskCallback<TSBlockAndMeta, Void> completeCallback;
         private static final TSBlockSerializer blockWriter = new TSBlockSerializer();
 
@@ -284,7 +283,7 @@ public class TSBlockPersister implements Initializer, Closer {
             return String.format("SimpleTSBlockStoreTask:%s:%s", metricId, snapshot.getTsBlock().getBaseTime());
         }
 
-        public SimpleTSBlockStoreTask(int metricId, TSBlockSnapshot snapshot, StoreHandlerPlugin storeHandler, TSDBTaskCallback completeCallback) {
+        public SimpleTSBlockStoreTask(int metricId, TSBlockSnapshot snapshot, FileStoreHandlerPlugin storeHandler, TSDBTaskCallback completeCallback) {
             this.metricId = metricId;
             this.fileLocation = FilenameStrategy.getTodayFileLocation(metricId, snapshot.getTsBlock().getBaseTime());
             this.snapshot = snapshot;

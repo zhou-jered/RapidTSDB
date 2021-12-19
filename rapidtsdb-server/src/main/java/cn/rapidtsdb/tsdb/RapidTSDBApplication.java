@@ -6,7 +6,6 @@ import cn.rapidtsdb.tsdb.config.TSDBConfig;
 import cn.rapidtsdb.tsdb.core.TSDB;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
 import cn.rapidtsdb.tsdb.lifecycle.Runner;
-import cn.rapidtsdb.tsdb.plugins.ConfigProcessPlugin;
 import cn.rapidtsdb.tsdb.plugins.PluginManager;
 import cn.rapidtsdb.tsdb.server.ServerInfo;
 import cn.rapidtsdb.tsdb.server.TSDBServer;
@@ -14,7 +13,6 @@ import cn.rapidtsdb.tsdb.server.config.ServerConfig;
 import cn.rapidtsdb.tsdb.server.config.ServerProtocol;
 import cn.rapidtsdb.tsdb.server.middleware.TSDBExecutor;
 import cn.rapidtsdb.tsdb.utils.CliParser;
-import cn.rapidtsdb.tsdb.utils.CollectionUtils;
 import cn.rapidtsdb.tsdb.utils.ResourceUtils;
 import com.alibaba.fastjson.JSON;
 import com.google.common.collect.Maps;
@@ -25,7 +23,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -43,7 +40,9 @@ public class RapidTSDBApplication implements Initializer, Runner {
 
     public static void main(String[] args) {
         PluginManager.loadPlugins();
-        initConfig(args);
+        Map<String, String> globalConfig = initConfig(args);
+        PluginManager.configPlugins(globalConfig);
+        PluginManager.preparePlugin();
         printBanner();
         RapidTSDBApplication application = new RapidTSDBApplication();
         application.init();
@@ -52,7 +51,7 @@ public class RapidTSDBApplication implements Initializer, Runner {
     }
 
 
-    private static void initConfig(String... args) {
+    private static Map<String, String> initConfig(String... args) {
         Map<String, String> globalConfig = new ConcurrentHashMap<>(128);
 
         Map<String, String> cmdProperties = CliParser.parseCmdArgs(args);
@@ -64,20 +63,7 @@ public class RapidTSDBApplication implements Initializer, Runner {
         globalConfig.putAll(appProperties);
         globalConfig.putAll(cmdProperties);
         TSDBConfig.init(globalConfig);
-
-        List<ConfigProcessPlugin> configProcessPlugins = PluginManager.getPlugins(ConfigProcessPlugin.class);
-        if (CollectionUtils.isNotEmpty(configProcessPlugins)) {
-            for (ConfigProcessPlugin configProcessPlugin : configProcessPlugins) {
-                String prefix = configProcessPlugin.getConfigPrefix();
-                Map<String, String> pluginConfig = new HashMap<>();
-                for (String k : globalConfig.keySet()) {
-                    if (k.startsWith(prefix)) {
-                        pluginConfig.put(k, globalConfig.get(k));
-                    }
-                }
-                configProcessPlugin.process(pluginConfig);
-            }
-        }
+        return globalConfig;
     }
 
     private static void printBanner() {

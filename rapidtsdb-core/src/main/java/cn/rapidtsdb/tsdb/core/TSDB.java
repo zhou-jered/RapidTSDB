@@ -65,6 +65,7 @@ public class TSDB implements Initializer, Closer {
         appendOnlyLogManager.init();
         metricsKeyManager.init();
         blockManager.init();
+        checkPointManager.init();
         recoveryDBData();
         initScheduleTimeTask();
         dbState.set(DB_STATE_RUNNING);
@@ -116,7 +117,6 @@ public class TSDB implements Initializer, Closer {
         queriedResult.setDps(dps);
         return queriedResult;
     }
-
 
 
     public void triggerBlockPersist() {
