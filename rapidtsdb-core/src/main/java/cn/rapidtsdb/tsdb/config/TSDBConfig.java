@@ -11,6 +11,7 @@ import org.apache.commons.lang.BooleanUtils;
 
 import java.lang.reflect.Field;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -20,6 +21,8 @@ import java.util.stream.Collectors;
 
 @Log4j2
 public class TSDBConfig {
+
+    private Map<String, String> rowConfig = new HashMap<>();
 
     /**
      * 存储在文件或者是Hbase, Hadoop, S3,
@@ -119,6 +122,7 @@ public class TSDBConfig {
 
     public static void init(Map<String, String> rawConfig) {
         TSDBConfig temp = new TSDBConfig();
+        temp.rowConfig = rawConfig;
         if (rawConfig != null) {
             for (String configItem : rawConfig.keySet()) {
                 temp.setConfigVal(configItem, rawConfig.get(configItem));
@@ -144,7 +148,7 @@ public class TSDBConfig {
             } else {
                 fieldName = configItem2FieldName(configItem);
             }
-            log.debug("Setting config field {} = {}", fieldName, val);
+
             Field configField = configClass.getDeclaredField(fieldName);
             Class fieldType = configField.getType();
             if (fieldType.equals(String.class)) {
