@@ -8,19 +8,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class RpcObjectCode {
 
-    public static final int ProtoAuthParams = 1;
-    public static final int ProtoAuthMessage = 2;
-    public static final int ProtoAuthResp = 3;
-    public static final int ProtoConnectionConfig = 4;
-    public static final int ProtoTSTag = 5;
-    public static final int ProtoDatapoint = 6;
-    public static final int ProtoSimpleDatapoint = 7;
-    public static final int ProtoDatapoints = 8;
-    public static final int ProtoDataResponse = 9;
-    public static final int ProtoCommonResponse = 10;
-    public static final int ProtoTSQuery = 11;
-
-
     private static Map<String, Integer> protoObjectCodeMap = new ConcurrentHashMap<>(128);
     private static Map<Integer, Parser> protoParserMap = new ConcurrentHashMap<>();
 
