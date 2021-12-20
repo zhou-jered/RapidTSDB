@@ -27,4 +27,9 @@ public class Pair<L, R> {
     public int hashCode() {
         return Objects.hash(left, right);
     }
+
+
+    public static <L, R> Pair<L, R> of(L left, R right) {
+        return new Pair<>(left, right);
+    }
 }

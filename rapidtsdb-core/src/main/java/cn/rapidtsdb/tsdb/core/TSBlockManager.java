@@ -39,8 +39,9 @@ public class TSBlockManager extends AbstractTSBlockManager implements Initialize
     private AtomicReference<Map<Integer, TSBlock>> forwardRoundBlockRef = new AtomicReference<>();
     private TSBlockPersister blockPersister;
 
-    ManagedThreadPool globalExecutor = ManagedThreadPool.getInstance();
-    ThreadPoolExecutor ioExecutor = globalExecutor.ioExecutor();
+    private ManagedThreadPool globalExecutor = ManagedThreadPool.getInstance();
+    private ThreadPoolExecutor ioExecutor = globalExecutor.ioExecutor();
+
 
     TSBlockManager(TSDBConfig tsdbConfig) {
         this.tsdbConfig = tsdbConfig;
@@ -50,6 +51,7 @@ public class TSBlockManager extends AbstractTSBlockManager implements Initialize
     @Override
     public void close() {
         flushMemoryBlock();
+        blockPersister.close();
     }
 
     @Override

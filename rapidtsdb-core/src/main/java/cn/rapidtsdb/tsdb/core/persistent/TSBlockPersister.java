@@ -2,6 +2,7 @@ package cn.rapidtsdb.tsdb.core.persistent;
 
 import cn.rapidtsdb.tsdb.TSDBTaskCallback;
 import cn.rapidtsdb.tsdb.common.TimeUtils;
+import cn.rapidtsdb.tsdb.core.QuickBlockDetector;
 import cn.rapidtsdb.tsdb.core.TSBlock;
 import cn.rapidtsdb.tsdb.core.TSBlockSnapshot;
 import cn.rapidtsdb.tsdb.core.io.IOLock;
@@ -39,19 +40,22 @@ public class TSBlockPersister implements Initializer, Closer {
     private BlockStoreHandlerPlugin blockStoreHandler;
     private TSBlockDeserializer blockReader = new TSBlockDeserializer();
     private TSBlockSerializer blockWriter = new TSBlockSerializer();
+    private QuickBlockDetector quickBlockDetector = new QuickBlockDetector();
 
     private TSBlockPersister() {
+
     }
 
     @Override
     public void init() {
         fileStoreHandler = PluginManager.getPlugin(FileStoreHandlerPlugin.class);
         blockStoreHandler = PluginManager.getPlugin(BlockStoreHandlerPlugin.class);
+        quickBlockDetector.init();
     }
 
     @Override
     public void close() {
-
+        quickBlockDetector.close();
     }
 
     /**
@@ -61,11 +65,13 @@ public class TSBlockPersister implements Initializer, Closer {
      */
     public void persistTSBlockSync(Map<Integer, TSBlock> tsBlocks) {
         if (tsBlocks != null) {
+            setQuickBlockFinder(tsBlocks);
             Map<Integer, TSBlock> writingBlocks = new HashMap<>(tsBlocks);
             for (Integer metricId : writingBlocks.keySet()) {
                 TSBlockSnapshot blockSnapshot = writingBlocks.get(metricId).snapshot();
                 byte[] existed = blockStoreHandler.getBlockData(metricId, blockSnapshot.getTsBlock().getBaseTime());
                 if (existed != null) {
+                    // had bug, todo
                     TSBlockAndMeta blockAndMeta = blockReader.deserializeFromBytes(existed);
                     TSBlock mergedBlock = TSBlockUtils.mergeStoredBlockWithMemoryBlock(blockAndMeta, blockSnapshot);
                     blockSnapshot = mergedBlock.snapshot();
@@ -88,6 +94,7 @@ public class TSBlockPersister implements Initializer, Closer {
     }
 
     public void persistTSBlockAsync(Map<Integer, TSBlock> tsBlocks, TSDBTaskCallback completeCallback) {
+        setQuickBlockFinder(tsBlocks);
         ManagedThreadPool.getInstance().ioExecutor()
                 .submit(() -> {
                     persistTSBlockSync(tsBlocks);
@@ -96,6 +103,9 @@ public class TSBlockPersister implements Initializer, Closer {
 
     public TSBlock getTSBlock(Integer metricId, long timestamp) {
         long blockBaseTime = TimeUtils.getBlockBaseTime(timestamp);
+        if (!quickBlockDetector.blockMayExist(metricId, blockBaseTime)) {
+            return null;
+        }
         byte[] blockBytes = blockStoreHandler.getBlockData(metricId, blockBaseTime);
         if (blockBytes != null) {
             TSBlockAndMeta blockAndMeta = blockReader.deserializeFromBytes(blockBytes);
@@ -119,9 +129,11 @@ public class TSBlockPersister implements Initializer, Closer {
         long t;
         for (; timeScanner.hasNext(); ) {
             t = timeScanner.next();
-            TSBlock b = getTSBlock(metricId, t);
-            if (b != null) {
-                blocks.add(b);
+            if (quickBlockDetector.blockMayExist(metricId, t)) {
+                TSBlock b = getTSBlock(metricId, t);
+                if (b != null) {
+                    blocks.add(b);
+                }
             }
         }
         return blocks;
@@ -140,6 +152,19 @@ public class TSBlockPersister implements Initializer, Closer {
             }
         }
         return INSTANCE;
+    }
+
+    private void setQuickBlockFinder(Map<Integer, TSBlock> blocks) {
+        Map<Integer, Long> quickIndex = new HashMap<>();
+        blocks.forEach((k, v) -> {
+            quickIndex.put(k, v.getBaseTime());
+        });
+        ManagedThreadPool.getInstance().ioExecutor()
+                .submit(() -> {
+                    quickIndex.forEach((metricId, basetime) -> {
+                        quickBlockDetector.rememberBlock(metricId, basetime);
+                    });
+                });
     }
 
 
