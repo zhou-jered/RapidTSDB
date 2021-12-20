@@ -16,7 +16,6 @@ import java.util.List;
 @Log4j2
 public class HbasePreparer {
 
-
     public void checkPrepare(Connection connection) throws IOException {
         Admin admin = connection.getAdmin();
         TableName tableName = TableName.valueOf(HbaseDefine.DATA_TABLE);

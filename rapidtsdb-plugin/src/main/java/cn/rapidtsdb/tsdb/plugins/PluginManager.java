@@ -1,6 +1,7 @@
 package cn.rapidtsdb.tsdb.plugins;
 
 import cn.rapidtsdb.tsdb.plugins.func.ConfigurablePlugin;
+import cn.rapidtsdb.tsdb.plugins.func.NameablePlugin;
 import cn.rapidtsdb.tsdb.plugins.func.PreparablePlugin;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang.StringUtils;
@@ -19,7 +20,9 @@ public class PluginManager {
 
     private static Class[] plugins = new Class[]{ConnectionAuthPlugin.class, FileStoreHandlerPlugin.class,
             BlockStoreHandlerPlugin.class};
-    private static Map<String, List> pluginRegistry = new ConcurrentHashMap<>();
+    private static Map<Class, String> pluginSpecifierMap;
+    private static Map<String, List> pluginRegistry = new HashMap<>();
+    private static Map<String, String> pluginSpecNameMap = new HashMap<>();
     static final int CREATE = 0;
     static final int REGISTED = 1;
     static final int CONFIGED = 3;
@@ -27,6 +30,10 @@ public class PluginManager {
     private static AtomicInteger state = new AtomicInteger(CREATE);
 
     static {
+        pluginSpecifierMap = new ConcurrentHashMap<>();
+        pluginSpecifierMap.put(ConnectionAuthPlugin.class, "auth.plugin");
+        pluginSpecifierMap.put(FileStoreHandlerPlugin.class, "fileStore.plugin");
+        pluginSpecifierMap.put(BlockStoreHandlerPlugin.class, "blockStore.plugin");
         loadPlugins();
     }
 
@@ -49,6 +56,7 @@ public class PluginManager {
 
     public static synchronized void configPlugins(Map<String, String> globalConfig) {
         if (state.compareAndSet(REGISTED, CONFIGED)) {
+            rememberPluginSpecConfig(globalConfig);
             Iterator<List> valIter = pluginRegistry.values().iterator();
             while (valIter.hasNext()) {
                 List pluginList = valIter.next();
@@ -70,11 +78,35 @@ public class PluginManager {
 
     public static synchronized void preparePlugin() {
         if (state.compareAndSet(CONFIGED, PREPARED)) {
-            pluginRegistry.values().forEach(list -> list.forEach(p -> {
-                if (p instanceof PreparablePlugin) {
-                    ((PreparablePlugin) p).prepare();
+            for (Class pluginClz : plugins) {
+                String rk = pluginClz.getCanonicalName();
+                String specName = pluginSpecNameMap.get(rk);
+                List pluginObjList = pluginRegistry.get(rk);
+                if (StringUtils.isNotBlank(specName)) {
+                    Object namedPlugin = null;
+                    for (Object pl : pluginObjList) {
+                        if (pl instanceof NameablePlugin) {
+                            if (((NameablePlugin) pl).getName().equals(specName)) {
+                                namedPlugin = pl;
+                                break;
+                            }
+                        }
+                    }
+                    if (namedPlugin == null) {
+                        String msg = String.format("Can not find Plugin:%s of name:%s", rk, specName);
+                        throw new RuntimeException(msg);
+                    } else if (namedPlugin instanceof PreparablePlugin) {
+                        ((PreparablePlugin) namedPlugin).prepare();
+                    }
+                } else {
+                    pluginObjList.forEach(p -> {
+                        if (p instanceof PreparablePlugin) {
+                            ((PreparablePlugin) p).prepare();
+                        }
+                    });
                 }
-            }));
+            }
+
         }
     }
 
@@ -83,9 +115,16 @@ public class PluginManager {
             throw new RuntimeException("plugin not prepared");
         }
         final String pname = pluginClazz.getCanonicalName();
-        List<T> result = pluginRegistry.get(pname);
-        if (result != null && result.size() > 0) {
-            return result.get(0);
+        List<T> candidatePlugins = pluginRegistry.get(pname);
+        String pluginSpecName = pluginSpecNameMap.get(pluginClazz.getCanonicalName());
+        if (StringUtils.isNotBlank(pluginSpecName)) {
+            for (Object plugin : candidatePlugins) {
+                if (plugin instanceof NameablePlugin && ((NameablePlugin) plugin).getName().equals(pluginSpecName)) {
+                    return (T) plugin;
+                }
+            }
+        } else if (candidatePlugins != null && candidatePlugins.size() > 0) {
+            return candidatePlugins.get(0);
         }
         return null;
     }
@@ -107,6 +146,15 @@ public class PluginManager {
             }
         }
         return subMap;
+    }
+
+    private static void rememberPluginSpecConfig(Map<String, String> globalConfig) {
+        for (Class pluginClz : plugins) {
+            String specK = pluginSpecifierMap.get(pluginClz);
+            if (globalConfig.containsKey(specK)) {
+                pluginSpecNameMap.put(pluginClz.getCanonicalName(), globalConfig.get(specK));
+            }
+        }
     }
 
 }

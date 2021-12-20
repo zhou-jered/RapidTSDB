@@ -1,7 +1,7 @@
 package cn.rapidtsdb.tsdb.server.handler.console;
 
 import cn.rapidtsdb.tsdb.TSDBDataOperationTask;
-import cn.rapidtsdb.tsdb.TSDBRunnableTask;
+import cn.rapidtsdb.tsdb.TSDBRetryableTask;
 import cn.rapidtsdb.tsdb.TSDBTaskCallback;
 import cn.rapidtsdb.tsdb.TSDataOperationQueue;
 import cn.rapidtsdb.tsdb.core.persistent.MetricsKeyManager;
@@ -236,7 +236,7 @@ public class ConsoleHandler extends SimpleChannelInboundHandler<ByteBuf> {
         }
 
         @Override
-        public void onFailed(TSDBRunnableTask task, Object data) {
+        public void onFailed(TSDBRetryableTask task, Object data) {
             ByteBuf byteBuf = ctx.alloc().buffer(15);
             byteBuf.writeBytes("Failed:".getBytes());
             ctx.writeAndFlush(byteBuf);
@@ -244,7 +244,7 @@ public class ConsoleHandler extends SimpleChannelInboundHandler<ByteBuf> {
         }
 
         @Override
-        public void onException(TSDBRunnableTask task, Object data, Throwable exception) {
+        public void onException(TSDBRetryableTask task, Object data, Throwable exception) {
             if (exception != null) {
                 ctx.writeAndFlush("\n");
                 ctx.writeAndFlush("Exception:" + exception.getMessage());

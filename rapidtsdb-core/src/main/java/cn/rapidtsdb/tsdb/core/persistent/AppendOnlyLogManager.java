@@ -1,6 +1,6 @@
 package cn.rapidtsdb.tsdb.core.persistent;
 
-import cn.rapidtsdb.tsdb.TSDBRunnableTask;
+import cn.rapidtsdb.tsdb.TSDBRetryableTask;
 import cn.rapidtsdb.tsdb.app.AppInfo;
 import cn.rapidtsdb.tsdb.common.TimeUtils;
 import cn.rapidtsdb.tsdb.executors.ManagedThreadPool;
@@ -223,7 +223,7 @@ public class AppendOnlyLogManager implements Initializer, Closer {
         }
     }
 
-    private class WriteLogTask extends TSDBRunnableTask {
+    private class WriteLogTask extends TSDBRetryableTask {
 
         private BlockingQueue<AOLog> logQueue = null;
 

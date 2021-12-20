@@ -1,6 +1,6 @@
 package cn.rapidtsdb.tsdb.meta;
 
-import cn.rapidtsdb.tsdb.TSDBRunnableTask;
+import cn.rapidtsdb.tsdb.TSDBRetryableTask;
 import cn.rapidtsdb.tsdb.common.LRUCache;
 import cn.rapidtsdb.tsdb.executors.ManagedThreadPool;
 import cn.rapidtsdb.tsdb.lifecycle.Closer;
@@ -301,7 +301,7 @@ public class MetricsTagUidManager implements Initializer, Closer {
 
     private static final ReentrantLock AppendFullKeyNameTask_LOCK = new ReentrantLock();
 
-    private class AppendFullKeyNameTask extends TSDBRunnableTask {
+    private class AppendFullKeyNameTask extends TSDBRetryableTask {
 
         private String keyName;
         private int keyIdx;

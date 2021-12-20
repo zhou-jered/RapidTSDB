@@ -16,7 +16,7 @@ public class LRUCache<K, V> {
     private final int maxSize;
     private Map<K, WrappedValue<V>> cache = new ConcurrentHashMap<>();
     private HeapNode[] heap;
-    private int heapIdx = 0;
+    private int heapIdx = 1;
     private ReadWriteLock rwLock = new ReentrantReadWriteLock();
 
     public LRUCache() {

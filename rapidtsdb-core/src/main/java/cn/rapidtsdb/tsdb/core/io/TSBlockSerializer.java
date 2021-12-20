@@ -29,9 +29,9 @@ public class TSBlockSerializer {
         int copyOffset = 0;
         System.arraycopy(metaSeries, 0, series, copyOffset, metaSeries.length);
         copyOffset += metaSeries.length;
-        System.arraycopy(snapshot.getTsBlock().getTime(), 0, series, copyOffset, snapshot.getTimeBytesLength());
+        System.arraycopy(snapshot.getTsBlock().getTime().getData(), 0, series, copyOffset, snapshot.getTimeBytesLength());
         copyOffset += snapshot.getTimeBytesLength();
-        System.arraycopy(snapshot.getTsBlock().getValues(), 0, series,
+        System.arraycopy(snapshot.getTsBlock().getValues().getData(), 0, series,
                 copyOffset, snapshot.getValuesBytesLength());
         return series;
     }

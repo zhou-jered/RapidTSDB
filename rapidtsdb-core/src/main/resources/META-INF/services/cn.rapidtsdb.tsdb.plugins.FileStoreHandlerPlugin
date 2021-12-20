@@ -1,1 +1,1 @@
-cn.rapidtsdb.tsdb.store.FileStoreHandler
+cn.rapidtsdb.tsdb.store.DefaultFileStoreHandler

@@ -14,7 +14,7 @@ import java.util.Map;
 
 
 @Log4j2
-public class FileStoreHandler implements FileStoreHandlerPlugin {
+public class DefaultFileStoreHandler implements FileStoreHandlerPlugin {
 
     private String baseDir;
 
@@ -65,7 +65,7 @@ public class FileStoreHandler implements FileStoreHandlerPlugin {
         return "file";
     }
 
-    public FileStoreHandler() {
+    public DefaultFileStoreHandler() {
 
 
     }

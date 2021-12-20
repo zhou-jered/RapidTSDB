@@ -4,12 +4,12 @@ public interface TSDBTaskCallback<T, R> {
 
     R onSuccess(T data);
 
-    default void onFailed(TSDBRunnableTask task, T data) {
+    default void onFailed(TSDBRetryableTask task, T data) {
         task.markRetry();
     }
 
 
-    default void onException(TSDBRunnableTask task, T data, Throwable exception) {
+    default void onException(TSDBRetryableTask task, T data, Throwable exception) {
 
     }
 

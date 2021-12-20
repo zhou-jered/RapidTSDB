@@ -1,7 +1,7 @@
 package cn.rapidtsdb.tsdb;
 
 
-public abstract class TSDBRunnableTask implements Runnable {
+public abstract class TSDBRetryableTask implements Runnable {
     private int retryCount = 0;
 
     public void markRetry() {
@@ -16,11 +16,11 @@ public abstract class TSDBRunnableTask implements Runnable {
 
     public abstract String getTaskName();
 
-    public static TSDBRunnableTask ofSimple(Runnable runnable) {
+    public static TSDBRetryableTask ofSimple(Runnable runnable) {
         return new SimpleTask(runnable);
     }
 
-    private static class SimpleTask extends TSDBRunnableTask {
+    private static class SimpleTask extends TSDBRetryableTask {
         private Runnable delegate;
 
         public SimpleTask(Runnable delegate) {

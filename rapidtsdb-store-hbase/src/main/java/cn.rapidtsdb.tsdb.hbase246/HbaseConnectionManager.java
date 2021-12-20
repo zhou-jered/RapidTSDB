@@ -7,11 +7,10 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import java.io.IOException;
 
 public class HbaseConnectionManager {
-    private Configuration configuration = new Configuration();
+    private Configuration configuration;
 
-    public HbaseConnectionManager() {
-//        configuration.set("hbase.zookeeper.property.clientPort", HbaseStoreConfig.getPort());
-//        configuration.set("hbase.zookeeper.quorum", HbaseStoreConfig.getQuoqum());
+    public HbaseConnectionManager(Configuration configuration) {
+        this.configuration = configuration;
     }
 
     private Connection cachedConnection = null;
