@@ -71,6 +71,10 @@ public class TSBlockManager extends AbstractTSBlockManager implements Initialize
         if (currentBlock == null) {
             log.debug("Create new TSBlock of timestamp:{}", timestamp);
             currentBlock = newTSBlock(metricId, timestamp);
+            TSBlock possiblePersistedBlock = blockPersister.getTSBlock(metricId, currentBlock.getBaseTime());
+            if (possiblePersistedBlock != null) {
+                currentBlock = TSBlockUtils.mergeBlocks(currentBlock, possiblePersistedBlock);
+            }
             TSBlock existedBlocks = currentBlockCache.putIfAbsent(metricId, currentBlock);
             if (existedBlocks != null) {
                 currentBlock = existedBlocks;

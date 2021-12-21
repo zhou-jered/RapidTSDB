@@ -58,9 +58,16 @@ public class TSBlock {
     public TSBlock(long baseTime, int blockLengthMills) {
         this.baseTime = baseTime;
         this.blockLengthMills = blockLengthMills;
+        initState();
+    }
+
+    private void initState() {
         time = new TSBytes(DEFAULT_TIME_BYTES_LENGTH);
         values = new TSBytes(DEFAULT_VALUE_BYTES_LENGTH);
-
+        preTime = null;
+        preTimeDelta = 0;
+        preWrittenValue = null;
+        preWrittenValueXorResult = null;
     }
 
     public boolean inBlock(long timestamp) {
@@ -236,8 +243,7 @@ public class TSBlock {
     public void rewriteBytesData(Map<Long, Double> dps) {
         try {
             writeLock.lock();
-            time = new TSBytes(Math.max(2 * blockLengthMills, 800));
-            values = new TSBytes(21600);
+            initState();
             if (dps != null) {
                 dps.forEach((k, v) -> {
                     appendDataPoint(k, v);

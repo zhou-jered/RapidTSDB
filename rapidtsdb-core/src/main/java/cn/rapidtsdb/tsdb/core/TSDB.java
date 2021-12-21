@@ -112,7 +112,7 @@ public class TSDB implements Initializer, Closer {
         for (TSBlock b : blocks) {
             dps.putAll(b.getDataPoints());
         }
-        dps = dps.subMap(query.getStartTime(), query.getEndTime());
+        dps = dps.subMap(query.getStartTime(), query.getEndTime()+1);
         TSQueryResult queriedResult = new TSQueryResult();
         queriedResult.setDps(dps);
         return queriedResult;

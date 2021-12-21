@@ -13,18 +13,20 @@ public class TSBlockUtils {
     public static TSBlock mergeStoredBlockWithMemoryBlock(TSBlockDeserializer.TSBlockAndMeta storedBlock, TSBlockSnapshot memoryBlock) {
         TSBlock preBlock = storedBlock.getData();
         TSBlock newBlock = memoryBlock.getTsBlock();
+        return mergeBlocks(preBlock, newBlock);
+    }
+
+    public static TSBlock mergeBlocks(TSBlock preBlock, TSBlock newBlock) {
         if (preBlock.getBaseTime() != newBlock.getBaseTime()) {
             log.error("Can not merge Block with different Basetime, trying to merge {} with {}",
                     preBlock.getBaseTime(), newBlock.getBaseTime());
             throw new RuntimeException(String.format("Can not merge Block with different Basetime, trying to merge %s with %s",
                     preBlock.getBaseTime(), newBlock.getBaseTime()));
         }
-        Map<Long, Double> dps1 = storedBlock.getData().getDataPoints();
-        Map<Long, Double> dps2 = memoryBlock.getTsBlock().getDataPoints();
+        Map<Long, Double> dps1 = preBlock.getDataPoints();
+        Map<Long, Double> dps2 = newBlock.getDataPoints();
         dps1.putAll(dps2);
-
         preBlock.rewriteBytesData(dps1);
-
         return preBlock;
     }
 

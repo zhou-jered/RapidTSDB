@@ -49,11 +49,13 @@ public class QuickBlockDetector implements Initializer, Closer {
 
     @Override
     public void close() {
+        log.debug(" closed");
         try (OutputStream outputStream = fileStoreHandlerPlugin.openFileOutputStream(PERSIST_FILENAME)) {
             for (byte[] bs : matrix) {
                 outputStream.write(bs);
             }
             outputStream.flush();
+            log.debug("persist flush");
         } catch (IOException e) {
             log.error(e);
         }
@@ -77,12 +79,12 @@ public class QuickBlockDetector implements Initializer, Closer {
     }
 
     private boolean inMatrix(int x, int y) {
-        byte b = matrix[x][y / X];
-        return (b & BIT_PROBER[y % X % 8]) > 0;
+        byte b = matrix[x][y % X];
+        return (b & BIT_PROBER[y % X % 8]) != 0;
     }
 
     private void setMatrix(int x, int y) {
-        matrix[x][y / X] |= BIT_PROBER[y % X % 8];
+        matrix[x][y % X] |= BIT_PROBER[y % X % 8];
     }
 
     private Pair<Integer, Integer> cal1(int mid, long t) {
@@ -90,6 +92,7 @@ public class QuickBlockDetector implements Initializer, Closer {
     }
 
     private Pair<Integer, Integer> cal2(int mid, long t) {
+
         int x = (int) (Math.abs(mid * t + 31) % X);
         int y = (int) Math.abs((mid + 37) * (t % 1000000007) % Y);
         return Pair.of(x, y);
@@ -114,8 +117,5 @@ public class QuickBlockDetector implements Initializer, Closer {
             (byte) (1 << 0)
     };
 
-    public static void main(String[] args) {
-
-    }
 
 }
