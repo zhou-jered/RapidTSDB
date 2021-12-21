@@ -37,6 +37,7 @@ public class RapidTSDBApplication implements Initializer, Runner {
     private TSDBServer server;
     private TSDB tsdb;
     private ServerInfo serverInfo;
+    private TSDBExecutor tsdbExecutor;
 
     public static void main(String[] args) {
         PluginManager.loadPlugins();
@@ -78,8 +79,8 @@ public class RapidTSDBApplication implements Initializer, Runner {
         log.info("start to init");
         tsdb = new TSDB();
         tsdb.init();
-        TSDBExecutor.start(tsdb, TSDBConfig.getConfigInstance());
-        TSDBExecutor.getEXECUTOR().shutdown();
+        tsdbExecutor = TSDBExecutor.getEXECUTOR();
+        tsdbExecutor.init();
         loadServerInfo();
         server = new TSDBServer(serverInfo);
         server.init();
@@ -89,6 +90,7 @@ public class RapidTSDBApplication implements Initializer, Runner {
     @Override
     public void run() {
         log.info("Application Run!!!");
+        tsdbExecutor.startExecute(tsdb, TSDBConfig.getConfigInstance());
         server.run();
     }
 

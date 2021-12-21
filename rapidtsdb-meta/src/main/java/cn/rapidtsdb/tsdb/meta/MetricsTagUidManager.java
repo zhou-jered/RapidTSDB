@@ -35,6 +35,7 @@ import java.util.concurrent.locks.ReentrantLock;
 @Log4j2
 public class MetricsTagUidManager implements Initializer, Closer {
 
+    private static MetricsTagUidManager instance = new MetricsTagUidManager();
 
     private final int STATUS_UNINIT = 1;
     private final int STATUS_INITIALIZING = 2;
@@ -337,5 +338,8 @@ public class MetricsTagUidManager implements Initializer, Closer {
         }
     }
 
-
+    public static MetricsTagUidManager getInstance() {
+        return instance;
+    }
+    private MetricsTagUidManager() {}
 }

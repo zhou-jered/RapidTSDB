@@ -2,9 +2,10 @@ package cn.rapidtsdb.tsdb.server.middleware;
 
 import cn.rapidtsdb.tsdb.config.TSDBConfig;
 import cn.rapidtsdb.tsdb.core.TSDB;
-import cn.rapidtsdb.tsdb.core.persistent.MetricsKeyManager;
 import cn.rapidtsdb.tsdb.core.pojo.TSEngineQuery;
 import cn.rapidtsdb.tsdb.core.pojo.TSEngineQueryResult;
+import cn.rapidtsdb.tsdb.lifecycle.Closer;
+import cn.rapidtsdb.tsdb.lifecycle.Initializer;
 import cn.rapidtsdb.tsdb.meta.MetricTransformer;
 import cn.rapidtsdb.tsdb.meta.exception.IllegalCharsException;
 import cn.rapidtsdb.tsdb.object.BizMetric;
@@ -23,7 +24,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Log4j2
-public class TSDBExecutor {
+public class TSDBExecutor implements Initializer, Closer {
 
     private static AtomicInteger state = new AtomicInteger(0);
     private static final TSDBExecutor EXECUTOR = new TSDBExecutor();
@@ -32,33 +33,42 @@ public class TSDBExecutor {
     private static final int SHUTDOWN = 2;
     private TSDB db;
     private MetricTransformer metricTransformer;
-    private MetricsKeyManager metricsKeyManager;
 
     private WriteQueue writeQueue;
     private QueueCoordinator queueCoordinator;
 
     private ThreadPoolExecutor threadPoolExecutor;
 
+    @Override
+    public void close() {
+        metricTransformer.close();
+    }
+
+    @Override
+    public void init() {
+        if (state.compareAndSet(NEW, RUNNING)) {
+            metricTransformer = new MetricTransformer();
+            metricTransformer.init();
+        }
+    }
+
     public static TSDBExecutor getEXECUTOR() {
         return EXECUTOR;
     }
 
-    public static void start(TSDB db, TSDBConfig config) {
-        if (state.compareAndSet(NEW, RUNNING)) {
-            int concurrent = config.getDbServerThreads();
-            EXECUTOR.db = db;
-            EXECUTOR.writeQueue = new WriteQueue(concurrent);
-            EXECUTOR.metricTransformer = new MetricTransformer();
-            EXECUTOR.queueCoordinator = new QueueCoordinator(concurrent);
-            EXECUTOR.threadPoolExecutor = new ThreadPoolExecutor(concurrent, concurrent,
-                    1, TimeUnit.HOURS, new LinkedBlockingQueue<>(), new ExecutorThreadFactory(),
-                    new ThreadPoolExecutor.AbortPolicy());
-            EXECUTOR.metricsKeyManager = MetricsKeyManager.getInstance();
-            for (int i = 0; i < concurrent; i++) {
-                int qidx = i;
-                ExecutorRunnable executorRunnable = new ExecutorRunnable(db, EXECUTOR.writeQueue, qidx);
-                EXECUTOR.threadPoolExecutor.submit(executorRunnable);
-            }
+    public void startExecute(TSDB db, TSDBConfig config) {
+        EXECUTOR.db = db;
+        int concurrent = config.getDbServerThreads();
+        writeQueue = new WriteQueue(concurrent);
+        queueCoordinator = new QueueCoordinator(concurrent);
+        threadPoolExecutor = new ThreadPoolExecutor(concurrent, concurrent,
+                1, TimeUnit.HOURS, new LinkedBlockingQueue<>(), new ExecutorThreadFactory(),
+                new ThreadPoolExecutor.AbortPolicy());
+        for (int i = 0; i < concurrent; i++) {
+            int qidx = i;
+            ExecutorRunnable executorRunnable = new ExecutorRunnable(db, EXECUTOR.writeQueue, qidx);
+            EXECUTOR.threadPoolExecutor.submit(executorRunnable);
+
         }
     }
 
