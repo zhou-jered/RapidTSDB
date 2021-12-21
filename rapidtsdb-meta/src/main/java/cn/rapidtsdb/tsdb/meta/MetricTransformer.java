@@ -5,6 +5,9 @@ import cn.rapidtsdb.tsdb.meta.exception.IllegalCharsException;
 import cn.rapidtsdb.tsdb.utils.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 
+import java.util.Arrays;
+import java.util.Map;
+
 public class MetricTransformer {
 
     private MetricsTagUidManager uidManager;
@@ -33,6 +36,9 @@ public class MetricTransformer {
         if (CollectionUtils.isEmpty(bizMetric.getTags())) {
             return bizname;
         }
+        Map<String, String> tags= bizMetric.getTags();
+        String[] sortedKeys = tags.keySet().toArray(new String[0]);
+        Arrays.sort(sortedKeys);
         return null;
     }
 

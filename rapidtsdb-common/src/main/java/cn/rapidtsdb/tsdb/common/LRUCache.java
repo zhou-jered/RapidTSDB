@@ -95,7 +95,6 @@ public class LRUCache<K, V> {
     private void touchNode(int nodeIdx) {
         heap[nodeIdx].accessTime = TimeUtils.currentMills();
         while (nodeIdx + 1 < heapIdx) {
-            System.out.println(nodeIdx + ":" + heapIdx);
             int leftIdx = nodeIdx * 2;
             int rightIdx = nodeIdx * 2 + 1;
             int targetIdx = leftIdx;

@@ -2,9 +2,13 @@ package cn.rapidtsdb.tsdb.server.middleware;
 
 import cn.rapidtsdb.tsdb.config.TSDBConfig;
 import cn.rapidtsdb.tsdb.core.TSDB;
+import cn.rapidtsdb.tsdb.core.persistent.MetricsKeyManager;
+import cn.rapidtsdb.tsdb.core.pojo.TSEngineQuery;
+import cn.rapidtsdb.tsdb.core.pojo.TSEngineQueryResult;
 import cn.rapidtsdb.tsdb.meta.MetricTransformer;
 import cn.rapidtsdb.tsdb.meta.exception.IllegalCharsException;
 import cn.rapidtsdb.tsdb.object.BizMetric;
+import cn.rapidtsdb.tsdb.object.QueryStats;
 import cn.rapidtsdb.tsdb.object.TSDataPoint;
 import cn.rapidtsdb.tsdb.object.TSQuery;
 import cn.rapidtsdb.tsdb.object.TSQueryResult;
@@ -28,6 +32,7 @@ public class TSDBExecutor {
     private static final int SHUTDOWN = 2;
     private TSDB db;
     private MetricTransformer metricTransformer;
+    private MetricsKeyManager metricsKeyManager;
 
     private WriteQueue writeQueue;
     private QueueCoordinator queueCoordinator;
@@ -48,6 +53,7 @@ public class TSDBExecutor {
             EXECUTOR.threadPoolExecutor = new ThreadPoolExecutor(concurrent, concurrent,
                     1, TimeUnit.HOURS, new LinkedBlockingQueue<>(), new ExecutorThreadFactory(),
                     new ThreadPoolExecutor.AbortPolicy());
+            EXECUTOR.metricsKeyManager = MetricsKeyManager.getInstance();
             for (int i = 0; i < concurrent; i++) {
                 int qidx = i;
                 ExecutorRunnable executorRunnable = new ExecutorRunnable(db, EXECUTOR.writeQueue, qidx);
@@ -67,7 +73,30 @@ public class TSDBExecutor {
     }
 
     public TSQueryResult read(TSQuery query) {
-        return db.queryTimeSeriesData(query);
+        BizMetric bizMetric = new BizMetric(query.getMetric(), query.getTags());
+        try {
+            //todo
+//            String internalPrefix = query.getMetric()+ me
+//            metricsKeyManager.scanMetrics()
+            String internalMetric = metricTransformer.toInternalMetric(bizMetric);
+            TSEngineQuery engineQuery = new TSEngineQuery(internalMetric, query.getStartTime(),
+                    query.getEndTime(), query.getDownSampler());
+            long start = System.nanoTime();
+            TSEngineQueryResult engineQueryResult = db.queryTimeSeriesData(engineQuery);
+            Map<Long, Double> dps = engineQueryResult.getDps();
+            long cost = System.nanoTime() - start;
+            QueryStats queryStats = QueryStats.builder()
+                    .costMs(cost / 1000)
+                    .dpsNumber(dps.size())
+                    .scannedDpsNumber(engineQueryResult.getScannerPointNumber())
+                    .build();
+            TSQueryResult queryResult = TSQueryResult.builder()
+                    .info(queryStats)
+                    .dps(dps).build();
+            return queryResult;
+        } catch (IllegalCharsException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private TSDBExecutor() {

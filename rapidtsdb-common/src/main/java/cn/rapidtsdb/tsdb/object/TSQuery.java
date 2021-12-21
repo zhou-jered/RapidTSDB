@@ -18,6 +18,7 @@ public class TSQuery {
     private long endTime;
     private String downSampler;
     private String aggregator;
+    private String dataMissStrategy;
 
     public TSQuery(String metric, long startTime, long endTime) {
         this.metric = metric;

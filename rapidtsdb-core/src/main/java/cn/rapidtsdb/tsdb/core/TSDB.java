@@ -1,16 +1,18 @@
 package cn.rapidtsdb.tsdb.core;
 
+import cn.rapidtsdb.tsdb.calculate.CalculatorFactory;
+import cn.rapidtsdb.tsdb.calculate.DownSampler;
 import cn.rapidtsdb.tsdb.common.TimeUtils;
 import cn.rapidtsdb.tsdb.config.TSDBConfig;
 import cn.rapidtsdb.tsdb.core.persistent.AOLog;
 import cn.rapidtsdb.tsdb.core.persistent.AppendOnlyLogManager;
 import cn.rapidtsdb.tsdb.core.persistent.MetricsKeyManager;
 import cn.rapidtsdb.tsdb.core.persistent.TSDBCheckPointManager;
+import cn.rapidtsdb.tsdb.core.pojo.TSEngineQuery;
+import cn.rapidtsdb.tsdb.core.pojo.TSEngineQueryResult;
 import cn.rapidtsdb.tsdb.executors.ManagedThreadPool;
 import cn.rapidtsdb.tsdb.lifecycle.Closer;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
-import cn.rapidtsdb.tsdb.object.TSQuery;
-import cn.rapidtsdb.tsdb.object.TSQueryResult;
 import cn.rapidtsdb.tsdb.tasks.BlockCompressTask;
 import cn.rapidtsdb.tsdb.tasks.TwoHoursTriggerTask;
 import lombok.extern.log4j.Log4j2;
@@ -105,17 +107,27 @@ public class TSDB implements Initializer, Closer {
         }
     }
 
-    public TSQueryResult queryTimeSeriesData(TSQuery query) {
+    public TSEngineQueryResult queryTimeSeriesData(TSEngineQuery query) {
+        long startNano = System.nanoTime();
         int mid = metricsKeyManager.getMetricsIndex(query.getMetric());
-        List<TSBlock> blocks = blockManager.getBlockWithTimeRange(mid, query.getStartTime(), query.getEndTime());
+        List<TSBlock> blocks = blockManager.getBlockWithTimeRange(mid, query.getStartTimestamp(), query.getEndTimestamp());
         SortedMap<Long, Double> dps = new TreeMap<>();
         for (TSBlock b : blocks) {
             dps.putAll(b.getDataPoints());
         }
-        dps = dps.subMap(query.getStartTime(), query.getEndTime()+1);
-        TSQueryResult queriedResult = new TSQueryResult();
-        queriedResult.setDps(dps);
-        return queriedResult;
+        int totalScanPointNUmber = dps.size();
+        dps = dps.subMap(query.getStartTimestamp(), query.getEndTimestamp() + 1);
+        DownSampler downSampler = CalculatorFactory.getDownSample(query.getDownSampler());
+        if (downSampler != null) {
+            dps = downSampler.downSample(dps);
+        }
+        long costNano = System.nanoTime() - startNano;
+        TSEngineQueryResult engineQueryResult = TSEngineQueryResult.builder()
+                .dps(dps)
+                .scanCostNanos(costNano)
+                .scannerPointNumber(totalScanPointNUmber)
+                .build();
+        return engineQueryResult;
     }
 
 

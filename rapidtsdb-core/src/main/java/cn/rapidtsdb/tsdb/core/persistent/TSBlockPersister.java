@@ -71,7 +71,6 @@ public class TSBlockPersister implements Initializer, Closer {
                 TSBlockSnapshot blockSnapshot = writingBlocks.get(metricId).snapshot();
                 byte[] existed = blockStoreHandler.getBlockData(metricId, blockSnapshot.getTsBlock().getBaseTime());
                 if (existed != null) {
-                    // had bug, todo
                     TSBlockAndMeta blockAndMeta = blockReader.deserializeFromBytes(existed);
                     TSBlock mergedBlock = TSBlockUtils.mergeStoredBlockWithMemoryBlock(blockAndMeta, blockSnapshot);
                     blockSnapshot = mergedBlock.snapshot();

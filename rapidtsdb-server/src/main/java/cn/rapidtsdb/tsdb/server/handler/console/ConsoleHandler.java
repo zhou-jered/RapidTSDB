@@ -15,7 +15,9 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.collections.MapUtils;
 
+import java.util.HashMap;
 import java.util.Map;
 
 @Log4j2
@@ -98,11 +100,21 @@ public class ConsoleHandler extends SimpleChannelInboundHandler<ByteBuf> {
         if (params.length < 3) {
             writeResponse(ctx, CONSOLE_RESP_PARAMS_NUMBER_ERROR);
         }
+        Map<String, String> tags = null;
+        for (int i = 3; i < params.length; i++) {
+            String[] kv = params[i].split("=");
+            if (kv.length == 2) {
+                if (tags == null) {
+                    tags = new HashMap<>();
+                }
+                tags.put(kv[0].trim(), kv[1].trim());
+            }
+        }
         String metric = params[0];
         long timestamp = Long.parseLong(params[1]);
         double val = Double.parseDouble(params[2]);
         TSDBDataOperationTask task = new PutTask(new CommonCommandCallback(ctx),
-                metric, new TSDataPoint(timestamp, val));
+                metric, new TSDataPoint(timestamp, val), tags);
         operationQueue.submitTask(task);
     }
 
@@ -123,8 +135,16 @@ public class ConsoleHandler extends SimpleChannelInboundHandler<ByteBuf> {
                 ctx.writeAndFlush("[]");
                 return;
             }
+            Map<String, String> tags = new HashMap<>();
+            for (int i = 3; i < params.length; i++) {
+                String[] kv = params[i].split("=");
+                if (kv.length == 2) {
+                    tags.put(kv[0], kv[1]);
+                }
+            }
             TSQuery tsQuery = TSQuery.builder()
                     .metric(metric)
+                    .tags(tags)
                     .startTime(startTime)
                     .endTime(endTime)
                     .build();
@@ -143,7 +163,7 @@ public class ConsoleHandler extends SimpleChannelInboundHandler<ByteBuf> {
                     String d = k + ":" + v;
                     ctx.writeAndFlush(d);
                     ctx.writeAndFlush("\n");
-                    
+
                 });
 
             }
@@ -181,6 +201,7 @@ public class ConsoleHandler extends SimpleChannelInboundHandler<ByteBuf> {
     static class PutTask extends TSDBDataOperationTask {
         private String metric;
         private TSDataPoint dp;
+        private Map<String, String> tags;
         private int mid;
 
         public PutTask(TSDBTaskCallback callback, String metric, TSDataPoint dp) {
@@ -189,6 +210,14 @@ public class ConsoleHandler extends SimpleChannelInboundHandler<ByteBuf> {
             this.dp = dp;
             this.mid = MetricsKeyManager.getInstance().getMetricsIndex(metric);
         }
+
+        public PutTask(TSDBTaskCallback callback, String metric, TSDataPoint dp, Map<String, String> tags) {
+            super(callback);
+            this.metric = metric;
+            this.dp = dp;
+            this.tags = tags;
+        }
+
 
         @Override
         public int getMetricId() {
@@ -208,7 +237,13 @@ public class ConsoleHandler extends SimpleChannelInboundHandler<ByteBuf> {
         @Override
         public void run() {
             try {
-                TSDBExecutor.getEXECUTOR().write(BizMetric.cache(metric),
+                BizMetric bizMetric;
+                if (MapUtils.isEmpty(tags)) {
+                    bizMetric = BizMetric.cache(metric);
+                } else {
+                    bizMetric = BizMetric.of(metric, tags);
+                }
+                TSDBExecutor.getEXECUTOR().write(bizMetric,
                         dp);
             } catch (Exception e) {
                 if (callback != null) {
