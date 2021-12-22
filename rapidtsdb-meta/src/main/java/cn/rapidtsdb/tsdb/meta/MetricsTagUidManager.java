@@ -7,13 +7,12 @@ import cn.rapidtsdb.tsdb.lifecycle.Closer;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
 import cn.rapidtsdb.tsdb.plugins.FileStoreHandlerPlugin;
 import cn.rapidtsdb.tsdb.plugins.PluginManager;
-import com.esotericsoftware.kryo.kryo5.Kryo;
-import com.esotericsoftware.kryo.kryo5.io.Input;
-import com.esotericsoftware.kryo.kryo5.io.Output;
 import lombok.Data;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang.StringUtils;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -40,13 +39,13 @@ public class MetricsTagUidManager implements Initializer, Closer {
     private final int STATUS_UNINIT = 1;
     private final int STATUS_INITIALIZING = 2;
     private final int STATUS_RUNNING = 3;
+    private final int STATUS_CLOSED = 4;
     private AtomicInteger status = new AtomicInteger(STATUS_UNINIT);
 
 
     private final int UID_FILE_RANGE_STEP = 10000;
     private Map<Integer, Lock> uidRangLockMap = new ConcurrentHashMap<>();
     private FileStoreHandlerPlugin storeHandler = null;
-    private Kryo kryo = new Kryo();
     private LRUCache<Integer, String> id2TagCache = new LRUCache<>();
     private LRUCache<Integer, String> id2KeyCache = new LRUCache<>();
 
@@ -60,6 +59,7 @@ public class MetricsTagUidManager implements Initializer, Closer {
 
     @Override
     public void close() {
+        status.set(STATUS_CLOSED);
         persistDataSync();
     }
 
@@ -69,15 +69,21 @@ public class MetricsTagUidManager implements Initializer, Closer {
         if (!status.compareAndSet(STATUS_UNINIT, STATUS_INITIALIZING)) {
             return;
         }
-        kryo.register(Node.class);
-        kryo.register(List.class);
-        kryo.register(ArrayList.class);
         storeHandler = PluginManager.getPlugin(FileStoreHandlerPlugin.class);
         recoveryData();
-        status.set(STATUS_RUNNING);
         synchronized (status) {
+            status.set(STATUS_RUNNING);
             status.notifyAll();
         }
+    }
+
+    public void forceInit() {
+        status.set(STATUS_UNINIT);
+        init();
+    }
+
+    public int nodeNumber() {
+        return root.size();
     }
 
 
@@ -116,11 +122,16 @@ public class MetricsTagUidManager implements Initializer, Closer {
     }
 
     private void waitingRunning() {
-        synchronized (status) {
-            try {
-                status.wait();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+        if (status.get() != STATUS_RUNNING) {
+            synchronized (status) {
+                if (status.get() == STATUS_RUNNING) {
+                    return;
+                }
+                try {
+                    status.wait();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
             }
         }
     }
@@ -142,7 +153,7 @@ public class MetricsTagUidManager implements Initializer, Closer {
     private void rememberTerminatedNodeIdx(String nodeString, Node node) {
         int arrayLength = trieTerminatedNodeArray.length;
         if (node.getVal() >= arrayLength) {
-            expandTerminatedNodeArray(arrayLength);
+            expandTerminatedNodeArray(arrayLength, node.getVal());
         }
         AppendFullKeyNameTask appendFullKeyNameTask = new AppendFullKeyNameTask(nodeString, node.getVal());
         ManagedThreadPool.getInstance()
@@ -152,11 +163,14 @@ public class MetricsTagUidManager implements Initializer, Closer {
 
 
     private void recoveryData() {
-        log.debug("Recovery Metrcs Uid Data");
+        log.debug("Recovery Metric Uid Data");
         if (storeHandler.fileExisted(TRIE_FILE)) {
             try (InputStream inputStream = storeHandler.openFileInputStream(TRIE_FILE)) {
-                Input input = new Input(inputStream);
-                root = kryo.readObject(input, Node.class);
+                BufferedInputStream bufferedInputStream = new BufferedInputStream(inputStream, 1024 * 128);
+                DataInputStream dis = new DataInputStream(bufferedInputStream);
+                root = new Node();
+                root.readFromSteam(dis);
+                dis.close();
             } catch (Exception e) {
                 log.error("Can Not open file " + TRIE_FILE, e);
             }
@@ -179,12 +193,14 @@ public class MetricsTagUidManager implements Initializer, Closer {
 
         log.debug("Persist Metric Uid Info");
         try (OutputStream treeOp = storeHandler.openFileOutputStream(TRIE_FILE)) {
-            kryo.writeObject(new Output(treeOp), root);
+            BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(treeOp, 1024 * 128);
+            DataOutputStream dos = new DataOutputStream(bufferedOutputStream);
+            root.writeToStream(dos);
+            dos.close();
         } catch (IOException e) {
             e.printStackTrace();
             log.fatal("Exception during persist Tree:", e);
         }
-
         try (OutputStream idxOp = storeHandler.openFileOutputStream(TAG_IDX_FILE)) {
             DataOutputStream dos = new DataOutputStream(idxOp);
             dos.writeInt(nodeIdx.get());
@@ -195,6 +211,7 @@ public class MetricsTagUidManager implements Initializer, Closer {
 
     }
 
+
     private Future persistDataAsync() {
         return ManagedThreadPool.getInstance().ioExecutor()
                 .submit(() -> {
@@ -202,13 +219,12 @@ public class MetricsTagUidManager implements Initializer, Closer {
                 });
     }
 
-    private void expandTerminatedNodeArray(int originalSize) {
+    private void expandTerminatedNodeArray(int originalSize, int expectSize) {
         synchronized (trieTerminatedNodeArray) {
-            if (trieTerminatedNodeArray.length == originalSize) {
-                Node[] newArray = new Node[trieTerminatedNodeArray.length + 10000];
-                System.arraycopy(trieTerminatedNodeArray, 0, newArray, 0, trieTerminatedNodeArray.length);
-                trieTerminatedNodeArray = newArray;
-            }
+            int newSize = expectSize - expectSize % UID_FILE_RANGE_STEP + UID_FILE_RANGE_STEP;
+            Node[] newArray = new Node[newSize];
+            System.arraycopy(trieTerminatedNodeArray, 0, newArray, 0, trieTerminatedNodeArray.length);
+            trieTerminatedNodeArray = newArray;
         }
     }
 
@@ -220,6 +236,7 @@ public class MetricsTagUidManager implements Initializer, Closer {
     private void loadNodeReverseIndex(int keyIdx) {
         String filename = getUidRangeFilename(keyIdx);
         if (storeHandler.fileExisted(filename)) {
+            Lock rangeLock = getKeyIdxRangeLock(keyIdx);
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(storeHandler.openFileInputStream(filename)));) {
                 String tmpKey;
                 while ((tmpKey = reader.readLine()) != null) {
@@ -229,15 +246,27 @@ public class MetricsTagUidManager implements Initializer, Closer {
             } catch (Exception e) {
                 e.printStackTrace();
                 log.error("READ {} exception", filename, e);
+            } finally {
+                rangeLock.unlock();
             }
-
+        } else {
+            throw new RuntimeException("No NodeReverseIndex file:" + filename + " FIND");
         }
     }
 
+    private Lock getKeyIdxRangeLock(int idx) {
+        int flooredIdx = getFlooredUid(idx);
+        Lock lock = uidRangLockMap.get(flooredIdx);
+        if (lock == null) {
+            uidRangLockMap.putIfAbsent(flooredIdx, new ReentrantLock());
+            lock = uidRangLockMap.get(flooredIdx);
+        }
+        return lock;
+    }
 
-    private String getUidRangeFilename(int uid) {
-        int floored = getFlooredUid(uid);
-        return "meta-idx-" + floored;
+    private String getUidRangeFilename(int idx) {
+        int floored = getFlooredUid(idx);
+        return TAG_REVERSE_IDX_FILE + floored;
     }
 
     private int getFlooredUid(int uid) {
@@ -255,7 +284,9 @@ public class MetricsTagUidManager implements Initializer, Closer {
             if (isTerminatedNote(current)) {
                 maxIdx = Math.max(maxIdx, current.getVal());
             }
-            Q.addAll(current.getChildren());
+            if (current.getChildren() != null) {
+                Q.addAll(current.getChildren());
+            }
         }
         return maxIdx;
     }
@@ -265,7 +296,7 @@ public class MetricsTagUidManager implements Initializer, Closer {
         char c;
         int val;
         List<Node> children;
-        Node parent;
+        transient Node parent;
 
         public Node() {
         }
@@ -276,15 +307,15 @@ public class MetricsTagUidManager implements Initializer, Closer {
         }
 
         public synchronized Node getOrCreateChildNode(char c) {
+            if (children == null) {
+                children = new ArrayList<>();
+            }
             for (Node node : children) {
                 if (node.c == c) {
                     return node;
                 }
             }
             Node node = new Node(this, c);
-            if (children == null) {
-                children = new ArrayList<>();
-            }
             children.add(node);
             return node;
         }
@@ -298,6 +329,50 @@ public class MetricsTagUidManager implements Initializer, Closer {
             }
             return sb.reverse().toString();
         }
+
+        public int size() {
+            int childSize = 0;
+            if (children != null && !children.isEmpty()) {
+                for (Node child : children) {
+                    childSize += child.size();
+                }
+            }
+            return childSize + 1;
+        }
+
+        final static byte hasChild = -1;
+        final static byte noChild = 0;
+
+        public void writeToStream(DataOutputStream outputStream) throws IOException {
+            outputStream.writeChar(c);
+            outputStream.writeInt(val);
+            if (children != null && children.size() > 0) {
+                int sz = children.size();
+                outputStream.writeByte(hasChild);
+                outputStream.writeInt(sz);
+                for (Node child : children) {
+                    child.writeToStream(outputStream);
+                }
+            } else {
+                outputStream.writeByte(noChild);
+            }
+        }
+
+        public void readFromSteam(DataInputStream dataInputStream) throws IOException {
+            this.c = dataInputStream.readChar();
+            this.val = dataInputStream.readInt();
+            byte childIndicator = dataInputStream.readByte();
+            if (childIndicator == hasChild) {
+                int sz = dataInputStream.readInt();
+                this.children = new ArrayList<>(sz);
+                for (int i = 0; i < sz; i++) {
+                    Node child = new Node();
+                    child.readFromSteam(dataInputStream);
+                    this.children.add(child);
+                }
+            }
+        }
+
     }
 
     private static final ReentrantLock AppendFullKeyNameTask_LOCK = new ReentrantLock();
@@ -341,5 +416,7 @@ public class MetricsTagUidManager implements Initializer, Closer {
     public static MetricsTagUidManager getInstance() {
         return instance;
     }
-    private MetricsTagUidManager() {}
+
+    private MetricsTagUidManager() {
+    }
 }

@@ -72,7 +72,7 @@ public class PluginManager {
                 }
             }
         } else {
-            throw new RuntimeException("Plugin not init");
+            throw new RuntimeException("Plugin not REGISTED");
         }
     }
 
