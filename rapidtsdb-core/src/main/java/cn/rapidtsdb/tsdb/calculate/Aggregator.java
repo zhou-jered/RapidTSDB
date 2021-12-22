@@ -1,11 +1,9 @@
 package cn.rapidtsdb.tsdb.calculate;
 
-import cn.rapidtsdb.tsdb.object.TSDataPoint;
-
-import java.util.List;
+import java.util.Map;
 
 public interface Aggregator {
 
-    List<TSDataPoint> aggregator(List<TSDataPoint> dps1, List<TSDataPoint> dps2);
+    Map<Long, Double> aggregator(Map<Long, Double> dps1, Map<Long, Double> dps2);
 
 }

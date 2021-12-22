@@ -38,7 +38,7 @@ public class TSDBServer implements Initializer, Runner, Closer {
                 instances.add(psi);
                 psi.init();
             } else {
-                log.debug("Skip disabled protocol server");
+                log.debug("Skip disabled protocol server:{}", sc.getProtocol());
             }
         }
     }

@@ -237,6 +237,7 @@ public class MetricsTagUidManager implements Initializer, Closer {
         String filename = getUidRangeFilename(keyIdx);
         if (storeHandler.fileExisted(filename)) {
             Lock rangeLock = getKeyIdxRangeLock(keyIdx);
+            rangeLock.lock();
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(storeHandler.openFileInputStream(filename)));) {
                 String tmpKey;
                 while ((tmpKey = reader.readLine()) != null) {
@@ -367,6 +368,7 @@ public class MetricsTagUidManager implements Initializer, Closer {
                 this.children = new ArrayList<>(sz);
                 for (int i = 0; i < sz; i++) {
                     Node child = new Node();
+                    child.parent = this;
                     child.readFromSteam(dataInputStream);
                     this.children.add(child);
                 }

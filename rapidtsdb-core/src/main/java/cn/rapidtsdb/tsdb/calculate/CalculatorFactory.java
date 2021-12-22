@@ -6,7 +6,8 @@ import cn.rapidtsdb.tsdb.common.TimeUtils;
 public class CalculatorFactory {
 
     public static Aggregator getAggregator(String aggregatorName) {
-        return null;
+        LinearFunction func = getFunction(aggregatorName);
+        return new LinearAggregator(func);
     }
 
     /**
@@ -17,6 +18,9 @@ public class CalculatorFactory {
      * @return
      */
     public static DownSampler getDownSample(String downSamplerConfig) {
+        if (downSamplerConfig == null) {
+            return null;
+        }
         String[] timeRangeAndName = downSamplerConfig.split("\\-");
         if (timeRangeAndName.length != 2) {
             throw new RuntimeException("Unknown downsampler config " + downSamplerConfig);

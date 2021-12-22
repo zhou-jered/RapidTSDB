@@ -123,9 +123,9 @@ public class ConsoleHandler extends SimpleChannelInboundHandler<ByteBuf> {
     }
 
     private void get(ChannelHandlerContext ctx, String... params) {
-        if (params == null || params.length < 3) {
+        if (params == null || params.length < 4) {
             ctx.writeAndFlush("Params Number Error\n");
-            ctx.writeAndFlush("GET ${metric} ${startTimeSeconds} ${endTimeSeconds}");
+            ctx.writeAndFlush("GET ${metric} ${startTimeSeconds} ${endTimeSeconds} ${aggregator}");
         }
         String metric = params[0];
         try {
@@ -135,6 +135,7 @@ public class ConsoleHandler extends SimpleChannelInboundHandler<ByteBuf> {
                 ctx.writeAndFlush("[]");
                 return;
             }
+            String aggregator = params[3];
             Map<String, String> tags = new HashMap<>();
             for (int i = 3; i < params.length; i++) {
                 String[] kv = params[i].split("=");
@@ -144,17 +145,16 @@ public class ConsoleHandler extends SimpleChannelInboundHandler<ByteBuf> {
             }
             TSQuery tsQuery = TSQuery.builder()
                     .metric(metric)
+                    .aggregator(aggregator)
                     .tags(tags)
                     .startTime(startTime)
                     .endTime(endTime)
                     .build();
             TSQueryResult qResult = null;
-            if (params.length > 3) {
-                tsQuery.setDownSampler(params[3]);
-                qResult = TSDBExecutor.getEXECUTOR().read(tsQuery);
-            } else {
-                qResult = TSDBExecutor.getEXECUTOR().read(tsQuery);
+            if (params.length > 4) {
+                tsQuery.setDownSampler(params[4]);
             }
+            qResult = TSDBExecutor.getEXECUTOR().read(tsQuery);
             if (qResult == null || qResult.getDps().size() == 0) {
                 ctx.writeAndFlush("[]");
             } else {
