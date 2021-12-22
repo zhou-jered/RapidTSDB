@@ -23,7 +23,7 @@ public class LinearDownSampler implements DownSampler {
         if (orderedDps != null && orderedDps.size() > 0) {
             BufferScope bufferScope = new BufferScope(timeRangeMills);
             Iterator<Long> keyIter = orderedDps.keySet().iterator();
-            bufferScope.init(keyIter.next());
+            bufferScope.init(orderedDps.firstKey());
             while (keyIter.hasNext()) {
                 long tp = keyIter.next();
                 double val = orderedDps.get(tp);

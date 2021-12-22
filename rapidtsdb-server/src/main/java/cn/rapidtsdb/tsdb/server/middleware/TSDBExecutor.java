@@ -78,9 +78,8 @@ public class TSDBExecutor implements Initializer, Closer {
                 new ThreadPoolExecutor.AbortPolicy());
         for (int i = 0; i < concurrent; i++) {
             int qidx = i;
-            ExecutorRunnable executorRunnable = new ExecutorRunnable(db, EXECUTOR.writeQueue, qidx);
+            ExecutorRunnable executorRunnable = new ExecutorRunnable(db, EXECUTOR.writeQueue, qidx, metricTransformer);
             EXECUTOR.threadPoolExecutor.submit(executorRunnable);
-
         }
     }
 
@@ -148,7 +147,7 @@ public class TSDBExecutor implements Initializer, Closer {
                 }
             }
             TSEngineQueryResult engineQueryResult = queryInternal(im, taggedQuery.getStartTime(), taggedQuery.getEndTime(), taggedQuery.getDownSampler());
-            resultDps = aggregator.aggregator(resultDps, engineQueryResult.getDps());
+            resultDps = aggregator.aggregate(resultDps, engineQueryResult.getDps());
             totalScannedDpsNumber += engineQueryResult.getScannerPointNumber();
         }
         long costMs = System.currentTimeMillis() - startMs;
@@ -189,11 +188,13 @@ public class TSDBExecutor implements Initializer, Closer {
         private TSDB tsdb;
         private WriteQueue Q;
         private int qidx;
+        private MetricTransformer metricTransformer;
 
-        public ExecutorRunnable(TSDB tsdb, WriteQueue q, int qidx) {
+        public ExecutorRunnable(TSDB tsdb, WriteQueue q, int qidx, MetricTransformer metricTransformer) {
             this.tsdb = tsdb;
             Q = q;
             this.qidx = qidx;
+            this.metricTransformer = metricTransformer;
         }
 
         @Override
@@ -207,7 +208,6 @@ public class TSDBExecutor implements Initializer, Closer {
                         return;
                     }
                 }
-                MetricTransformer metricTransformer = new MetricTransformer();
                 try {
                     String internalMetric = metricTransformer.toInternalMetric(cmd.getMetric());
                     Iterator<TSDataPoint> dpIter = cmd.iter();

@@ -137,7 +137,7 @@ public class ConsoleHandler extends SimpleChannelInboundHandler<ByteBuf> {
             }
             String aggregator = params[3];
             Map<String, String> tags = new HashMap<>();
-            for (int i = 3; i < params.length; i++) {
+            for (int i = 5; i < params.length; i++) {
                 String[] kv = params[i].split("=");
                 if (kv.length == 2) {
                     tags.put(kv[0], kv[1]);

@@ -17,7 +17,7 @@ public class LinearAggregator implements Aggregator {
     }
 
     @Override
-    public Map<Long, Double> aggregator(Map<Long, Double> dps1, Map<Long, Double> dps2) {
+    public Map<Long, Double> aggregate(Map<Long, Double> dps1, Map<Long, Double> dps2) {
         if (CollectionUtils.isEmpty(dps1)) {
             return dps2;
         }

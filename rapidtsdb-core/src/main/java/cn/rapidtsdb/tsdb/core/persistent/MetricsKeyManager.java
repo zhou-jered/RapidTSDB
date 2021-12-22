@@ -30,10 +30,8 @@ import java.io.OutputStreamWriter;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -153,7 +151,7 @@ public class MetricsKeyManager implements Initializer, Closer {
         Queue<Pair<String, List<TrieNode>>> innerQ = new LinkedList<>();
         List<TrieNode> children = curNode.getChildNode();
         if (CollectionUtils.isNotEmpty(children)) {
-            innerQ.add(new Pair<>("", children));
+            innerQ.add(new Pair<>(metricsPrefix, children));
         }
         while (!innerQ.isEmpty()) {
             Pair<String, List<TrieNode>> current = innerQ.poll();
