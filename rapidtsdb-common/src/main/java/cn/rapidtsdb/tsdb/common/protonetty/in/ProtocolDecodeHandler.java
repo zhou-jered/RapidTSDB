@@ -44,7 +44,6 @@ public class ProtocolDecodeHandler extends ReplayingDecoder<ProtocolDecodeHandle
                 in.readBytes(objBytes);
                 Message protoObj = getProtoMsg();
                 out.add(protoObj);
-                log.debug("read protoObject:{}", protoObj.getClass().getSimpleName());
                 checkpoint(DecodeState.obj_id);
         }
     }

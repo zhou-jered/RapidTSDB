@@ -8,6 +8,7 @@ import cn.rapidtsdb.tsdb.object.TSQueryResult;
 import cn.rapidtsdb.tsdb.protocol.RpcResponseCode;
 import cn.rapidtsdb.tsdb.server.handler.rpc.v1.exceptions.RequestIdenticalRuntimeException;
 import cn.rapidtsdb.tsdb.server.middleware.TSDBExecutor;
+import com.google.common.collect.Lists;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import lombok.extern.log4j.Log4j2;
@@ -35,15 +36,18 @@ public class TSQueryHandler extends SimpleChannelInboundHandler<ProtoTSQuery> {
                 protoTSQuery.getAggregator(), protoTSQuery.getDownSampler(), protoTSQuery.getTagsMap());
         try {
             TSQuery tsQuery = ProtoObjectUtils.getTSQuery(protoTSQuery);
-            TSQueryResult dps = executor.read(tsQuery);
+            TSQueryResult tsQueryResult = executor.read(tsQuery);
             TSDBResponse.ProtoDataResponse dataResponse = TSDBResponse.ProtoDataResponse.newBuilder()
                     .setReqId(protoTSQuery.getReqId())
+                    .setMetric(protoTSQuery.getMetrics())
+                    .putAllTags(tsQueryResult.getTags())
+                    .putAllDps(tsQueryResult.getDps())
                     .setAggregator(protoTSQuery.getAggregator())
                     .setDownsampler(protoTSQuery.getDownSampler())
-                    .putAllDps(dps.getDps())
-                    .setInfo(ProtoObjectUtils.getProtoQueryStat(dps.getInfo()))
+                    .addAllAggregatedTags(Lists.newArrayList(tsQueryResult.getAggregatedTags()))
+                    .setInfo(ProtoObjectUtils.getProtoQueryStat(tsQueryResult.getInfo()))
                     .build();
-            log.debug("server send data response:{}", dps.getDps().size());
+            log.debug("server send data response:{}", tsQueryResult.getDps().size());
             ctx.pipeline().writeAndFlush(dataResponse);
         } catch (Exception e) {
             throw new RequestIdenticalRuntimeException(e.getMessage(), protoTSQuery.getReqId());
