@@ -5,6 +5,7 @@ message ProtoCommonResponse {
   int32 code = 1;
   string msg = 2;
   int32 reqId = 3;
+  bool exception = 4;
 }
 
 
@@ -15,5 +16,12 @@ message ProtoDataResponse {
   int32 reqId = 4;
   string metric = 5;
   repeated string aggregatedTags = 6;
-  map<string, string> tags=7;
+  map<string, string> tags = 7;
+  ProtoDataQueryStat info =8;
+}
+
+message ProtoDataQueryStat {
+  int64 costMs = 1;
+  int32 scannedDpsNumber = 2;
+  int32 dpsNumber = 3;
 }

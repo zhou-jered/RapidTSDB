@@ -1,6 +1,5 @@
 package cn.rapidtsdb.tsdb.server;
 
-import cn.rapidtsdb.tsdb.TSDataOperationQueue;
 import cn.rapidtsdb.tsdb.app.AppInfo;
 import cn.rapidtsdb.tsdb.lifecycle.Closer;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
@@ -85,8 +84,6 @@ public class ProtocolServerInstance implements Initializer, Runner, Closer {
 
     @Override
     public void run() {
-        TSDataOperationQueue queue = TSDataOperationQueue.getQ();
-        queue.start();
         serverChannelFuture = serverBootstrap.bind(port);
         serverChannelFuture.addListener((ChannelFutureListener) future -> {
                     if (future.isDone() && future.isSuccess()) {

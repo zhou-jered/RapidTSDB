@@ -110,7 +110,7 @@ public class MetricsKeyManager implements Initializer, Closer {
         }
     }
 
-    public int getMetricsIndex(String metric) {
+    public int getMetricsIndex(String metric, boolean createWhenNotExist) {
         if (StringUtils.isEmpty(metric)) {
             throw new RuntimeException("Empty metrics");
         }
@@ -122,7 +122,7 @@ public class MetricsKeyManager implements Initializer, Closer {
             return idx;
         }
         char[] chars = metric.toCharArray();
-        idx = getMetricsIndexInternal(chars);
+        idx = getMetricsIndexInternal(chars, createWhenNotExist);
         idxCache.put(metric, idx);
         return idx;
     }
@@ -184,13 +184,16 @@ public class MetricsKeyManager implements Initializer, Closer {
     }
 
 
-    private int getMetricsIndexInternal(char[] metricsChars) {
+    private int getMetricsIndexInternal(char[] metricsChars, boolean create) {
         TrieNode currentNode = trieNodeRoot;
         for (int i = 0; i < metricsChars.length; i++) {
             char currentChar = metricsChars[i];
-            currentNode = currentNode.getOrCreateChildNode(currentChar);
+            currentNode = currentNode.getChild(currentChar, create);
+            if (currentNode == null) {
+                return -1;
+            }
         }
-        if (isNotStringTerminatedNode(currentNode)) {
+        if (isNotStringTerminatedNode(currentNode) && create) {
             currentNode.setValue(metricKeyIdx.incrementAndGet());
             persistenceMetrics(metricsChars);
         }
@@ -298,15 +301,18 @@ public class MetricsKeyManager implements Initializer, Closer {
             this.val = value;
         }
 
-        public synchronized TrieNode getOrCreateChildNode(char c) {
+        public synchronized TrieNode getChild(char c, boolean create) {
             for (TrieNode node : childNode) {
                 if (node.c == c) {
                     return node;
                 }
             }
-            TrieNode node = new TrieNode(c);
-            childNode.add(node);
-            return node;
+            if (create) {
+                TrieNode node = new TrieNode(c);
+                childNode.add(node);
+                return node;
+            }
+            return null;
         }
 
         public TrieNode getChildNode(char c) {

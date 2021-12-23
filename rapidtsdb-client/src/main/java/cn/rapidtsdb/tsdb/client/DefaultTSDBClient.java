@@ -32,6 +32,7 @@ class DefaultTSDBClient implements TSDBClient {
 
     private TSDBClientConfig config;
     private ClientSession clientSession;
+    private EventLoopGroup eventLoopGroup;
     private AtomicInteger reqIdIndex = new AtomicInteger(0);
 
     private final static boolean DEFAULT_KEEP_ALIVE = true;
@@ -47,10 +48,10 @@ class DefaultTSDBClient implements TSDBClient {
 
 
     public void connect(boolean keepAlive) {
-        EventLoopGroup worker = new NioEventLoopGroup(config.getClientThreads());
-        worker.scheduleAtFixedRate(() -> checkReqIdIndex(), TimeUnit.MINUTES.toMillis(10), TimeUnit.MINUTES.toMillis(10), TimeUnit.MILLISECONDS);
-        ClientSessionRegistry.getRegistry().scheduleRegistry(worker);
-        Bootstrap bootstrap = new Bootstrap().group(worker);
+        eventLoopGroup = new NioEventLoopGroup(config.getClientThreads());
+        eventLoopGroup.scheduleAtFixedRate(() -> checkReqIdIndex(), TimeUnit.MINUTES.toMillis(10), TimeUnit.MINUTES.toMillis(10), TimeUnit.MILLISECONDS);
+        ClientSessionRegistry.getRegistry().scheduleRegistry(eventLoopGroup);
+        Bootstrap bootstrap = new Bootstrap().group(eventLoopGroup);
         bootstrap.channel(NioSocketChannel.class)
                 .handler(new ClientChannelInitializer())
                 .option(ChannelOption.SO_KEEPALIVE, keepAlive)
@@ -138,29 +139,24 @@ class DefaultTSDBClient implements TSDBClient {
         return writeMultiInternal(metric, tags, dps);
     }
 
-    @Override
-    public TSQueryResult readMetrics(String metric, long startTimestamp, long endTimestamp) {
-        return readMetrics(metric, startTimestamp, endTimestamp, null, null, null);
-    }
 
     @Override
     public TSQueryResult readMetrics(String metric, long startTimestamp, long endTimestamp, String aggregator) {
-        return readMetrics(metric, startTimestamp, endTimestamp, null, null, aggregator);
+        return readMetrics(metric, startTimestamp, endTimestamp, null, aggregator, null);
     }
 
     @Override
-    public TSQueryResult readMetrics(String metric, long startTimestamp, long endTimestamp, String downsampler, String aggregator) {
-        return readMetrics(metric, startTimestamp, endTimestamp, null, downsampler, aggregator);
+    public TSQueryResult readMetrics(String metric, long startTimestamp, long endTimestamp, String aggregator, String downsampler) {
+        return readMetrics(metric, startTimestamp, endTimestamp, null, aggregator, downsampler);
     }
 
     @Override
     public TSQueryResult readMetrics(String metric, long startTimestamp, long endTimestamp, Map<String, String> tags, String aggregator) {
-        return readMetrics(metric, startTimestamp, endTimestamp, tags, null, aggregator);
+        return readMetrics(metric, startTimestamp, endTimestamp, tags, aggregator, null);
     }
 
-
     @Override
-    public TSQueryResult readMetrics(String metric, long startTimestamp, long endTimestamp, Map<String, String> tags, String downsampler, String aggregator) {
+    public TSQueryResult readMetrics(String metric, long startTimestamp, long endTimestamp, Map<String, String> tags, String aggregator, String downsampler) {
 
         TSQuery tsQuery = TSQuery.builder()
                 .metric(metric)
@@ -176,6 +172,7 @@ class DefaultTSDBClient implements TSDBClient {
     @Override
     public void close() {
         clientSession.close();
+        eventLoopGroup.shutdownGracefully();
     }
 
     @Override

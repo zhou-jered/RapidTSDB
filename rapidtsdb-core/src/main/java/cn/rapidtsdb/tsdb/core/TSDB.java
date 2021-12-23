@@ -92,7 +92,7 @@ public class TSDB implements Initializer, Closer {
     }
 
     public void writeMetric(String metric, double val, long timestamp) {
-        Integer mIdx = metricsKeyManager.getMetricsIndex(metric);
+        Integer mIdx = metricsKeyManager.getMetricsIndex(metric, true);
         writeMetricInternal(mIdx, timestamp, val);
         appendOnlyLogManager.appendLog(mIdx, timestamp, val);
     }
@@ -109,7 +109,14 @@ public class TSDB implements Initializer, Closer {
 
     public TSEngineQueryResult queryTimeSeriesData(TSEngineQuery query) {
         long startNano = System.nanoTime();
-        int mid = metricsKeyManager.getMetricsIndex(query.getMetric());
+        int mid = metricsKeyManager.getMetricsIndex(query.getMetric(), false);
+        if (mid <= 0) {
+            return TSEngineQueryResult.builder()
+                    .dps(new TreeMap<>())
+                    .scanCostNanos(0)
+                    .scannerPointNumber(0)
+                    .build();
+        }
         List<TSBlock> blocks = blockManager.getBlockWithTimeRange(mid, query.getStartTimestamp(), query.getEndTimestamp());
         SortedMap<Long, Double> dps = new TreeMap<>();
         for (TSBlock b : blocks) {
@@ -166,7 +173,7 @@ public class TSDB implements Initializer, Closer {
     private void tryRecoveyMemoryData() {
         Set<String> allMetrics = metricsKeyManager.getAllMetrics();
         List<Integer> allMids = new ArrayList<>(allMetrics.size());
-        allMetrics.forEach(m -> allMids.add(metricsKeyManager.getMetricsIndex(m)));
+        allMetrics.forEach(m -> allMids.add(metricsKeyManager.getMetricsIndex(m, false)));
         blockManager.tryRecoveryMemoryData(allMids);
     }
 

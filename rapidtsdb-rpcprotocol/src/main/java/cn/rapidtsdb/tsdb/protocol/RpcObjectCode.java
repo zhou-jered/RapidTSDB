@@ -23,9 +23,11 @@ public class RpcObjectCode {
         protoObjectCodeMap.put("cn.rapidtsdb.tsdb.model.proto.TSDBResponse$ProtoDataResponse", 9);
         protoObjectCodeMap.put("cn.rapidtsdb.tsdb.model.proto.TSDBResponse$ProtoCommonResponse", 10);
         protoObjectCodeMap.put("cn.rapidtsdb.tsdb.model.proto.TSQueryMessage$ProtoTSQuery", 11);
+        protoObjectCodeMap.put("cn.rapidtsdb.tsdb.model.proto.TSDBResponse$ProtoDataQueryStat", 12);
 
         for (String clsName : protoObjectCodeMap.keySet()) {
             Integer code = protoObjectCodeMap.get(clsName);
+
             try {
                 Class clz = Class.forName(clsName);
                 Method method = clz.getMethod("parser");

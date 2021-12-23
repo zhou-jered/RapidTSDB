@@ -2,6 +2,7 @@ package cn.rapidtsdb.tsdb.calculate;
 
 
 import cn.rapidtsdb.tsdb.common.TimeUtils;
+import org.apache.commons.lang.StringUtils;
 
 public class CalculatorFactory {
 
@@ -18,7 +19,7 @@ public class CalculatorFactory {
      * @return
      */
     public static DownSampler getDownSample(String downSamplerConfig) {
-        if (downSamplerConfig == null) {
+        if (StringUtils.isBlank(downSamplerConfig)) {
             return null;
         }
         String[] timeRangeAndName = downSamplerConfig.split("\\-");

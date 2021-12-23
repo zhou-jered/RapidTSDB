@@ -1,21 +1,17 @@
 package cn.rapidtsdb.tsdb.server.handler.console;
 
-import cn.rapidtsdb.tsdb.TSDBDataOperationTask;
-import cn.rapidtsdb.tsdb.TSDBRetryableTask;
-import cn.rapidtsdb.tsdb.TSDBTaskCallback;
-import cn.rapidtsdb.tsdb.TSDataOperationQueue;
-import cn.rapidtsdb.tsdb.core.persistent.MetricsKeyManager;
 import cn.rapidtsdb.tsdb.object.BizMetric;
 import cn.rapidtsdb.tsdb.object.TSDataPoint;
 import cn.rapidtsdb.tsdb.object.TSQuery;
 import cn.rapidtsdb.tsdb.object.TSQueryResult;
 import cn.rapidtsdb.tsdb.server.middleware.TSDBExecutor;
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.serializer.SerializerFeature;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import lombok.extern.log4j.Log4j2;
-import org.apache.commons.collections.MapUtils;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -81,8 +77,6 @@ public class ConsoleHandler extends SimpleChannelInboundHandler<ByteBuf> {
         }
     }
 
-    TSDataOperationQueue operationQueue = TSDataOperationQueue.getQ();
-
     /**
      * metric time value time value .....
      *
@@ -113,9 +107,9 @@ public class ConsoleHandler extends SimpleChannelInboundHandler<ByteBuf> {
         String metric = params[0];
         long timestamp = Long.parseLong(params[1]);
         double val = Double.parseDouble(params[2]);
-        TSDBDataOperationTask task = new PutTask(new CommonCommandCallback(ctx),
-                metric, new TSDataPoint(timestamp, val), tags);
-        operationQueue.submitTask(task);
+        boolean putResult = TSDBExecutor.getEXECUTOR().write(new BizMetric(metric, tags), new TSDataPoint(timestamp, val));
+        ctx.writeAndFlush(String.valueOf(putResult));
+        newLine(ctx);
     }
 
     private void putValue(ChannelHandlerContext ctx, String... params) {
@@ -155,19 +149,14 @@ public class ConsoleHandler extends SimpleChannelInboundHandler<ByteBuf> {
                 tsQuery.setDownSampler(params[4]);
             }
             qResult = TSDBExecutor.getEXECUTOR().read(tsQuery);
-            if (qResult == null || qResult.getDps().size() == 0) {
-                ctx.writeAndFlush("[]");
+            if (qResult == null) {
+                ctx.writeAndFlush("{}");
             } else {
-                Map<Long, Double> dps = qResult.getDps();
-                dps.forEach((k, v) -> {
-                    String d = k + ":" + v;
-                    ctx.writeAndFlush(d);
-                    ctx.writeAndFlush("\n");
-
-                });
-
+                String jsonStr = JSON.toJSONString(qResult, SerializerFeature.PrettyFormat,
+                        SerializerFeature.WriteNonStringKeyAsString);
+                ctx.writeAndFlush(jsonStr);
             }
-        } catch (NumberFormatException e) {
+        } catch (Exception e) {
             ctx.writeAndFlush(e.getMessage());
             ctx.writeAndFlush("\n");
         }
@@ -196,96 +185,5 @@ public class ConsoleHandler extends SimpleChannelInboundHandler<ByteBuf> {
         ByteBuf respBuf = ctx.alloc().buffer(lineBytes.length);
         respBuf.writeBytes(line.getBytes());
         ctx.writeAndFlush(respBuf);
-    }
-
-    static class PutTask extends TSDBDataOperationTask {
-        private String metric;
-        private TSDataPoint dp;
-        private Map<String, String> tags;
-        private int mid;
-
-        public PutTask(TSDBTaskCallback callback, String metric, TSDataPoint dp) {
-            super(callback);
-            this.metric = metric;
-            this.dp = dp;
-            this.mid = MetricsKeyManager.getInstance().getMetricsIndex(metric);
-        }
-
-        public PutTask(TSDBTaskCallback callback, String metric, TSDataPoint dp, Map<String, String> tags) {
-            super(callback);
-            this.metric = metric;
-            this.dp = dp;
-            this.tags = tags;
-        }
-
-
-        @Override
-        public int getMetricId() {
-            return mid;
-        }
-
-        @Override
-        public int getRetryLimit() {
-            return 0;
-        }
-
-        @Override
-        public String getTaskName() {
-            return null;
-        }
-
-        @Override
-        public void run() {
-            try {
-                BizMetric bizMetric;
-                if (MapUtils.isEmpty(tags)) {
-                    bizMetric = BizMetric.cache(metric);
-                } else {
-                    bizMetric = BizMetric.of(metric, tags);
-                }
-                TSDBExecutor.getEXECUTOR().write(bizMetric,
-                        dp);
-            } catch (Exception e) {
-                if (callback != null) {
-                    callback.onException(this, dp, e);
-                }
-                callback.onFailed(this, null);
-                return;
-            }
-            callback.onSuccess(null);
-        }
-    }
-
-    static class CommonCommandCallback implements TSDBTaskCallback {
-        ChannelHandlerContext ctx;
-
-        public CommonCommandCallback(ChannelHandlerContext ctx) {
-            this.ctx = ctx;
-        }
-
-        @Override
-        public Object onSuccess(Object data) {
-            ctx.writeAndFlush("ok");
-            newLine(ctx);
-            return null;
-        }
-
-        @Override
-        public void onFailed(TSDBRetryableTask task, Object data) {
-            ByteBuf byteBuf = ctx.alloc().buffer(15);
-            byteBuf.writeBytes("Failed:".getBytes());
-            ctx.writeAndFlush(byteBuf);
-            newLine(ctx);
-        }
-
-        @Override
-        public void onException(TSDBRetryableTask task, Object data, Throwable exception) {
-            if (exception != null) {
-                ctx.writeAndFlush("\n");
-                ctx.writeAndFlush("Exception:" + exception.getMessage());
-                log.error("", exception);
-            }
-            newLine(ctx);
-        }
     }
 }

@@ -18,7 +18,13 @@ public class CommonResponseHandler extends SimpleChannelInboundHandler<TSDBRespo
             clientSession = ChannelAttributes.getSessionAttribute(ctx);
         }
         int reqId = commonResp.getReqId();
-        clientSession.setResult(reqId, commonResp);
+        if (!commonResp.getException()) {
+            clientSession.setResult(reqId, commonResp);
+        } else {
+            Throwable throwable = new Throwable(commonResp.getMsg());
+            clientSession.setException(reqId, throwable);
+        }
+
     }
 
     @Override

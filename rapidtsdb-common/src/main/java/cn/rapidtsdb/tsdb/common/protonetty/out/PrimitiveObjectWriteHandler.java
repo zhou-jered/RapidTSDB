@@ -11,7 +11,6 @@ public class PrimitiveObjectWriteHandler extends ChannelOutboundHandlerAdapter {
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
         ByteBuf byteBuf = null;
-        log.debug("Pirmitive Write:{}", msg.getClass().getSimpleName());
         if (msg instanceof String) {
             String str = (String) msg;
             byteBuf = ctx.alloc().buffer(str.length());

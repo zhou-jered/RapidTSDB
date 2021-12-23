@@ -22,13 +22,15 @@ public class BaseFlowTest {
                 .build();
         TSDBClient tsdbClient = TSDBClientFactory.getTSDBClient(config);
         long tp = System.currentTimeMillis();
+        Map<String, String> tags = new HashMap<>();
+        tags.put("host", "localhost");
         for (int i = 0; i < 10; i++) {
-            WriteMetricResult writeMetricResult = tsdbClient.writeMetric("me.local", tp + i, 1.3 + i);
+            WriteMetricResult writeMetricResult = tsdbClient.writeMetric("me.local", tp + i, 1.3 + i, tags);
             System.out.println(writeMetricResult);
         }
 
         System.out.println("start read");
-        TSQueryResult queryResult = tsdbClient.readMetrics("me.local", tp - 100, tp + 5);
+        TSQueryResult queryResult = tsdbClient.readMetrics("me.local", tp - 100, tp + 12, tags,"sum");
         System.out.println("read" + queryResult.getDps());
         System.out.println("Result:" + queryResult);
 

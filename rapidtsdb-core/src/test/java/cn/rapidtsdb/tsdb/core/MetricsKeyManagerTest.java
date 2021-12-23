@@ -27,9 +27,9 @@ public class MetricsKeyManagerTest {
     public void testWriteMetric() {
         MetricsKeyManager metricsKeyManager = MetricsKeyManager.getInstance();
         metricsKeyManager.init();
-        int mid = metricsKeyManager.getMetricsIndex(metric);
+        int mid = metricsKeyManager.getMetricsIndex(metric, true);
         System.out.println(metric + " mid: " + mid);
-        int mid2 = metricsKeyManager.getMetricsIndex(metric);
+        int mid2 = metricsKeyManager.getMetricsIndex(metric, true);
         System.out.println(metric + " mid: " + mid2);
         metricsKeyManager.close();
 
@@ -39,7 +39,7 @@ public class MetricsKeyManagerTest {
     public void testReadMetric() {
         MetricsKeyManager mkManager = MetricsKeyManager.getInstance();
         mkManager.init();
-        int mid = mkManager.getMetricsIndex(metric);
+        int mid = mkManager.getMetricsIndex(metric,true);
         System.out.println(metric + " mid: " + mid);
     }
 
@@ -49,7 +49,7 @@ public class MetricsKeyManagerTest {
         MetricsKeyManager mkManager = MetricsKeyManager.getInstance();
         mkManager.init();
         for (String str : data) {
-            int idx = mkManager.getMetricsIndex(str);
+            int idx = mkManager.getMetricsIndex(str,true);
             System.out.println(str + " : " + idx);
         }
         List<String> scanMetricsResult = mkManager.scanMetrics("aa");
@@ -65,7 +65,7 @@ public class MetricsKeyManagerTest {
         MetricsKeyManager mkManager = MetricsKeyManager.getInstance();
         mkManager.init();
         for (String str : data) {
-            int idx = mkManager.getMetricsIndex(str);
+            int idx = mkManager.getMetricsIndex(str,true);
             System.out.println(str + " : " + idx);
         }
         List<String> scanMetricsResult = mkManager.scanMetrics("aa", Lists.newArrayList("b"));

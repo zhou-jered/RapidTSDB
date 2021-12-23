@@ -25,15 +25,13 @@ public interface TSDBClient {
 
     WriteMetricResult writeMetrics(String metric, Map<Long, Double> dps, Map<String, String> tags);
 
-    TSQueryResult readMetrics(String metric, long startTimestamp, long endTimestamp);
-
     TSQueryResult readMetrics(String metric, long startTimestamp, long endTimestamp, String aggregator);
 
-    TSQueryResult readMetrics(String metric, long startTimestamp, long endTimestamp, String downsampler, String aggregator);
+    TSQueryResult readMetrics(String metric, long startTimestamp, long endTimestamp, String aggregator, String downsampler);
 
     TSQueryResult readMetrics(String metric, long startTimestamp, long endTimestamp, Map<String, String> tags, String aggregator);
 
-    TSQueryResult readMetrics(String metric, long startTimestamp, long endTimestamp, Map<String, String> tags, String downsampler, String aggregator);
+    TSQueryResult readMetrics(String metric, long startTimestamp, long endTimestamp, Map<String, String> tags, String aggregator, String downsampler);
 
     void close();
 

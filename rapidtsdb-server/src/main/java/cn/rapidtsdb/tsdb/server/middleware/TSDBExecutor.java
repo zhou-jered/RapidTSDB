@@ -51,6 +51,7 @@ public class TSDBExecutor implements Initializer, Closer {
 
     @Override
     public void close() {
+        shutdown();
         metricTransformer.close();
     }
 
@@ -78,7 +79,7 @@ public class TSDBExecutor implements Initializer, Closer {
                 new ThreadPoolExecutor.AbortPolicy());
         for (int i = 0; i < concurrent; i++) {
             int qidx = i;
-            ExecutorRunnable executorRunnable = new ExecutorRunnable(db, EXECUTOR.writeQueue, qidx, metricTransformer);
+            ExecutorRunnable executorRunnable = new ExecutorRunnable(db, writeQueue, qidx, metricTransformer);
             EXECUTOR.threadPoolExecutor.submit(executorRunnable);
         }
     }
@@ -93,20 +94,54 @@ public class TSDBExecutor implements Initializer, Closer {
         return writeQueue.write(queueCoordinator, writeCommand);
     }
 
-    public TSQueryResult read(TSQuery query) {
+    public TSQueryResult read(TSQuery query) throws Exception {
         if (StringUtils.isEmpty(query.getAggregator())) {
-            throw new RuntimeException("Aggregator can not be null");
+            throw new Exception("Aggregator can not be null");
         }
         Aggregator aggregator = CalculatorFactory.getAggregator(query.getAggregator());
         if (aggregator == null) {
             throw new RuntimeException("Can not get aggregator of :" + query.getAggregator());
         }
+        List<String> filterdInternalMetricParts = null;
         Map<String, String> tags = query.getTags();
-        if (CollectionUtils.isEmpty(tags)) {
-            return queryWithoutTag(query);
-        } else {
-            return queryWithTags(query);
+        if (CollectionUtils.isNotEmpty(tags)) {
+            filterdInternalMetricParts = metricTransformer.concatTags(tags);
         }
+        String scannedMetricPrefix = metricTransformer.getMetricTagScanPrefix(query.getMetric());
+        List<String> internalMetrics = metricsKeyManager.scanMetrics(scannedMetricPrefix, filterdInternalMetricParts);
+        internalMetrics.add(query.getMetric());//?
+
+        QueryStats queryStats = new QueryStats();
+        int totalScannedDpsNumber = 0;
+        long startMs = System.currentTimeMillis();
+        Map<Long, Double> resultDps = new HashMap<>();
+        Set<String> aggregatortedTags = new HashSet<>();
+        for (String im : internalMetrics) {
+            BizMetric bizMetric = metricTransformer.toBizMetric(im);
+            Map<String, String> singleMTags = bizMetric.getTags();
+            if (singleMTags != null) {
+                for (String st : singleMTags.keySet()) {
+                    if (!tags.containsKey(st)) {
+                        aggregatortedTags.add(st);
+                    }
+                }
+            }
+            TSEngineQueryResult engineQueryResult = queryInternal(im, query.getStartTime(), query.getEndTime(), query.getDownSampler());
+            resultDps = aggregator.aggregate(resultDps, engineQueryResult.getDps());
+            totalScannedDpsNumber += engineQueryResult.getScannerPointNumber();
+        }
+        long costMs = System.currentTimeMillis() - startMs;
+        queryStats.setCostMs(costMs);
+        queryStats.setDpsNumber(resultDps.size());
+        queryStats.setScannedDpsNumber(totalScannedDpsNumber);
+        TSQueryResult tsQueryResult = TSQueryResult
+                .builder().dps(resultDps)
+                .info(queryStats)
+                .metric(query.getMetric())
+                .tags(query.getTags())
+                .aggregatedTags(aggregatortedTags.toArray(new String[0]))
+                .build();
+        return tsQueryResult;
 
     }
 
@@ -127,41 +162,6 @@ public class TSDBExecutor implements Initializer, Closer {
         return queryResult;
     }
 
-    private TSQueryResult queryWithTags(TSQuery taggedQuery) {
-        Map<String, String> tags = taggedQuery.getTags();
-        List<String> filterdInternalMetricParts = metricTransformer.concatTags(tags);
-        String scannedMetricPrefix = metricTransformer.getMetricTagScanPrefix(taggedQuery.getMetric());
-        List<String> internalMetrics = metricsKeyManager.scanMetrics(scannedMetricPrefix, filterdInternalMetricParts);
-        Aggregator aggregator = CalculatorFactory.getAggregator(taggedQuery.getAggregator());
-        QueryStats queryStats = new QueryStats();
-        int totalScannedDpsNumber = 0;
-        long startMs = System.currentTimeMillis();
-        Map<Long, Double> resultDps = new HashMap<>();
-        Set<String> aggregatortedTags = new HashSet<>();
-        for (String im : internalMetrics) {
-            BizMetric bizMetric = metricTransformer.toBizMetric(im);
-            Map<String, String> singleMTags = bizMetric.getTags();
-            for (String st : singleMTags.keySet()) {
-                if (!tags.containsKey(st)) {
-                    aggregatortedTags.add(st);
-                }
-            }
-            TSEngineQueryResult engineQueryResult = queryInternal(im, taggedQuery.getStartTime(), taggedQuery.getEndTime(), taggedQuery.getDownSampler());
-            resultDps = aggregator.aggregate(resultDps, engineQueryResult.getDps());
-            totalScannedDpsNumber += engineQueryResult.getScannerPointNumber();
-        }
-        long costMs = System.currentTimeMillis() - startMs;
-        queryStats.setCostMs(costMs);
-        queryStats.setScannedDpsNumber(totalScannedDpsNumber);
-        TSQueryResult tsQueryResult = TSQueryResult
-                .builder().dps(resultDps)
-                .info(queryStats)
-                .metric(taggedQuery.getMetric())
-                .tags(taggedQuery.getTags())
-                .aggregatedTags(aggregatortedTags.toArray(new String[0]))
-                .build();
-        return tsQueryResult;
-    }
 
     private TSEngineQueryResult queryInternal(String metric, long start, long end, String downSampler) {
         TSEngineQuery engineQuery = new TSEngineQuery(metric, start,
@@ -213,10 +213,12 @@ public class TSDBExecutor implements Initializer, Closer {
                     Iterator<TSDataPoint> dpIter = cmd.iter();
                     while (dpIter.hasNext()) {
                         TSDataPoint dp = dpIter.next();
+                        log.debug("server write dp:{} ,{}", dp.getValue(), dp.getTimestamp());
                         tsdb.writeMetric(internalMetric, dp.getValue(), dp.getTimestamp());
                     }
                 } catch (IllegalCharsException e) {
                     e.printStackTrace();
+                    log.error(e);
                 }
             }
         }

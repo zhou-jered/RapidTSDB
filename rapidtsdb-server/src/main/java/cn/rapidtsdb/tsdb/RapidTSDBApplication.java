@@ -99,6 +99,7 @@ public class RapidTSDBApplication implements Initializer, Runner {
             log.info("TSDB Shutting Down");
             AppInfo.setApplicationState(AppInfo.ApplicationState.SHUTDOWN);
             tsdb.close();
+            tsdbExecutor.close();
             log.info("TSDB ShutDown Finished, Bye.");
         }));
     }

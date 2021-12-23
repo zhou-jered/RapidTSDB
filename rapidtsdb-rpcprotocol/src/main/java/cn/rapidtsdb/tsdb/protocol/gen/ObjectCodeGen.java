@@ -15,18 +15,11 @@ public class ObjectCodeGen {
             TSDataMessage.ProtoDatapoints.class,
             TSDBResponse.ProtoDataResponse.class,
             TSDBResponse.ProtoCommonResponse.class,
-            TSQueryMessage.ProtoTSQuery.class
-
+            TSQueryMessage.ProtoTSQuery.class,
+            TSDBResponse.ProtoDataQueryStat.class
     };
 
     public static void main(String[] args) {
-
-        String defineTemplate = "public static final int %s = %s;";
-        for (int i = 0; i < protoClasses.length; i++) {
-            Class clz = protoClasses[i];
-            String def = String.format(defineTemplate, clz.getSimpleName(), i + 1);
-            System.out.println(def);
-        }
 
 
         String mapEntryTemplate = "protoObjectCodeMap.put(\"%s\", %s);";

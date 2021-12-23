@@ -3,6 +3,7 @@ package cn.rapidtsdb.tsdb.client.handler.v1;
 import cn.rapidtsdb.tsdb.client.TSDBClientConfig;
 import cn.rapidtsdb.tsdb.client.WriteMetricResult;
 import cn.rapidtsdb.tsdb.client.exceptions.NoPermissionException;
+import cn.rapidtsdb.tsdb.common.protonetty.utils.ProtoObjectUtils;
 import cn.rapidtsdb.tsdb.common.utils.ChannelUtils;
 import cn.rapidtsdb.tsdb.model.proto.ConnectionAuth;
 import cn.rapidtsdb.tsdb.model.proto.TSDBResponse.ProtoCommonResponse;
@@ -84,6 +85,7 @@ public class ClientSession {
                     .dps(protoDataResponse.getDpsMap())
                     .metric(protoDataResponse.getMetric())
                     .tags(protoDataResponse.getTagsMap())
+                    .info(ProtoObjectUtils.getQueryState(protoDataResponse.getInfo()))
                     .aggregatedTags(protoDataResponse.getAggregatedTagsList().toArray(new String[0]))
                     .build();
             return queryResult;
