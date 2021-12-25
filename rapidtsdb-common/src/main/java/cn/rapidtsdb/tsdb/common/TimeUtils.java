@@ -90,18 +90,22 @@ public class TimeUtils {
         }
         config = config.trim();
         char s = config.charAt(config.length() - 1);
+        String nums = "1";
+        if (config.length() > 1) {
+            nums = config.substring(0, config.length() - 1);
+        }
         if (Character.isDigit(s)) {
             return Integer.parseInt(config);
         }
         switch (Character.toLowerCase(s)) {
             case 's':
-                return (int) TimeUnit.SECONDS.toMillis(1);
+                return (int) TimeUnit.SECONDS.toMillis(Integer.parseInt(nums));
             case 'm':
-                return (int) TimeUnit.MINUTES.toMillis(1);
+                return (int) TimeUnit.MINUTES.toMillis(Integer.parseInt(nums));
             case 'h':
-                return (int) TimeUnit.HOURS.toMillis(1);
+                return (int) TimeUnit.HOURS.toMillis(Integer.parseInt(nums));
             case 'd':
-                return (int) TimeUnit.DAYS.toMillis(1);
+                return (int) TimeUnit.DAYS.toMillis(Integer.parseInt(nums));
             default:
                 throw new RuntimeException("Unknown timeunti '" + s + "' Supported Unit are [s,m,h,d], See Docs for more infomation");
         }

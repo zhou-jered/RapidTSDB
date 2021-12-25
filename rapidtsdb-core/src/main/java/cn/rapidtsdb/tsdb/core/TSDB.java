@@ -78,10 +78,10 @@ public class TSDB implements Initializer, Closer {
     public void close() {
         log.info("Closing TSDB");
         dbState.set(DB_STATE_CLOSED);
-        appendOnlyLogManager.close();
         metricsKeyManager.close();
         blockManager.close();
         checkPointManager.savePoint(appendOnlyLogManager.getLogIndex());
+        appendOnlyLogManager.close();
         globalExecutor.close();
         log.info("TSDB Close completed");
     }
@@ -99,7 +99,7 @@ public class TSDB implements Initializer, Closer {
 
 
     private void writeMetricInternal(int mid, long timestamp, double val) {
-        TSBlock tsBlock = blockManager.getCurrentWriteBlock(mid, timestamp);
+        TSBlock tsBlock = blockManager.getTargetWriteBlock(mid, timestamp);
         if (tsBlock != null) {
             tsBlock.appendDataPoint(timestamp, val);
         } else if (TimeUtils.currentSeconds() - timestamp / 1000 < config.getMaxAllowedDelaySeconds()) {

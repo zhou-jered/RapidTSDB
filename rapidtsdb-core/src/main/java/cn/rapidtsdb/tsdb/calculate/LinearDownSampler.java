@@ -29,15 +29,13 @@ public class LinearDownSampler implements DownSampler {
                 double val = orderedDps.get(tp);
                 if (bufferScope.inScope(tp)) {
                     valueBuffer.add(val);
-                } else if (bufferScope.inNextScope(tp)) {
+                } else {
                     if (valueBuffer.size() > 0) {
                         double aggreVal = downSamplerFunction.apply(valueBuffer);
                         valueBuffer.clear();
-                        result.put(tp, aggreVal);
+                        long scopeTp = bufferScope.start;
+                        result.put(scopeTp, aggreVal);
                     }
-                    bufferScope.stepForward();
-                    valueBuffer.add(val);
-                } else {
                     bufferScope.init(tp);
                     valueBuffer.add(val);
                 }

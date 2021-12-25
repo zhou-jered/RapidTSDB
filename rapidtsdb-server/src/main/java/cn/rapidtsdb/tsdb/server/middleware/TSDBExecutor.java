@@ -77,6 +77,7 @@ public class TSDBExecutor implements Initializer, Closer {
         threadPoolExecutor = new ThreadPoolExecutor(concurrent, concurrent,
                 1, TimeUnit.HOURS, new LinkedBlockingQueue<>(), new ExecutorThreadFactory(),
                 new ThreadPoolExecutor.AbortPolicy());
+
         for (int i = 0; i < concurrent; i++) {
             int qidx = i;
             ExecutorRunnable executorRunnable = new ExecutorRunnable(db, writeQueue, qidx, metricTransformer);
@@ -145,23 +146,6 @@ public class TSDBExecutor implements Initializer, Closer {
 
     }
 
-    private TSQueryResult queryWithoutTag(TSQuery query) {
-        long start = System.nanoTime();
-        TSEngineQueryResult engineQueryResult = queryInternal(query.getMetric(),
-                query.getStartTime(), query.getEndTime(), query.getDownSampler());
-        Map<Long, Double> dps = engineQueryResult.getDps();
-        long cost = System.nanoTime() - start;
-        QueryStats queryStats = QueryStats.builder()
-                .costMs(cost / 1000)
-                .dpsNumber(dps.size())
-                .scannedDpsNumber(engineQueryResult.getScannerPointNumber())
-                .build();
-        TSQueryResult queryResult = TSQueryResult.builder()
-                .info(queryStats)
-                .dps(dps).build();
-        return queryResult;
-    }
-
 
     private TSEngineQueryResult queryInternal(String metric, long start, long end, String downSampler) {
         TSEngineQuery engineQuery = new TSEngineQuery(metric, start,
@@ -200,15 +184,9 @@ public class TSDBExecutor implements Initializer, Closer {
         @Override
         public void run() {
             while (true) {
-                WriteCommand cmd = null;
                 try {
+                    WriteCommand cmd = null;
                     cmd = Q.pollCommand(qidx);
-                } catch (InterruptedException e) {
-                    if (TSDBExecutor.getEXECUTOR().isShutdown()) {
-                        return;
-                    }
-                }
-                try {
                     String internalMetric = metricTransformer.toInternalMetric(cmd.getMetric());
                     Iterator<TSDataPoint> dpIter = cmd.iter();
                     while (dpIter.hasNext()) {
@@ -219,6 +197,12 @@ public class TSDBExecutor implements Initializer, Closer {
                 } catch (IllegalCharsException e) {
                     e.printStackTrace();
                     log.error(e);
+                } catch (InterruptedException ie) {
+                    if (EXECUTOR.isShutdown()) {
+                        return;
+                    }
+                } catch (Exception unexpectException) {
+                    log.error("Unexpect Exception", unexpectException);
                 }
             }
         }

@@ -15,6 +15,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static cn.rapidtsdb.tsdb.core.ByteMask.RIGHT_MASK;
+import static cn.rapidtsdb.tsdb.core.TSBlockFactory.BLOCK_SIZE_MILLSECONDS;
 
 @Log4j2
 public class TSBlock {
@@ -80,8 +81,21 @@ public class TSBlock {
         return diffSeconds >= blockLengthMills;
     }
 
+    public boolean haveDataInRange(long startTimestamp, long endTimestamp) {
+        long blockStartTime = baseTime;
+        long blockEndTime = startTimestamp + BLOCK_SIZE_MILLSECONDS;
+        if (preTime != null) {
+            blockEndTime = preTime + 1;
+        }
+        return !(blockStartTime >= endTimestamp || blockEndTime <= startTimestamp);
+    }
+
     public boolean isNextAjacentBlock(TSBlock tsBlock) {
-        return tsBlock.getBaseTime() - baseTime == TSBlockFactory.BLOCK_SIZE_MILLSECONDS;
+        return tsBlock.getBaseTime() - baseTime == BLOCK_SIZE_MILLSECONDS;
+    }
+
+    public boolean inNextBlock(long timestamp) {
+        return baseTime + BLOCK_SIZE_MILLSECONDS < timestamp && timestamp <= baseTime + 2 * BLOCK_SIZE_MILLSECONDS;
     }
 
 

@@ -4,19 +4,16 @@ import cn.rapidtsdb.tsdb.TSDBTaskCallback;
 import cn.rapidtsdb.tsdb.common.TimeUtils;
 import cn.rapidtsdb.tsdb.config.TSDBConfig;
 import cn.rapidtsdb.tsdb.core.persistent.TSBlockPersister;
-import cn.rapidtsdb.tsdb.executors.ManagedThreadPool;
 import cn.rapidtsdb.tsdb.lifecycle.Closer;
 import cn.rapidtsdb.tsdb.lifecycle.Initializer;
-import cn.rapidtsdb.tsdb.tasks.ClearDirtyBlockTask;
+import cn.rapidtsdb.tsdb.utils.CollectionUtils;
 import cn.rapidtsdb.tsdb.utils.TSBlockUtils;
 import lombok.extern.log4j.Log4j2;
 
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static cn.rapidtsdb.tsdb.core.TSBlockFactory.BLOCK_SIZE_MILLSECONDS;
@@ -35,12 +32,10 @@ public class TSBlockManager extends AbstractTSBlockManager implements Initialize
 
 
     private AtomicReference<Map<Integer, TSBlock>> currentBlockCacheRef = new AtomicReference<>();
-    private AtomicReference<Map<Integer, TSBlock>> preRoundBlockRef = new AtomicReference<>();
     private AtomicReference<Map<Integer, TSBlock>> forwardRoundBlockRef = new AtomicReference<>();
     private TSBlockPersister blockPersister;
 
-    private ManagedThreadPool globalExecutor = ManagedThreadPool.getInstance();
-    private ThreadPoolExecutor ioExecutor = globalExecutor.ioExecutor();
+    private DirtyBlockManager dirtyBlockManager = DirtyBlockManager.getINSTANCE();
 
 
     TSBlockManager(TSDBConfig tsdbConfig) {
@@ -51,20 +46,21 @@ public class TSBlockManager extends AbstractTSBlockManager implements Initialize
     @Override
     public void close() {
         flushMemoryBlock();
+        dirtyBlockManager.clearDirtyBlock();
+        dirtyBlockManager.close();
         blockPersister.close();
     }
 
     @Override
     public void init() {
         blockPersister.init();
-        dirtyBlocksRef.set(new HashMap<>());
-        preRoundBlockRef.set(newTSMap());
+        dirtyBlockManager.init();
         currentBlockCacheRef.set(newTSMap());
         forwardRoundBlockRef.set(newTSMap());
     }
 
 
-    public TSBlock getCurrentWriteBlock(int metricId, long timestamp) {
+    public TSBlock getTargetWriteBlock(int metricId, long timestamp) {
 
         Map<Integer, TSBlock> currentBlockCache = currentBlockCacheRef.get();
         TSBlock currentBlock = currentBlockCache.get(metricId);
@@ -80,34 +76,24 @@ public class TSBlockManager extends AbstractTSBlockManager implements Initialize
                 currentBlock = existedBlocks;
             }
         }
-
         if (currentBlock.inBlock(timestamp)) {
             return currentBlock;
         }
 
-        if (currentBlock.afterBlock(timestamp)) {
+        if (currentBlock.inNextBlock(timestamp)) {
             TSBlock forwardBlock = forwardRoundBlockRef.get().get(metricId);
-            if (forwardBlock != null && forwardBlock.inBlock(timestamp)) {
+            if (forwardBlock != null) {
                 log.info("return forwarding block of timestamp:{}", timestamp);
                 return forwardBlock;
-            }
-            if (forwardBlock == null) {
+            } else {
                 forwardBlock = newTSBlock(metricId, timestamp);
-            }
-            if (currentBlock.isNextAjacentBlock(forwardBlock)) {
                 forwardBlock = forwardRoundBlockRef.get().putIfAbsent(metricId, forwardBlock);
                 return forwardBlock;
-            } else {
-                log.error("Refused to Write too much ahead of time data, metricId:{}, write time:{}, currentTime:{}", metricId, timestamp, currentBlock.getBaseTime());
-                return null;
             }
         } else {
-            TSBlock preBlock = preRoundBlockRef.get().get(metricId);
-            if (preBlock != null && preBlock.inBlock(timestamp)) {
-                markPreRoundBlockDirty(metricId, preBlock);
-            }
+            TSBlock dirtyBlock = dirtyBlockManager.getDirtyBlockForWrite(metricId, timestamp);
+            return dirtyBlock;
         }
-        return null;
     }
 
 
@@ -115,46 +101,36 @@ public class TSBlockManager extends AbstractTSBlockManager implements Initialize
     public void triggerRoundCheck(TSDBTaskCallback completedCallback) {
         log.debug("Block Round check");
         Map<Integer, TSBlock> current = currentBlockCacheRef.get();
-        preRoundBlockRef.set(current);
         currentBlockCacheRef.set(forwardRoundBlockRef.get());
         forwardRoundBlockRef.set(newTSMap());
         blockPersister.persistTSBlockAsync(current, completedCallback);
-        clearDirtyBlock();
+        dirtyBlockManager.clearDirtyBlock();
     }
 
-    @Override
-    protected void clearDirtyBlock() {
-        synchronized (dirtyBlocksRef) {
-            Map<Integer, TSBlock> dirtyBlock = dirtyBlocksRef.get();
-            if (dirtyBlock.size() > 0) {
-                log.debug("clear dirty block:{}", dirtyBlock.size());
-                dirtyBlocksRef.set(new HashMap<>());
-                ioExecutor.submit(new ClearDirtyBlockTask(dirtyBlock, blockPersister));
-            }
-        }
-    }
 
     public List<TSBlock> getBlockWithTimeRange(int metricId, long start, long end) {
         List<TSBlock> tsBlocks = blockPersister.getTSBlocks(metricId, start, end);
-        TSBlock preRoundBlock = preRoundBlockRef.get().get(metricId);
         TSBlock thisRoundBlock = currentBlockCacheRef.get().get(metricId);
         TSBlock forwordRoundBlock = forwardRoundBlockRef.get().get(metricId);
-
-        if (preRoundBlock != null && preRoundBlock.isDirty()) {
-            tryMergeInListBlock(preRoundBlock, tsBlocks, start, end);
-        }
         if (thisRoundBlock != null) {
             tryMergeInListBlock(thisRoundBlock, tsBlocks, start, end);
         }
         if (forwordRoundBlock != null) {
             tryMergeInListBlock(forwordRoundBlock, tsBlocks, start, end);
         }
+        List<TSBlock> dirtyBlocks = dirtyBlockManager.searchDirtyBlockForRead(metricId, start, end);
+        if (CollectionUtils.isNotEmpty(dirtyBlocks)) {
+            for (TSBlock block : dirtyBlocks) {
+                tryMergeInListBlock(block, tsBlocks, start, end);
+            }
+        }
         return tsBlocks;
     }
 
     private void tryMergeInListBlock(TSBlock newerBlock, List<TSBlock> oldersBlocks, long start, long end) {
         long basetime = newerBlock.getBaseTime();
-        if (!(basetime > end || (basetime + BLOCK_SIZE_MILLSECONDS < start))) {
+
+        if (newerBlock.haveDataInRange(start, end)) {
             boolean inList = false;
             for (int i = 0; i < oldersBlocks.size(); i++) {
                 TSBlock block = oldersBlocks.get(i);
@@ -162,6 +138,7 @@ public class TSBlockManager extends AbstractTSBlockManager implements Initialize
                     inList = true;
                     TSBlock mergedBlock = TSBlockUtils.orderedMassiveMerge(block, newerBlock);
                     oldersBlocks.set(i, mergedBlock);
+                    break;
                 }
             }
             if (!inList) {

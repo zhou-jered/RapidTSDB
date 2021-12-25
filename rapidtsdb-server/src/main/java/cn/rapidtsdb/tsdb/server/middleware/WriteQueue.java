@@ -30,6 +30,7 @@ class WriteQueue {
 
     public boolean write(QueueCoordinator queueCoordinator, WriteCommand writeCommand) {
         final int i = queueCoordinator.getQueueIndex(writeCommand.getMetric().getMetric());
+        log.info("Q {} size: {}", i, QS[i].size());
         return QS[i].add(writeCommand);
     }
 
