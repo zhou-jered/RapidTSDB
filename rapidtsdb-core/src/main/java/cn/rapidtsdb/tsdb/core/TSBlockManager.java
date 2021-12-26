@@ -16,7 +16,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static cn.rapidtsdb.tsdb.core.TSBlockFactory.BLOCK_SIZE_MILLSECONDS;
 import static cn.rapidtsdb.tsdb.core.TSBlockFactory.newTSBlock;
 
 /**
@@ -46,7 +45,7 @@ public class TSBlockManager extends AbstractTSBlockManager implements Initialize
     @Override
     public void close() {
         flushMemoryBlock();
-        dirtyBlockManager.clearDirtyBlock();
+        dirtyBlockManager.doClearDirtyBlock();
         dirtyBlockManager.close();
         blockPersister.close();
     }
@@ -80,20 +79,19 @@ public class TSBlockManager extends AbstractTSBlockManager implements Initialize
             return currentBlock;
         }
 
-        if (currentBlock.inNextBlock(timestamp)) {
-            TSBlock forwardBlock = forwardRoundBlockRef.get().get(metricId);
-            if (forwardBlock != null) {
-                log.info("return forwarding block of timestamp:{}", timestamp);
-                return forwardBlock;
-            } else {
-                forwardBlock = newTSBlock(metricId, timestamp);
-                forwardBlock = forwardRoundBlockRef.get().putIfAbsent(metricId, forwardBlock);
+        TSBlock forwardBlock = forwardRoundBlockRef.get().get(metricId);
+        if (forwardBlock != null) {
+            if (forwardBlock.inBlock(timestamp)) {
                 return forwardBlock;
             }
-        } else {
-            TSBlock dirtyBlock = dirtyBlockManager.getDirtyBlockForWrite(metricId, timestamp);
-            return dirtyBlock;
+        } else if (currentBlock.inNextBlock(timestamp)) {
+            forwardBlock = newTSBlock(metricId, timestamp);
+            forwardRoundBlockRef.get().put(metricId, forwardBlock);
+            return forwardBlock;
         }
+
+        TSBlock dirtyBlock = dirtyBlockManager.getDirtyBlockForWrite(metricId, timestamp);
+        return dirtyBlock;
     }
 
 
@@ -104,7 +102,7 @@ public class TSBlockManager extends AbstractTSBlockManager implements Initialize
         currentBlockCacheRef.set(forwardRoundBlockRef.get());
         forwardRoundBlockRef.set(newTSMap());
         blockPersister.persistTSBlockAsync(current, completedCallback);
-        dirtyBlockManager.clearDirtyBlock();
+        dirtyBlockManager.doClearDirtyBlock();
     }
 
 

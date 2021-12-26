@@ -1,7 +1,7 @@
 将TSBlock 存储在hbase 中：
 
-block的三元素：metricId，basetime，databytes。
+Block的三元素：metricId，basetime，databytes。
 
-row key 为：metricId:basetime
+row key 为metricId
 cf 为固定值d
-cq 为
+cq 为timestamp

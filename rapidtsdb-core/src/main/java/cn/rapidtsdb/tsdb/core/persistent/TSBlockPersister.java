@@ -74,7 +74,7 @@ public class TSBlockPersister implements Initializer, Closer {
      */
     public void persistTSBlockSync(Map<Integer, TSBlock> tsBlocks) {
         if (tsBlocks != null) {
-            setQuickBlockFinder(tsBlocks);
+
             Map<Integer, TSBlock> writingBlocks = new HashMap<>(tsBlocks);
             for (Integer metricId : writingBlocks.keySet()) {
                 persistInternal(metricId, writingBlocks.get(metricId));
@@ -98,7 +98,7 @@ public class TSBlockPersister implements Initializer, Closer {
     }
 
     public void persistTSBlockAsync(Map<Integer, TSBlock> tsBlocks, TSDBTaskCallback completeCallback) {
-        setQuickBlockFinder(tsBlocks);
+
         ManagedThreadPool.getInstance().ioExecutor()
                 .submit(() -> {
                     persistTSBlockSync(tsBlocks);
@@ -159,18 +159,6 @@ public class TSBlockPersister implements Initializer, Closer {
         return INSTANCE;
     }
 
-    private void setQuickBlockFinder(Map<Integer, TSBlock> blocks) {
-        Map<Integer, Long> quickIndex = new HashMap<>();
-        blocks.forEach((k, v) -> {
-            quickIndex.put(k, v.getBaseTime());
-        });
-        ManagedThreadPool.getInstance().ioExecutor()
-                .submit(() -> {
-                    quickIndex.forEach((metricId, basetime) -> {
-                        quickBlockDetector.rememberBlock(metricId, basetime);
-                    });
-                });
-    }
 
     private void persistInternal(int metricId, TSBlock block) {
         TSBlockSnapshot blockSnapshot = block.snapshot();
@@ -184,7 +172,9 @@ public class TSBlockPersister implements Initializer, Closer {
         Lock ioLock = IOLock.getMetricLock(metricId);
         try {
             ioLock.lockInterruptibly();
-            blockStoreHandler.storeBlock(metricId, blockSnapshot.getTsBlock().getBaseTime(), data);
+            long blockBaseTime = blockSnapshot.getTsBlock().getBaseTime();
+            blockStoreHandler.storeBlock(metricId, blockBaseTime, data);
+            quickBlockDetector.rememberBlock(metricId, blockBaseTime);
         } catch (InterruptedException e) {
             log.error(e);
             log.error("write data {} , {} failed, cause {}", metricId, blockSnapshot.getTsBlock().getBaseTime(),

@@ -191,7 +191,6 @@ public class TSDBExecutor implements Initializer, Closer {
                     Iterator<TSDataPoint> dpIter = cmd.iter();
                     while (dpIter.hasNext()) {
                         TSDataPoint dp = dpIter.next();
-                        log.debug("server write dp:{} ,{}", dp.getValue(), dp.getTimestamp());
                         tsdb.writeMetric(internalMetric, dp.getValue(), dp.getTimestamp());
                     }
                 } catch (IllegalCharsException e) {

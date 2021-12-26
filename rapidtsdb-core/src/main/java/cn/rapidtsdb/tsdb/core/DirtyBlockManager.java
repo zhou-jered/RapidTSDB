@@ -12,12 +12,12 @@ import com.google.common.collect.Lists;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -40,6 +40,7 @@ public class DirtyBlockManager implements Initializer, Closer {
 
     @Override
     public void init() {
+        dirtyBlocksRef.set(new ConcurrentHashMap<>());
         ioExecutor = ManagedThreadPool.getInstance().ioExecutor();
         blockPersister = TSBlockPersister.getINSTANCE();
         blockPersister.init();
@@ -55,14 +56,15 @@ public class DirtyBlockManager implements Initializer, Closer {
         if (currentDirtyBlockNumber < maxMemoryDirtyBlocks) {
             return;
         }
-        clearDirtyBlock();
+        doClearDirtyBlock();
     }
 
     public TSBlock getDirtyBlockForWrite(int metricId, long timestamp) {
         long basetime = TimeUtils.getBlockBaseTime(timestamp);
-        Map<Long, TSBlock> metricDirtyBlockMap = dirtyBlocksRef.get().get(metricId);
+        SortedMap<Long, TSBlock> metricDirtyBlockMap = dirtyBlocksRef.get().get(metricId);
         if (metricDirtyBlockMap == null) {
             dirtyBlocksRef.get().putIfAbsent(metricId, new TreeMap<>());
+            metricDirtyBlockMap = dirtyBlocksRef.get().get(metricId);
         }
         TSBlock tsBlock = metricDirtyBlockMap.get(basetime);
         if (tsBlock != null && tsBlock.inBlock(timestamp)) {
@@ -111,12 +113,13 @@ public class DirtyBlockManager implements Initializer, Closer {
         return Lists.newArrayList(resultMap.values());
     }
 
-    public void clearDirtyBlock() {
+    public void doClearDirtyBlock() {
         synchronized (dirtyBlocksRef) {
             Map<Integer, SortedMap<Long, TSBlock>> dirtyBlock = dirtyBlocksRef.get();
             if (dirtyBlock.size() > 0) {
                 log.debug("clear dirty block:{}", currentDirtyBlockNumber);
-                dirtyBlock = dirtyBlocksRef.getAndSet(new HashMap<>());
+                dirtyBlock = dirtyBlocksRef.getAndSet(new ConcurrentHashMap<>());
+                currentDirtyBlockNumber = 0;
                 AtomicReference<Map<Integer, SortedMap<Long, TSBlock>>> flyingBlocks = new AtomicReference<>(dirtyBlock);
                 allFlyingDirtyBlocks.add(flyingBlocks);
                 ioExecutor.submit(new ClearDirtyBlockTask(flyingBlocks, blockPersister));

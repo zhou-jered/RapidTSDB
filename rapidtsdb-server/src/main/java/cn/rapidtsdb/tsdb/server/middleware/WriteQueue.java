@@ -30,7 +30,9 @@ class WriteQueue {
 
     public boolean write(QueueCoordinator queueCoordinator, WriteCommand writeCommand) {
         final int i = queueCoordinator.getQueueIndex(writeCommand.getMetric().getMetric());
-        log.info("Q {} size: {}", i, QS[i].size());
+        if (QS[i].size() > 1024) {
+            log.error("Report Internal Q Buffer Back Pressured {}", QS[i].size());
+        }
         return QS[i].add(writeCommand);
     }
 

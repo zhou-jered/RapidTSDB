@@ -75,7 +75,7 @@ public class TSDBConfig {
     Boolean allowOverwrite = false;
 
     @Getter
-    int maxMemoryDirtyBlocks = 1;
+    int maxMemoryDirtyBlocks = 3;
 
     @Getter
     int dbServerThreads = 5;
