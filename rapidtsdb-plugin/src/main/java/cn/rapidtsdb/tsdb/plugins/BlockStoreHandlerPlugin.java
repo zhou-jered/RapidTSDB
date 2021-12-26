@@ -3,7 +3,7 @@ package cn.rapidtsdb.tsdb.plugins;
 import cn.rapidtsdb.tsdb.plugins.func.ConfigurablePlugin;
 import cn.rapidtsdb.tsdb.plugins.func.NameablePlugin;
 import cn.rapidtsdb.tsdb.plugins.func.PreparablePlugin;
-import cn.rapidtsdb.tsdb.plugins.polo.BlockPojo;
+import cn.rapidtsdb.tsdb.plugins.pojo.BlockPojo;
 
 import java.util.Iterator;
 import java.util.Map;

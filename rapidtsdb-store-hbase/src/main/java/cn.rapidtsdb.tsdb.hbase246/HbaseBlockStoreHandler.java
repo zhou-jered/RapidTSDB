@@ -1,7 +1,7 @@
 package cn.rapidtsdb.tsdb.hbase246;
 
 import cn.rapidtsdb.tsdb.plugins.BlockStoreHandlerPlugin;
-import cn.rapidtsdb.tsdb.plugins.polo.BlockPojo;
+import cn.rapidtsdb.tsdb.plugins.pojo.BlockPojo;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import lombok.extern.log4j.Log4j2;

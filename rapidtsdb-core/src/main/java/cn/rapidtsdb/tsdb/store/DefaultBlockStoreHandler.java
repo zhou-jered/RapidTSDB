@@ -5,7 +5,7 @@ import cn.rapidtsdb.tsdb.core.persistent.file.FileLocation;
 import cn.rapidtsdb.tsdb.plugins.BlockStoreHandlerPlugin;
 import cn.rapidtsdb.tsdb.plugins.FileStoreHandlerPlugin;
 import cn.rapidtsdb.tsdb.plugins.PluginManager;
-import cn.rapidtsdb.tsdb.plugins.polo.BlockPojo;
+import cn.rapidtsdb.tsdb.plugins.pojo.BlockPojo;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.IOUtils;
 

@@ -1,4 +1,4 @@
-package cn.rapidtsdb.tsdb.plugins.polo;
+package cn.rapidtsdb.tsdb.plugins.pojo;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
