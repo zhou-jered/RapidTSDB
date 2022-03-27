@@ -3,6 +3,7 @@ package cn.rapidtsdb.tsdb.client.handler.v1;
 import cn.rapidtsdb.tsdb.client.TSDBClientConfig;
 import cn.rapidtsdb.tsdb.client.WriteMetricResult;
 import cn.rapidtsdb.tsdb.client.exceptions.NoPermissionException;
+import cn.rapidtsdb.tsdb.client.exceptions.RequestException;
 import cn.rapidtsdb.tsdb.common.protonetty.utils.ProtoObjectUtils;
 import cn.rapidtsdb.tsdb.common.utils.ChannelUtils;
 import cn.rapidtsdb.tsdb.model.proto.ConnectionAuth;
@@ -18,6 +19,8 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import lombok.extern.log4j.Log4j2;
 
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
@@ -38,11 +41,13 @@ public class ClientSession {
     private int permissions = 0;
     private Map<Integer, MsgExchange> exchangerMap = new ConcurrentHashMap<>();
     private Semaphore concurrentRequestSem;
+    private Duration exchangeTimeout;
 
     public ClientSession(Channel channel, TSDBClientConfig config) {
         this.channel = channel;
         final int concurrentLevel = Math.max(config.getMaxConcurrentRequestPerChannel(), 1);
         concurrentRequestSem = new Semaphore(concurrentLevel, true);
+        exchangeTimeout = config.getTimeout();
     }
 
 
@@ -80,15 +85,21 @@ public class ClientSession {
         if (OperationPermissionMasks.hadReadPermission(permissions)) {
             MsgExchange<ProtoTSQuery, ProtoDataResponse> msgExchange = new MsgExchange<>(protoQuery.getReqId(), protoQuery);
             exchange(msgExchange);
-            ProtoDataResponse protoDataResponse = msgExchange.get();
-            TSQueryResult queryResult = TSQueryResult.builder()
-                    .dps(protoDataResponse.getDpsMap())
-                    .metric(protoDataResponse.getMetric())
-                    .tags(protoDataResponse.getTagsMap())
-                    .info(ProtoObjectUtils.getQueryState(protoDataResponse.getInfo()))
-                    .aggregatedTags(protoDataResponse.getAggregatedTagsList().toArray(new String[0]))
-                    .build();
-            return queryResult;
+
+            try  {
+                ProtoDataResponse protoDataResponse = msgExchange.get(exchangeTimeout.get(ChronoUnit.NANOS), TimeUnit.NANOSECONDS);
+                TSQueryResult queryResult = TSQueryResult.builder()
+                        .dps(protoDataResponse.getDpsMap())
+                        .metric(protoDataResponse.getMetric())
+                        .tags(protoDataResponse.getTagsMap())
+                        .info(ProtoObjectUtils.getQueryState(protoDataResponse.getInfo()))
+                        .aggregatedTags(protoDataResponse.getAggregatedTagsList().toArray(new String[0]))
+                        .build();
+                return queryResult;
+            }catch (TimeoutException te) {
+                throw new RequestException(te);
+            }
+
         } else {
             throw new NoPermissionException("No Read Permission, permission mask:" + permissions);
         }
@@ -100,7 +111,7 @@ public class ClientSession {
             exchange(msgExchange);
             ProtoCommonResponse response = null;
             try {
-                response = msgExchange.get(3, TimeUnit.SECONDS);
+                response = msgExchange.get(exchangeTimeout.get(ChronoUnit.NANOS), TimeUnit.NANOSECONDS);
             } catch (TimeoutException e) {
                 return new WriteMetricResult(false, -1, "timeout");
             }
