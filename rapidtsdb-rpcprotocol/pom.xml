@@ -49,7 +49,8 @@
                 <artifactId>protobuf-maven-plugin</artifactId>
                 <version>0.6.1</version>
                 <configuration>
-                    <protocExecutable>/usr/local/bin/protoc</protocExecutable>
+                    <!-- be aware of the version, may some issue here -->
+                    <protocExecutable>/opt/homebrew/Cellar/protobuf@3.6/3.6.1.3_4/bin/protoc</protocExecutable>
                 </configuration>
                 <executions>
                     <execution>

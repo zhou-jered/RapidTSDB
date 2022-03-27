@@ -4,6 +4,7 @@ import cn.rapidtsdb.tsdb.TSDBConfigTester;
 import cn.rapidtsdb.tsdb.config.TSDBConfig;
 import cn.rapidtsdb.tsdb.core.persistent.AOLog;
 import cn.rapidtsdb.tsdb.core.persistent.AppendOnlyLogManager;
+import cn.rapidtsdb.tsdb.plugins.PluginManager;
 import lombok.extern.log4j.Log4j2;
 import org.junit.Assert;
 import org.junit.Before;
@@ -13,7 +14,7 @@ import java.io.File;
 import java.util.Arrays;
 
 @Log4j2
-public class AppendOnlyLogManagerTest {
+public class AppendOnlyLogManagerTest  {
 
 
     @Before
@@ -30,6 +31,10 @@ public class AppendOnlyLogManagerTest {
         }
         file.mkdirs();
         TSDBConfig.getConfigInstance().setConfigVal("dataPath", testingDir);
+        PluginManager.configPlugins(TSDBConfig.getConfigInstance().getRawConfig());
+        PluginManager.preparePlugin();
+
+
     }
 
 

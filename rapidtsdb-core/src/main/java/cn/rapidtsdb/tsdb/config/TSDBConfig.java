@@ -3,6 +3,7 @@ package cn.rapidtsdb.tsdb.config;
 import cn.rapidtsdb.tsdb.BlockCompressStrategy;
 import cn.rapidtsdb.tsdb.DefaultBlockCompressStrategy;
 import cn.rapidtsdb.tsdb.utils.ClassUtils;
+import com.google.common.annotations.VisibleForTesting;
 import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -10,19 +11,14 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang.BooleanUtils;
 
 import java.lang.reflect.Field;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Log4j2
 public class TSDBConfig {
 
-    private Map<String, String> rowConfig = new HashMap<>();
+    private Map<String, String> rawConfig = new HashMap<>();
 
     /**
      * 存储在文件或者是Hbase, Hadoop, S3,
@@ -122,7 +118,7 @@ public class TSDBConfig {
 
     public static void init(Map<String, String> rawConfig) {
         TSDBConfig temp = new TSDBConfig();
-        temp.rowConfig = rawConfig;
+        temp.rawConfig = rawConfig;
         if (rawConfig != null) {
             for (String configItem : rawConfig.keySet()) {
                 temp.setConfigVal(configItem, rawConfig.get(configItem));
@@ -138,6 +134,7 @@ public class TSDBConfig {
     public void setConfigVal(String configItem, String val) {
 
         try {
+            rawConfig.put(configItem, val);
             Class configClass = this.getClass();
             Object configObj = this;
             String fieldName = null;
@@ -205,6 +202,11 @@ public class TSDBConfig {
     private boolean isSystemConfig(String configName) {
         Properties properties = System.getProperties();
         return properties.containsKey(configName);
+    }
+
+
+    public Map<String, String> getRawConfig() {
+        return new HashMap<>(rawConfig);
     }
 
 }

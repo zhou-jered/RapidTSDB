@@ -5,8 +5,6 @@ import cn.rapidtsdb.tsdb.common.LRUCache;
 import cn.rapidtsdb.tsdb.common.Pair;
 import cn.rapidtsdb.tsdb.config.TSDBConfig;
 import cn.rapidtsdb.tsdb.executors.ManagedThreadPool;
-import cn.rapidtsdb.tsdb.lifecycle.Closer;
-import cn.rapidtsdb.tsdb.lifecycle.Initializer;
 import cn.rapidtsdb.tsdb.plugins.FileStoreHandlerPlugin;
 import cn.rapidtsdb.tsdb.plugins.PluginManager;
 import cn.rapidtsdb.tsdb.utils.CollectionUtils;
@@ -40,7 +38,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 
 @Log4j2
-public class MetricsKeyManager implements Initializer, Closer {
+public class MetricsKeyFileManager implements IMetricsKeyManager {
 
     private final int STATUS_UNINIT = 1;
     private final int STATUS_INITIALIZING = 2;
@@ -65,14 +63,10 @@ public class MetricsKeyManager implements Initializer, Closer {
 
     private LRUCache<String, Integer> idxCache = new LRUCache(1024 * 10);
 
-    private static MetricsKeyManager instance = new MetricsKeyManager();
+    private static IMetricsKeyManager instance = new MetricsKeyFileManager();
 
-    private MetricsKeyManager() {
+    MetricsKeyFileManager() {
 
-    }
-
-    public static MetricsKeyManager getInstance() {
-        return instance;
     }
 
     @Override
@@ -90,6 +84,7 @@ public class MetricsKeyManager implements Initializer, Closer {
         recoverFromFile();
     }
 
+    @Override
     public Set<String> getAllMetrics() {
         if (!storeHandler.fileExisted(metricsKeyListFile)) {
             return new HashSet<>();
@@ -110,6 +105,7 @@ public class MetricsKeyManager implements Initializer, Closer {
         }
     }
 
+    @Override
     public int getMetricsIndex(String metric, boolean createWhenNotExist) {
         if (StringUtils.isEmpty(metric)) {
             throw new RuntimeException("Empty metrics");
@@ -127,11 +123,13 @@ public class MetricsKeyManager implements Initializer, Closer {
         return idx;
     }
 
+    @Override
     public List<String> scanMetrics(String metricsPrefix) {
         return scanMetrics(metricsPrefix, null);
     }
 
 
+    @Override
     public List<String> scanMetrics(String metricsPrefix, @Nullable List<String> mustIncluded) {
         if (StringUtils.isEmpty(metricsPrefix)) {
             return new ArrayList<>();

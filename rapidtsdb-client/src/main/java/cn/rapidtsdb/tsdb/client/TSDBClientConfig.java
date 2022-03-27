@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang.StringUtils;
 
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -31,6 +32,8 @@ public class TSDBClientConfig {
     private int clientThreads = 2;
     @Getter
     private int maxConcurrentRequestPerChannel = 10;
+    @Getter
+    private Duration timeout = Duration.ofSeconds(3);
 
     @Getter
     private boolean autoReconnect = true;
@@ -97,6 +100,11 @@ public class TSDBClientConfig {
         public TSDBClientConfigBuilder clientThreads(
                 int clientThread) {
             config.clientThreads = clientThread;
+            return this;
+        }
+
+        public TSDBClientConfigBuilder timeout (Duration timeout) {
+            config.timeout = timeout;
             return this;
         }
 

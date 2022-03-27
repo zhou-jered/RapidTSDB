@@ -4,7 +4,8 @@ import cn.rapidtsdb.tsdb.calculate.Aggregator;
 import cn.rapidtsdb.tsdb.calculate.CalculatorFactory;
 import cn.rapidtsdb.tsdb.config.TSDBConfig;
 import cn.rapidtsdb.tsdb.core.TSDB;
-import cn.rapidtsdb.tsdb.core.persistent.MetricsKeyManager;
+import cn.rapidtsdb.tsdb.core.persistent.IMetricsKeyManager;
+import cn.rapidtsdb.tsdb.core.persistent.MetricsKeyManagerFactory;
 import cn.rapidtsdb.tsdb.core.pojo.TSEngineQuery;
 import cn.rapidtsdb.tsdb.core.pojo.TSEngineQueryResult;
 import cn.rapidtsdb.tsdb.lifecycle.Closer;
@@ -41,7 +42,7 @@ public class TSDBExecutor implements Initializer, Closer {
     private static final int RUNNING = 1;
     private static final int SHUTDOWN = 2;
     private TSDB db;
-    private MetricsKeyManager metricsKeyManager;
+    private IMetricsKeyManager IMetricsKeyManager;
     private MetricTransformer metricTransformer;
 
     private WriteQueue writeQueue;
@@ -60,8 +61,8 @@ public class TSDBExecutor implements Initializer, Closer {
         if (state.compareAndSet(NEW, RUNNING)) {
             metricTransformer = new MetricTransformer();
             metricTransformer.init();
-            metricsKeyManager = MetricsKeyManager.getInstance();
-            metricsKeyManager.init();
+            IMetricsKeyManager = MetricsKeyManagerFactory.getInstance();
+            IMetricsKeyManager.init();
         }
     }
 
@@ -109,7 +110,7 @@ public class TSDBExecutor implements Initializer, Closer {
             filterdInternalMetricParts = metricTransformer.concatTags(tags);
         }
         String scannedMetricPrefix = metricTransformer.getMetricTagScanPrefix(query.getMetric());
-        List<String> internalMetrics = metricsKeyManager.scanMetrics(scannedMetricPrefix, filterdInternalMetricParts);
+        List<String> internalMetrics = IMetricsKeyManager.scanMetrics(scannedMetricPrefix, filterdInternalMetricParts);
         internalMetrics.add(query.getMetric());//?
 
         QueryStats queryStats = new QueryStats();

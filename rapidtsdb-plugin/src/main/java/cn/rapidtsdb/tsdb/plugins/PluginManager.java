@@ -72,7 +72,9 @@ public class PluginManager {
                 }
             }
         } else {
-            throw new RuntimeException("Plugin not REGISTED");
+            if(state.get() == CREATE) {
+                throw new RuntimeException("Plugin not REGISTED");
+            }
         }
     }
 
@@ -106,7 +108,6 @@ public class PluginManager {
                     });
                 }
             }
-
         }
     }
 

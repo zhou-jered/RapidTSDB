@@ -4,10 +4,7 @@ import cn.rapidtsdb.tsdb.calculate.CalculatorFactory;
 import cn.rapidtsdb.tsdb.calculate.DownSampler;
 import cn.rapidtsdb.tsdb.common.TimeUtils;
 import cn.rapidtsdb.tsdb.config.TSDBConfig;
-import cn.rapidtsdb.tsdb.core.persistent.AOLog;
-import cn.rapidtsdb.tsdb.core.persistent.AppendOnlyLogManager;
-import cn.rapidtsdb.tsdb.core.persistent.MetricsKeyManager;
-import cn.rapidtsdb.tsdb.core.persistent.TSDBCheckPointManager;
+import cn.rapidtsdb.tsdb.core.persistent.*;
 import cn.rapidtsdb.tsdb.core.pojo.TSEngineQuery;
 import cn.rapidtsdb.tsdb.core.pojo.TSEngineQueryResult;
 import cn.rapidtsdb.tsdb.executors.ManagedThreadPool;
@@ -17,11 +14,7 @@ import cn.rapidtsdb.tsdb.tasks.BlockCompressTask;
 import cn.rapidtsdb.tsdb.tasks.TwoHoursTriggerTask;
 import lombok.extern.log4j.Log4j2;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-import java.util.SortedMap;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -34,7 +27,7 @@ public class TSDB implements Initializer, Closer {
     // components
     private AbstractTSBlockManager blockManager;
     private AppendOnlyLogManager appendOnlyLogManager;
-    private MetricsKeyManager metricsKeyManager;
+    private IMetricsKeyManager IMetricsKeyManager;
     private TSDBCheckPointManager checkPointManager;
     private ManagedThreadPool globalExecutor = ManagedThreadPool.getInstance();
 
@@ -49,7 +42,7 @@ public class TSDB implements Initializer, Closer {
 
     public TSDB() {
         this.config = TSDBConfig.getConfigInstance();
-        metricsKeyManager = MetricsKeyManager.getInstance();
+        IMetricsKeyManager = MetricsKeyManagerFactory.getInstance();
         blockManager = new TSBlockManager(config);
         appendOnlyLogManager = new AppendOnlyLogManager();
         checkPointManager = TSDBCheckPointManager.getInstance();
@@ -65,7 +58,7 @@ public class TSDB implements Initializer, Closer {
     @Override
     public void init() {
         appendOnlyLogManager.init();
-        metricsKeyManager.init();
+        IMetricsKeyManager.init();
         blockManager.init();
         checkPointManager.init();
         recoveryDBData();
@@ -78,7 +71,7 @@ public class TSDB implements Initializer, Closer {
     public void close() {
         log.info("Closing TSDB");
         dbState.set(DB_STATE_CLOSED);
-        metricsKeyManager.close();
+        IMetricsKeyManager.close();
         blockManager.close();
         checkPointManager.savePoint(appendOnlyLogManager.getLogIndex());
         appendOnlyLogManager.close();
@@ -92,7 +85,7 @@ public class TSDB implements Initializer, Closer {
     }
 
     public void writeMetric(String metric, double val, long timestamp) {
-        Integer mIdx = metricsKeyManager.getMetricsIndex(metric, true);
+        Integer mIdx = IMetricsKeyManager.getMetricsIndex(metric, true);
         writeMetricInternal(mIdx, timestamp, val);
         appendOnlyLogManager.appendLog(mIdx, timestamp, val);
     }
@@ -109,7 +102,7 @@ public class TSDB implements Initializer, Closer {
 
     public TSEngineQueryResult queryTimeSeriesData(TSEngineQuery query) {
         long startNano = System.nanoTime();
-        int mid = metricsKeyManager.getMetricsIndex(query.getMetric(), false);
+        int mid = IMetricsKeyManager.getMetricsIndex(query.getMetric(), false);
         if (mid <= 0) {
             return TSEngineQueryResult.builder()
                     .dps(new TreeMap<>())
@@ -171,9 +164,9 @@ public class TSDB implements Initializer, Closer {
     }
 
     private void tryRecoveyMemoryData() {
-        Set<String> allMetrics = metricsKeyManager.getAllMetrics();
+        Set<String> allMetrics = IMetricsKeyManager.getAllMetrics();
         List<Integer> allMids = new ArrayList<>(allMetrics.size());
-        allMetrics.forEach(m -> allMids.add(metricsKeyManager.getMetricsIndex(m, false)));
+        allMetrics.forEach(m -> allMids.add(IMetricsKeyManager.getMetricsIndex(m, false)));
         blockManager.tryRecoveryMemoryData(allMids);
     }
 

@@ -1,8 +1,10 @@
 package cn.rapidtsdb.tsdb.core;
 
 import cn.rapidtsdb.tsdb.common.TimeUtils;
+import cn.rapidtsdb.tsdb.config.TSDBConfig;
 import cn.rapidtsdb.tsdb.core.io.TSBlockDeserializer;
 import cn.rapidtsdb.tsdb.core.persistent.TSBlockPersister;
+import cn.rapidtsdb.tsdb.plugins.PluginManager;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.FixMethodOrder;
@@ -21,7 +23,11 @@ public class PersisterTest {
     @Before
     public void setUp() throws Exception {
         testingTime = System.currentTimeMillis();
-
+        TSDBConfig.init(new HashMap<>());
+        TSDBConfig.getConfigInstance().setConfigVal("dataPath", "/tmp/data/tsdb/test");
+        PluginManager.loadPlugins();
+        PluginManager.configPlugins(TSDBConfig.getConfigInstance().getRawConfig());
+        PluginManager.preparePlugin();
     }
 
     @Test
@@ -39,17 +45,18 @@ public class PersisterTest {
         }
 
         TSBlockPersister persister = TSBlockPersister.getINSTANCE();
+        persister.init();
         Map<Integer, TSBlock> memoryBlock = new HashMap<>();
         memoryBlock.put(1, tsBlock);
         persister.persistTSBlockSync(memoryBlock);
-
-
+        persister.close();
     }
 
     @Test
     public void test1_Read() {
         long basetime = testingTime / 1000;
         TSBlockPersister blockPersister = TSBlockPersister.getINSTANCE();
+        blockPersister.init();
         TSBlock tsBlock = blockPersister.getTSBlock(1, basetime);
         Assert.assertNotNull(tsBlock);
         Map<Long, Double> dps = tsBlock.getDataPoints();

@@ -249,7 +249,6 @@ public class TSBlock {
         for (int i = 0; i < decodedTimestamp.size(); i++) {
             dps.put(decodedTimestamp.get(i), decodedValues.get(i));
         }
-//        handleDuplicateDatapoint((ArrayList<TSDataPoint>) dps);
         cachedDataPoints = new WeakReference<>(dps);
         return dps;
     }
@@ -275,8 +274,8 @@ public class TSBlock {
 
         int bitsLimit = time.getBytesOffset() * 8 + time.getBitsOffset();
         byte[] data = time.getData();
-        if (data.length < 8) {
-            return Lists.newArrayList();
+        if (bitsLimit < 8) {
+            return Lists.newArrayList();//todo ?
         }
         long first = Longs.fromByteArray(data);
         timestamps.add(first);
@@ -320,7 +319,7 @@ public class TSBlock {
         List<Double> decodedValues = Lists.newArrayListWithCapacity(120 * 60);
         int bitsLimit = values.getBytesOffset() * 8 + values.getBitsOffset();
         byte[] data = values.getData();
-        if (data.length < 8) {
+        if (bitsLimit < 8) {
             return Lists.newArrayList();
         }
 

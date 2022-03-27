@@ -56,6 +56,7 @@ public class AppendOnlyLogManager implements Initializer, Closer {
             return;
         }
         initialized = true;
+        PluginManager.preparePlugin();
         storeHandler = PluginManager.getPlugin(FileStoreHandlerPlugin.class);
         writeLogTask = new WriteLogTask(bufferQ);
         writeThread = ManagedThreadPool.getInstance().newThread(writeLogTask);
