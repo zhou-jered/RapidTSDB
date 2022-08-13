@@ -143,7 +143,9 @@ public class TSBytes {
     }
 
     public void preExpandSpace(int byteSize) {
-        expandDataSize(byteSize);
+        if(byteSize> data.length) {
+            expandDataSize(byteSize);
+        }
     }
 
     public int getTotalBitsLength() {

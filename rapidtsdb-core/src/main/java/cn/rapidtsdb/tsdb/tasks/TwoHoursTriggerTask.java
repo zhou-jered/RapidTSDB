@@ -26,6 +26,6 @@ public class TwoHoursTriggerTask extends TSDBRetryableTask implements Runnable {
 
     @Override
     public String getTaskName() {
-        return null;
+        return "TwoHoursTriggerTask";
     }
 }

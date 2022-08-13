@@ -3,7 +3,7 @@ package cn.rapidtsdb.tsdb.hbase246;
 import java.nio.charset.StandardCharsets;
 
 public class HbaseDefine {
-    public static final String DATA_TABLE = "rapid-data";
+    public static final String DATA_TABLE = "rapid-ts-data";
 
     public static final String CF_DATA = "d";
     public static final String CF_META = "t";

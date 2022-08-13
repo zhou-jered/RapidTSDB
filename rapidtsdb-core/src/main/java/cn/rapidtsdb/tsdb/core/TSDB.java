@@ -171,12 +171,13 @@ public class TSDB implements Initializer, Closer {
     }
 
     private void initScheduleTimeTask() {
-        log.info("schedule 2 hour trigger task");
+
         long currentSeconds = TimeUtils.currentSeconds();
         long triggerInitDelay = TimeUnit.HOURS.toSeconds(2) - currentSeconds % TimeUnit.HOURS.toSeconds(2);
         TwoHoursTriggerTask twoHoursTriggerTask = new TwoHoursTriggerTask(this);
+        log.info("schedule 2 hour trigger task, current: {}, initDelay:{},", currentSeconds, triggerInitDelay);
         globalExecutor.scheduledExecutor().scheduleAtFixedRate(twoHoursTriggerTask, triggerInitDelay, TimeUnit.HOURS.toSeconds(2), TimeUnit.SECONDS);
-        log.info("initScheduleTimeTask with initDelay:{}", triggerInitDelay);
+        log.info("initScheduleTimeTask with initDelay: {} min {} secs", triggerInitDelay/60, triggerInitDelay%60);
 
         scheduleCompressTask();
     }
