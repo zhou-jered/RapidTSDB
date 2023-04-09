@@ -45,7 +45,7 @@ public class TSDBExecutor implements Initializer, Closer {
     private IMetricsKeyManager IMetricsKeyManager;
     private MetricTransformer metricTransformer;
 
-    private WriteQueue writeQueue;
+    private SmartWriteQueue smartWriteQueue;
     private QueueCoordinator queueCoordinator;
 
     private ThreadPoolExecutor threadPoolExecutor;
@@ -73,7 +73,7 @@ public class TSDBExecutor implements Initializer, Closer {
     public void startExecute(TSDB db, TSDBConfig config) {
         EXECUTOR.db = db;
         int concurrent = config.getDbServerThreads();
-        writeQueue = new WriteQueue(concurrent);
+        smartWriteQueue = new SmartWriteQueue(concurrent);
         queueCoordinator = new QueueCoordinator(concurrent);
         threadPoolExecutor = new ThreadPoolExecutor(concurrent, concurrent,
                 1, TimeUnit.HOURS, new LinkedBlockingQueue<>(), new ExecutorThreadFactory(),
@@ -81,19 +81,19 @@ public class TSDBExecutor implements Initializer, Closer {
 
         for (int i = 0; i < concurrent; i++) {
             int qidx = i;
-            ExecutorRunnable executorRunnable = new ExecutorRunnable(db, writeQueue, qidx, metricTransformer);
+            ExecutorRunnable executorRunnable = new ExecutorRunnable(db, smartWriteQueue, qidx, metricTransformer);
             EXECUTOR.threadPoolExecutor.submit(executorRunnable);
         }
     }
 
     public boolean write(BizMetric metric, TSDataPoint dp) {
         WriteCommand writeCommand = new WriteCommand(metric, dp); // todo gc review
-        return writeQueue.write(queueCoordinator, writeCommand);
+        return smartWriteQueue.write(queueCoordinator, writeCommand);
     }
 
     public boolean write(BizMetric metric, Map<Long, Double> dps) {
         WriteCommand writeCommand = new WriteCommand(metric, dps); // todo gc review
-        return writeQueue.write(queueCoordinator, writeCommand);
+        return smartWriteQueue.write(queueCoordinator, writeCommand);
     }
 
     public TSQueryResult read(TSQuery query) throws Exception {
@@ -171,11 +171,11 @@ public class TSDBExecutor implements Initializer, Closer {
     static class ExecutorRunnable implements Runnable {
 
         private TSDB tsdb;
-        private WriteQueue Q;
+        private SmartWriteQueue Q;
         private int qidx;
         private MetricTransformer metricTransformer;
 
-        public ExecutorRunnable(TSDB tsdb, WriteQueue q, int qidx, MetricTransformer metricTransformer) {
+        public ExecutorRunnable(TSDB tsdb, SmartWriteQueue q, int qidx, MetricTransformer metricTransformer) {
             this.tsdb = tsdb;
             Q = q;
             this.qidx = qidx;

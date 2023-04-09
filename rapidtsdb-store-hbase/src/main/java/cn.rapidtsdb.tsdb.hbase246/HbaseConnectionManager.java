@@ -7,6 +7,7 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import java.io.IOException;
 
 public class HbaseConnectionManager {
+
     private Configuration configuration;
 
     public HbaseConnectionManager(Configuration configuration) {
@@ -16,7 +17,8 @@ public class HbaseConnectionManager {
     private Connection cachedConnection = null;
     private Object lock = new Object();
 
-    public Connection getConnection() throws IOException {
+
+    public Connection getCachedConnection() throws IOException {
         if (cachedConnection != null && !cachedConnection.isClosed()) {
             return cachedConnection;
         } else {

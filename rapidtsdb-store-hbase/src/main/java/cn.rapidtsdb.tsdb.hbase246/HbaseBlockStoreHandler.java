@@ -133,9 +133,9 @@ public class HbaseBlockStoreHandler implements BlockStoreHandlerPlugin {
     @Override
     public void prepare() {
         try {
-            dataTable = connectionManager.getConnection().getTable(TableName.valueOf(HbaseDefine.DATA_TABLE));
+            dataTable = connectionManager.getCachedConnection().getTable(TableName.valueOf(HbaseDefine.DATA_TABLE));
             HbasePreparer tablePreparer = new HbasePreparer();
-            tablePreparer.checkPrepare(connectionManager.getConnection());
+            tablePreparer.checkPrepare(connectionManager.getCachedConnection());
             log.info("{} prepare done", getClass().getSimpleName());
         } catch (IOException e) {
             log.error(e);

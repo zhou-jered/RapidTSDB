@@ -36,6 +36,7 @@ public class Main {
             Put put = new Put("h".getBytes(StandardCharsets.UTF_8));
             put.addColumn("f1".getBytes(StandardCharsets.UTF_8), "Greeting".getBytes(StandardCharsets.UTF_8),
                     "HelloJava".getBytes(StandardCharsets.UTF_8));
+            
             table.put(put);
 
         } catch (IOException e) {

@@ -68,7 +68,7 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <version>2.1.0.RELEASE</version>
                 <configuration>
-                    <mainClass>cn.rapidtsdb.tsdb.RapidTSDBApplication</mainClass>
+                    <mainClass>cn.rapidtsdb.tsdb.LabApplication</mainClass>
                 </configuration>
                 <executions>
                     <execution>
